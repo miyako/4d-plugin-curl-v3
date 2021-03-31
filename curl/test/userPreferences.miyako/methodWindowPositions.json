@@ -1,0 +1,200 @@
+﻿{
+	"Sources/DatabaseMethods/onStartup.4dm": {
+		"left": 322,
+		"top": 651,
+		"width": 1138,
+		"height": 642
+	},
+	"Trash/Methods/(test_mkbitmap).4dm": {
+		"left": 319,
+		"top": 298,
+		"width": 1138,
+		"height": 617
+	},
+	"Trash/Methods/(test).4dm": {
+		"left": 319,
+		"top": 273,
+		"width": 1138,
+		"height": 642
+	},
+	"Trash/Methods/(Method2).4dm": {
+		"left": 764,
+		"top": 275,
+		"width": 1138,
+		"height": 592
+	},
+	"Sources/Methods/generate_project_xcode.4dm": {
+		"left": 511,
+		"top": 304,
+		"width": 1129,
+		"height": 787
+	},
+	"Sources/Methods/generate_constants_xlf.4dm": {
+		"left": 478,
+		"top": 165,
+		"width": 1129,
+		"height": 762
+	},
+	"Sources/Methods/generate_project_vs.4dm": {
+		"left": 478,
+		"top": 165,
+		"width": 1129,
+		"height": 762
+	},
+	"Sources/Methods/generate_project.4dm": {
+		"left": 908,
+		"top": 423,
+		"width": 699,
+		"height": 504
+	},
+	"Sources/Methods/generate_project_source.4dm": {
+		"left": 511,
+		"top": 304,
+		"width": 1129,
+		"height": 787
+	},
+	"Sources/Methods/generate_file_from_template.4dm": {
+		"left": 478,
+		"top": 165,
+		"width": 1129,
+		"height": 762
+	},
+	"Sources/Methods/generate_project_plugin_stub.4dm": {
+		"left": 500,
+		"top": 130,
+		"width": 720,
+		"height": 399
+	},
+	"Sources/Methods/generate_project_infoplist.4dm": {
+		"left": 305,
+		"top": 248,
+		"width": 1129,
+		"height": 762
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/ボタン.4dm": {
+		"left": 490,
+		"top": 229,
+		"width": 938,
+		"height": 823
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/ボタン1.4dm": {
+		"left": 490,
+		"top": 229,
+		"width": 938,
+		"height": 823
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/ボタン2.4dm": {
+		"left": 490,
+		"top": 229,
+		"width": 938,
+		"height": 823
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/Get window tab id.4dm": {
+		"left": 490,
+		"top": 229,
+		"width": 938,
+		"height": 823
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/SET WINDOW TAB ID.4dm": {
+		"left": 490,
+		"top": 229,
+		"width": 938,
+		"height": 823
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/TOGGLE WINDOW TAB OVERVIEW.4dm": {
+		"left": 146,
+		"top": 200,
+		"width": 938,
+		"height": 773
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/TOGGLE WINDOW TAB BAR.4dm": {
+		"left": 146,
+		"top": 200,
+		"width": 938,
+		"height": 773
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/MERGE ALL WINDOWS.4dm": {
+		"left": 146,
+		"top": 200,
+		"width": 938,
+		"height": 773
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/SELECT PREVIOUS WINDOW TAB.4dm": {
+		"left": 490,
+		"top": 229,
+		"width": 938,
+		"height": 823
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/SELECT NEXT WINDOW TAB.4dm": {
+		"left": 194,
+		"top": 248,
+		"width": 938,
+		"height": 773
+	},
+	"Sources/Forms/フォーム1/ObjectMethods/SET WINDOW TAB ID (%22%22).4dm": {
+		"left": 162,
+		"top": 377,
+		"width": 938,
+		"height": 773
+	},
+	"Trash/Methods/(test_1).4dm": {
+		"left": 511,
+		"top": 329,
+		"width": 1129,
+		"height": 762
+	},
+	"Sources/Methods/TEST.4dm": {
+		"left": 450,
+		"top": 188,
+		"width": 877,
+		"height": 637
+	},
+	"Sources/Methods/TEST_v17.4dm": {
+		"left": 450,
+		"top": 163,
+		"width": 877,
+		"height": 662
+	},
+	"Sources/Methods/update_manifest_json.4dm": {
+		"left": 70,
+		"top": 323,
+		"width": 1129,
+		"height": 757
+	},
+	"Sources/Methods/TEST_PROGRESS.4dm": {
+		"left": 90,
+		"top": 228,
+		"width": 961,
+		"height": 486
+	},
+	"Sources/Methods/TEST_ftp.4dm": {
+		"left": 148,
+		"top": 441,
+		"width": 1178,
+		"height": 497
+	},
+	"Sources/Methods/TEST_version_info.4dm": {
+		"left": 220,
+		"top": 228,
+		"width": 1178,
+		"height": 523
+	},
+	"Sources/Methods/TEST_ftp_upload.4dm": {
+		"left": 291,
+		"top": 235,
+		"width": 961,
+		"height": 408
+	},
+	"Sources/Methods/TEST_https.4dm": {
+		"left": 291,
+		"top": 235,
+		"width": 961,
+		"height": 408
+	},
+	"Sources/Methods/TEST_http.4dm": {
+		"left": 217,
+		"top": 179,
+		"width": 961,
+		"height": 434
+	}
+}

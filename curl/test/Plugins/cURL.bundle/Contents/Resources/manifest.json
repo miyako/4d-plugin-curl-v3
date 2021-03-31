@@ -1,0 +1,81 @@
+{
+	"name": "cURL",
+	"id": 20000,
+	"commands": [
+		{
+			"theme": "cURL",
+			"syntax": "cURL_VersionInfo:J",
+			"threadSafe": true
+		},
+		{
+			"theme": "cURL",
+			"syntax": "cURL_Escape(&T):T",
+			"threadSafe": true
+		},
+		{
+			"theme": "cURL",
+			"syntax": "cURL_Unescape(&T):T",
+			"threadSafe": true
+		},
+		{
+			"theme": "cURL",
+			"syntax": "cURL_GetDate(&T;&T):L",
+			"threadSafe": true
+		},
+		{
+			"theme": "cURL",
+			"syntax": "cURL(&J;&O;&O;&T):J",
+			"threadSafe": true
+		},
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_Delete(&J;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_GetDirList(&J;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_GetFileInfo(&J;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_MakeDir(&J;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_PrintDir(&J;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_Receive(&J;&O;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_RemoveDir(&J;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_Rename(&J;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_Send(&J;&O;&T):J",
+        "threadSafe": true
+        },
+        {
+        "theme": "FTP",
+        "syntax": "cURL_FTP_System(&J;&T):J",
+        "threadSafe": true
+        }
+	]
+}

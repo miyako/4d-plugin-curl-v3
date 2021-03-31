@@ -1,0 +1,78 @@
+﻿{
+	"methods": {
+		"TEST_ftp_upload": {
+			"timeStamp": "2021-03-31T15:17:31.029Z"
+		},
+		"generate_file_from_template": {
+			"timeStamp": "2019-07-29T04:26:04.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"generate_project_infoplist": {
+			"timeStamp": "2019-07-02T13:51:21.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"generate_constants_xlf": {
+			"timeStamp": "2019-07-29T04:26:04.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"update_manifest_json": {
+			"timeStamp": "2019-12-13T04:37:40.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"generate_project_xcode": {
+			"timeStamp": "2019-07-02T13:57:13.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"TEST_version_info": {
+			"timeStamp": "2021-03-31T14:28:26.985Z"
+		},
+		"TEST_PROGRESS": {
+			"timeStamp": "2021-03-31T07:57:31.000Z"
+		},
+		"generate_project": {
+			"timeStamp": "2021-03-30T07:42:53.000Z"
+		},
+		"generate_project_vs": {
+			"timeStamp": "2019-07-24T08:49:03.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"TEST_http": {
+			"timeStamp": "2021-03-31T15:26:06.294Z"
+		},
+		"generate_project_plugin_stub": {
+			"timeStamp": "2019-07-23T08:36:58.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		},
+		"TEST_https": {
+			"timeStamp": "2021-03-31T14:34:44.414Z"
+		},
+		"generate_project_source": {
+			"timeStamp": "2019-07-02T14:36:13.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
+		}
+	}
+}
