@@ -181,9 +181,9 @@
 	},
 	"Sources/Methods/TEST_ftp_upload.4dm": {
 		"left": 291,
-		"top": 235,
+		"top": 261,
 		"width": 961,
-		"height": 408
+		"height": 382
 	},
 	"Sources/Methods/TEST_https.4dm": {
 		"left": 291,
@@ -192,9 +192,15 @@
 		"height": 408
 	},
 	"Sources/Methods/TEST_http.4dm": {
-		"left": 217,
-		"top": 179,
+		"left": 291,
+		"top": 261,
 		"width": 961,
-		"height": 434
+		"height": 382
+	},
+	"Sources/Methods/TEST_http_301.4dm": {
+		"left": 291,
+		"top": 287,
+		"width": 961,
+		"height": 356
 	}
 }

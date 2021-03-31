@@ -395,6 +395,18 @@ static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
             ob_set_n(transferInfo, "appConnectTime", appConnectTimeT);
         }
         
+        curl_off_t retryAfterT;
+        
+        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RETRY_AFTER, &retryAfterT)) {
+            ob_set_n(transferInfo, "retryAfter", retryAfterT);
+        }
+        
+        long proxyError;
+        
+        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROXY_ERROR, &proxyError)) {
+            ob_set_n(transferInfo, "proxyError", proxyError);
+        }
+        
         if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_CLIENT_CSEQ, &rtspClientCseq)) {
             ob_set_n(transferInfo, "rtspClientCseq", rtspClientCseq);
         }
@@ -507,6 +519,12 @@ static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
 
         if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effectiveUrl))) {
             ob_set_s(transferInfo, "effectiveUrl", effectiveUrl ? effectiveUrl : "");
+        }
+        
+        char *effectiveMethod = NULL;
+        
+        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_METHOD, &effectiveMethod))) {
+            ob_set_s(transferInfo, "effectiveMethod", effectiveMethod ? effectiveMethod : "");
         }
 
         if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_LOCAL_IP, &localIp))) {
@@ -1511,299 +1529,324 @@ static bool curl_set_options(CURL *curl,
         /* longint */
         
         if(ob_is_defined(Param1, L"PORT")) {
-            curl_easy_setopt(curl, CURLOPT_PORT, ob_get_n(Param1, L"PORT"));
+            curl_easy_setopt(curl, CURLOPT_PORT, (long)ob_get_n(Param1, L"PORT"));
         }
         
         if(ob_is_defined(Param1, L"TIMEOUT")) {
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, ob_get_n(Param1, L"TIMEOUT"));
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, (long)ob_get_n(Param1, L"TIMEOUT"));
         }
         if(ob_is_defined(Param1, L"LOW_SPEED_LIMIT")) {
-            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, ob_get_n(Param1, L"LOW_SPEED_LIMIT"));
+            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, (long)ob_get_n(Param1, L"LOW_SPEED_LIMIT"));
         }
         if(ob_is_defined(Param1, L"LOW_SPEED_TIME")) {
-            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, ob_get_n(Param1, L"LOW_SPEED_TIME"));
+            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, (long)ob_get_n(Param1, L"LOW_SPEED_TIME"));
         }
         if(ob_is_defined(Param1, L"RESUME_FROM")) {
-            curl_easy_setopt(curl, CURLOPT_RESUME_FROM, ob_get_n(Param1, L"RESUME_FROM"));
+            curl_easy_setopt(curl, CURLOPT_RESUME_FROM_LARGE, (curl_off_t)ob_get_n(Param1, L"RESUME_FROM"));
+        }
+        if(ob_is_defined(Param1, L"RESUME_FROM_LARGE")) {
+            curl_easy_setopt(curl, CURLOPT_RESUME_FROM_LARGE, (curl_off_t)ob_get_n(Param1, L"RESUME_FROM_LARGE"));
         }
         if(ob_is_defined(Param1, L"CRLF")) {
-            curl_easy_setopt(curl, CURLOPT_CRLF, ob_get_n(Param1, L"CRLF"));
+            curl_easy_setopt(curl, CURLOPT_CRLF, (long)ob_get_n(Param1, L"CRLF"));
         }
         if(ob_is_defined(Param1, L"TIMEVALUE")) {
-            curl_easy_setopt(curl, CURLOPT_TIMEVALUE, ob_get_n(Param1, L"TIMEVALUE"));
+            curl_easy_setopt(curl, CURLOPT_TIMEVALUE_LARGE, (curl_off_t)ob_get_n(Param1, L"TIMEVALUE"));
+        }
+        if(ob_is_defined(Param1, L"TIMEVALUE_LARGE")) {
+            curl_easy_setopt(curl, CURLOPT_TIMEVALUE_LARGE, (curl_off_t)ob_get_n(Param1, L"TIMEVALUE_LARGE"));
         }
         if(ob_is_defined(Param1, L"HEADER")) {
-            curl_easy_setopt(curl, CURLOPT_HEADER, ob_get_n(Param1, L"HEADER"));
+            curl_easy_setopt(curl, CURLOPT_HEADER, (long)ob_get_n(Param1, L"HEADER"));
         }
         if(ob_is_defined(Param1, L"NOBODY")) {
-            curl_easy_setopt(curl, CURLOPT_NOBODY, ob_get_n(Param1, L"NOBODY"));
+            curl_easy_setopt(curl, CURLOPT_NOBODY, (long)ob_get_n(Param1, L"NOBODY"));
         }
         if(ob_is_defined(Param1, L"FAILONERROR")) {
-            curl_easy_setopt(curl, CURLOPT_FAILONERROR, ob_get_n(Param1, L"FAILONERROR"));
+            curl_easy_setopt(curl, CURLOPT_FAILONERROR, (long)ob_get_n(Param1, L"FAILONERROR"));
         }
         if(ob_is_defined(Param1, L"UPLOAD")) {
-            curl_easy_setopt(curl, CURLOPT_UPLOAD, ob_get_n(Param1, L"UPLOAD"));
+            curl_easy_setopt(curl, CURLOPT_UPLOAD, (long)ob_get_n(Param1, L"UPLOAD"));
         }
         if(ob_is_defined(Param1, L"POST")) {
-            curl_easy_setopt(curl, CURLOPT_POST, ob_get_n(Param1, L"POST"));
+            curl_easy_setopt(curl, CURLOPT_POST, (long)ob_get_n(Param1, L"POST"));
         }
         if(ob_is_defined(Param1, L"DIRLISTONLY")) {
-            curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, ob_get_n(Param1, L"DIRLISTONLY"));
+            curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, (long)ob_get_n(Param1, L"DIRLISTONLY"));
         }
         if(ob_is_defined(Param1, L"APPEND")) {
-            curl_easy_setopt(curl, CURLOPT_APPEND, ob_get_n(Param1, L"APPEND"));
+            curl_easy_setopt(curl, CURLOPT_APPEND, (long)ob_get_n(Param1, L"APPEND"));
         }
         if(ob_is_defined(Param1, L"NETRC")) {
-            curl_easy_setopt(curl, CURLOPT_NETRC, ob_get_n(Param1, L"NETRC"));
+            curl_easy_setopt(curl, CURLOPT_NETRC, (long)ob_get_n(Param1, L"NETRC"));
         }
         if(ob_is_defined(Param1, L"FOLLOWLOCATION")) {
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, ob_get_n(Param1, L"FOLLOWLOCATION"));
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, (long)ob_get_n(Param1, L"FOLLOWLOCATION"));
         }
         if(ob_is_defined(Param1, L"PUT")) {
-            curl_easy_setopt(curl, CURLOPT_PUT, ob_get_n(Param1, L"PUT"));
+            curl_easy_setopt(curl, CURLOPT_PUT, (long)ob_get_n(Param1, L"PUT"));
         }
         if(ob_is_defined(Param1, L"AUTOREFERER")) {
-            curl_easy_setopt(curl, CURLOPT_AUTOREFERER, ob_get_n(Param1, L"AUTOREFERER"));
+            curl_easy_setopt(curl, CURLOPT_AUTOREFERER, (long)ob_get_n(Param1, L"AUTOREFERER"));
         }
         if(ob_is_defined(Param1, L"PROXYPORT")) {
-            curl_easy_setopt(curl, CURLOPT_PROXYPORT, ob_get_n(Param1, L"PROXYPORT"));
+            curl_easy_setopt(curl, CURLOPT_PROXYPORT, (long)ob_get_n(Param1, L"PROXYPORT"));
         }
         if(ob_is_defined(Param1, L"HTTPPROXYTUNNEL")) {
-            curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, ob_get_n(Param1, L"HTTPPROXYTUNNEL"));
+            curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, (long)ob_get_n(Param1, L"HTTPPROXYTUNNEL"));
         }
         if(ob_is_defined(Param1, L"SSL_VERIFYPEER")) {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ob_get_n(Param1, L"SSL_VERIFYPEER"));
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, (long)ob_get_n(Param1, L"SSL_VERIFYPEER"));
         }
         if(ob_is_defined(Param1, L"MAXREDIRS")) {
-            curl_easy_setopt(curl, CURLOPT_MAXREDIRS, ob_get_n(Param1, L"MAXREDIRS"));
+            curl_easy_setopt(curl, CURLOPT_MAXREDIRS, (long)ob_get_n(Param1, L"MAXREDIRS"));
         }
         if(ob_is_defined(Param1, L"FILETIME")) {
-            curl_easy_setopt(curl, CURLOPT_FILETIME, ob_get_n(Param1, L"FILETIME"));
+            curl_easy_setopt(curl, CURLOPT_FILETIME, (long)ob_get_n(Param1, L"FILETIME"));
         }
         if(ob_is_defined(Param1, L"MAXCONNECTS")) {
-            curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, ob_get_n(Param1, L"MAXCONNECTS"));
+            curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, (long)ob_get_n(Param1, L"MAXCONNECTS"));
         }
         if(ob_is_defined(Param1, L"FRESH_CONNECT")) {
-            curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, ob_get_n(Param1, L"FRESH_CONNECT"));
+            curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, (long)ob_get_n(Param1, L"FRESH_CONNECT"));
         }
         if(ob_is_defined(Param1, L"FORBID_REUSE")) {
-            curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, ob_get_n(Param1, L"FORBID_REUSE"));
+            curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, (long)ob_get_n(Param1, L"FORBID_REUSE"));
         }
         if(ob_is_defined(Param1, L"CONNECTTIMEOUT")) {
-            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, ob_get_n(Param1, L"CONNECTTIMEOUT"));
+            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, (long)ob_get_n(Param1, L"CONNECTTIMEOUT"));
         }
         if(ob_is_defined(Param1, L"HTTPGET")) {
-            curl_easy_setopt(curl, CURLOPT_HTTPGET, ob_get_n(Param1, L"HTTPGET"));
+            curl_easy_setopt(curl, CURLOPT_HTTPGET, (long)ob_get_n(Param1, L"HTTPGET"));
         }
         if(ob_is_defined(Param1, L"SSL_VERIFYHOST")) {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, ob_get_n(Param1, L"SSL_VERIFYHOST"));
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, (long)ob_get_n(Param1, L"SSL_VERIFYHOST"));
         }
         if(ob_is_defined(Param1, L"FTP_USE_EPSV")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_USE_EPSV, ob_get_n(Param1, L"FTP_USE_EPSV"));
+            curl_easy_setopt(curl, CURLOPT_FTP_USE_EPSV, (long)ob_get_n(Param1, L"FTP_USE_EPSV"));
         }
         if(ob_is_defined(Param1, L"DNS_CACHE_TIMEOUT")) {
-            curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, ob_get_n(Param1, L"DNS_CACHE_TIMEOUT"));
+            curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, (long)ob_get_n(Param1, L"DNS_CACHE_TIMEOUT"));
         }
         if(ob_is_defined(Param1, L"COOKIESESSION")) {
-            curl_easy_setopt(curl, CURLOPT_COOKIESESSION, ob_get_n(Param1, L"COOKIESESSION"));
+            curl_easy_setopt(curl, CURLOPT_COOKIESESSION, (long)ob_get_n(Param1, L"COOKIESESSION"));
         }
         if(ob_is_defined(Param1, L"BUFFERSIZE")) {
-            curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, ob_get_n(Param1, L"BUFFERSIZE"));
+            curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, (long)ob_get_n(Param1, L"BUFFERSIZE"));
         }
         if(ob_is_defined(Param1, L"UNRESTRICTED_AUTH")) {
-            curl_easy_setopt(curl, CURLOPT_UNRESTRICTED_AUTH, ob_get_n(Param1, L"UNRESTRICTED_AUTH"));
+            curl_easy_setopt(curl, CURLOPT_UNRESTRICTED_AUTH, (long)ob_get_n(Param1, L"UNRESTRICTED_AUTH"));
         }
         if(ob_is_defined(Param1, L"FTP_USE_EPRT")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_USE_EPRT, ob_get_n(Param1, L"FTP_USE_EPRT"));
+            curl_easy_setopt(curl, CURLOPT_FTP_USE_EPRT, (long)ob_get_n(Param1, L"FTP_USE_EPRT"));
         }
         if(ob_is_defined(Param1, L"HTTPAUTH")) {
-            curl_easy_setopt(curl, CURLOPT_HTTPAUTH, ob_get_n(Param1, L"HTTPAUTH"));
+            curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)ob_get_n(Param1, L"HTTPAUTH"));
         }
         if(ob_is_defined(Param1, L"FTP_CREATE_MISSING_DIRS")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_CREATE_MISSING_DIRS, ob_get_n(Param1, L"FTP_CREATE_MISSING_DIRS"));
+            curl_easy_setopt(curl, CURLOPT_FTP_CREATE_MISSING_DIRS, (long)ob_get_n(Param1, L"FTP_CREATE_MISSING_DIRS"));
         }
         if(ob_is_defined(Param1, L"PROXYAUTH")) {
-            curl_easy_setopt(curl, CURLOPT_PROXYAUTH, ob_get_n(Param1, L"PROXYAUTH"));
+            curl_easy_setopt(curl, CURLOPT_PROXYAUTH, (long)ob_get_n(Param1, L"PROXYAUTH"));
         }
         if(ob_is_defined(Param1, L"FTP_RESPONSE_TIMEOUT")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_RESPONSE_TIMEOUT, ob_get_n(Param1, L"FTP_RESPONSE_TIMEOUT"));
+            curl_easy_setopt(curl, CURLOPT_FTP_RESPONSE_TIMEOUT, (long)ob_get_n(Param1, L"FTP_RESPONSE_TIMEOUT"));
         }
         if(ob_is_defined(Param1, L"IPRESOLVE")) {
-            curl_easy_setopt(curl, CURLOPT_IPRESOLVE, ob_get_n(Param1, L"IPRESOLVE"));
+            curl_easy_setopt(curl, CURLOPT_IPRESOLVE, (long)ob_get_n(Param1, L"IPRESOLVE"));
         }
         if(ob_is_defined(Param1, L"MAXFILESIZE")) {
-            curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, ob_get_n(Param1, L"MAXFILESIZE"));
+            curl_easy_setopt(curl, CURLOPT_MAXFILESIZE_LARGE, (curl_off_t)ob_get_n(Param1, L"MAXFILESIZE"));
+        }
+        if(ob_is_defined(Param1, L"MAXFILESIZE_LARGE")) {
+            curl_easy_setopt(curl, CURLOPT_MAXFILESIZE_LARGE, (curl_off_t)ob_get_n(Param1, L"MAXFILESIZE_LARGE"));
         }
         if(ob_is_defined(Param1, L"IGNORE_CONTENT_LENGTH")) {
-            curl_easy_setopt(curl, CURLOPT_IGNORE_CONTENT_LENGTH, ob_get_n(Param1, L"IGNORE_CONTENT_LENGTH"));
+            curl_easy_setopt(curl, CURLOPT_IGNORE_CONTENT_LENGTH, (long)ob_get_n(Param1, L"IGNORE_CONTENT_LENGTH"));
         }
         if(ob_is_defined(Param1, L"FTP_SKIP_PASV_IP")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_SKIP_PASV_IP, ob_get_n(Param1, L"FTP_SKIP_PASV_IP"));
+            curl_easy_setopt(curl, CURLOPT_FTP_SKIP_PASV_IP, (long)ob_get_n(Param1, L"FTP_SKIP_PASV_IP"));
         }
         if(ob_is_defined(Param1, L"FTP_FILEMETHOD")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_FILEMETHOD, ob_get_n(Param1, L"FTP_FILEMETHOD"));
+            curl_easy_setopt(curl, CURLOPT_FTP_FILEMETHOD, (long)ob_get_n(Param1, L"FTP_FILEMETHOD"));
         }
         if(ob_is_defined(Param1, L"LOCALPORT")) {
-            curl_easy_setopt(curl, CURLOPT_LOCALPORT, ob_get_n(Param1, L"LOCALPORT"));
+            curl_easy_setopt(curl, CURLOPT_LOCALPORT, (long)ob_get_n(Param1, L"LOCALPORT"));
         }
         if(ob_is_defined(Param1, L"LOCALPORTRANGE")) {
-            curl_easy_setopt(curl, CURLOPT_LOCALPORTRANGE, ob_get_n(Param1, L"LOCALPORTRANGE"));
+            curl_easy_setopt(curl, CURLOPT_LOCALPORTRANGE, (long)ob_get_n(Param1, L"LOCALPORTRANGE"));
         }
         if(ob_is_defined(Param1, L"CONNECT_ONLY")) {
-            curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, ob_get_n(Param1, L"CONNECT_ONLY"));
+            curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, (long)ob_get_n(Param1, L"CONNECT_ONLY"));
         }
         if(ob_is_defined(Param1, L"SSL_SESSIONID_CACHE")) {
-            curl_easy_setopt(curl, CURLOPT_SSL_SESSIONID_CACHE, ob_get_n(Param1, L"SSL_SESSIONID_CACHE"));
+            curl_easy_setopt(curl, CURLOPT_SSL_SESSIONID_CACHE, (long)ob_get_n(Param1, L"SSL_SESSIONID_CACHE"));
         }
         if(ob_is_defined(Param1, L"SSH_AUTH_TYPES")) {
-            curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, ob_get_n(Param1, L"SSH_AUTH_TYPES"));
+            curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, (long)ob_get_n(Param1, L"SSH_AUTH_TYPES"));
         }
         if(ob_is_defined(Param1, L"FTP_SSL_CCC")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_SSL_CCC, ob_get_n(Param1, L"FTP_SSL_CCC"));
+            curl_easy_setopt(curl, CURLOPT_FTP_SSL_CCC, (long)ob_get_n(Param1, L"FTP_SSL_CCC"));
         }
         if(ob_is_defined(Param1, L"TIMEOUT_MS")) {
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, ob_get_n(Param1, L"TIMEOUT_MS"));
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)ob_get_n(Param1, L"TIMEOUT_MS"));
         }
         if(ob_is_defined(Param1, L"CONNECTTIMEOUT_MS")) {
-            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, ob_get_n(Param1, L"CONNECTTIMEOUT_MS"));
+            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, (long)ob_get_n(Param1, L"CONNECTTIMEOUT_MS"));
         }
         if(ob_is_defined(Param1, L"HTTP_TRANSFER_DECODING")) {
-            curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, ob_get_n(Param1, L"HTTP_TRANSFER_DECODING"));
+            curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, (long)ob_get_n(Param1, L"HTTP_TRANSFER_DECODING"));
         }
         if(ob_is_defined(Param1, L"HTTP_CONTENT_DECODING")) {
-            curl_easy_setopt(curl, CURLOPT_HTTP_CONTENT_DECODING, ob_get_n(Param1, L"HTTP_CONTENT_DECODING"));
+            curl_easy_setopt(curl, CURLOPT_HTTP_CONTENT_DECODING, (long)ob_get_n(Param1, L"HTTP_CONTENT_DECODING"));
         }
         if(ob_is_defined(Param1, L"NEW_FILE_PERMS")) {
-            curl_easy_setopt(curl, CURLOPT_NEW_FILE_PERMS, ob_get_n(Param1, L"NEW_FILE_PERMS"));
+            curl_easy_setopt(curl, CURLOPT_NEW_FILE_PERMS, (long)ob_get_n(Param1, L"NEW_FILE_PERMS"));
         }
         if(ob_is_defined(Param1, L"NEW_DIRECTORY_PERMS")) {
-            curl_easy_setopt(curl, CURLOPT_NEW_DIRECTORY_PERMS, ob_get_n(Param1, L"NEW_DIRECTORY_PERMS"));
+            curl_easy_setopt(curl, CURLOPT_NEW_DIRECTORY_PERMS, (long)ob_get_n(Param1, L"NEW_DIRECTORY_PERMS"));
         }
         if(ob_is_defined(Param1, L"POSTREDIR")) {
-            curl_easy_setopt(curl, CURLOPT_POSTREDIR, ob_get_n(Param1, L"POSTREDIR"));
+            curl_easy_setopt(curl, CURLOPT_POSTREDIR, (long)ob_get_n(Param1, L"POSTREDIR"));
         }
         if(ob_is_defined(Param1, L"PROXY_TRANSFER_MODE")) {
-            curl_easy_setopt(curl, CURLOPT_PROXY_TRANSFER_MODE, ob_get_n(Param1, L"PROXY_TRANSFER_MODE"));
+            curl_easy_setopt(curl, CURLOPT_PROXY_TRANSFER_MODE, (long)ob_get_n(Param1, L"PROXY_TRANSFER_MODE"));
         }
         if(ob_is_defined(Param1, L"ADDRESS_SCOPE")) {
-            curl_easy_setopt(curl, CURLOPT_ADDRESS_SCOPE, ob_get_n(Param1, L"ADDRESS_SCOPE"));
+            curl_easy_setopt(curl, CURLOPT_ADDRESS_SCOPE, (long)ob_get_n(Param1, L"ADDRESS_SCOPE"));
         }
         if(ob_is_defined(Param1, L"CERTINFO")) {
-            curl_easy_setopt(curl, CURLOPT_CERTINFO, ob_get_n(Param1, L"CERTINFO"));
+            curl_easy_setopt(curl, CURLOPT_CERTINFO, (long)ob_get_n(Param1, L"CERTINFO"));
         }
         if(ob_is_defined(Param1, L"TFTP_BLKSIZE")) {
-            curl_easy_setopt(curl, CURLOPT_TFTP_BLKSIZE, ob_get_n(Param1, L"TFTP_BLKSIZE"));
+            curl_easy_setopt(curl, CURLOPT_TFTP_BLKSIZE, (long)ob_get_n(Param1, L"TFTP_BLKSIZE"));
         }
         if(ob_is_defined(Param1, L"PROTOCOLS")) {
-            curl_easy_setopt(curl, CURLOPT_PROTOCOLS, ob_get_n(Param1, L"PROTOCOLS"));
+            curl_easy_setopt(curl, CURLOPT_PROTOCOLS, (long)ob_get_n(Param1, L"PROTOCOLS"));
         }
         if(ob_is_defined(Param1, L"REDIR_PROTOCOLS")) {
-            curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, ob_get_n(Param1, L"REDIR_PROTOCOLS"));
+            curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, (long)ob_get_n(Param1, L"REDIR_PROTOCOLS"));
         }
         if(ob_is_defined(Param1, L"FTP_USE_PRET")) {
-            curl_easy_setopt(curl, CURLOPT_FTP_USE_PRET, ob_get_n(Param1, L"FTP_USE_PRET"));
+            curl_easy_setopt(curl, CURLOPT_FTP_USE_PRET, (long)ob_get_n(Param1, L"FTP_USE_PRET"));
         }
         if(ob_is_defined(Param1, L"RTSP_REQUEST")) {
-            curl_easy_setopt(curl, CURLOPT_RTSP_REQUEST, ob_get_n(Param1, L"RTSP_REQUEST"));
+            curl_easy_setopt(curl, CURLOPT_RTSP_REQUEST, (long)ob_get_n(Param1, L"RTSP_REQUEST"));
         }
         if(ob_is_defined(Param1, L"RTSP_CLIENT_CSEQ")) {
-            curl_easy_setopt(curl, CURLOPT_RTSP_CLIENT_CSEQ, ob_get_n(Param1, L"RTSP_CLIENT_CSEQ"));
+            curl_easy_setopt(curl, CURLOPT_RTSP_CLIENT_CSEQ, (long)ob_get_n(Param1, L"RTSP_CLIENT_CSEQ"));
         }
         if(ob_is_defined(Param1, L"RTSP_SERVER_CSEQ")) {
-            curl_easy_setopt(curl, CURLOPT_RTSP_SERVER_CSEQ, ob_get_n(Param1, L"RTSP_SERVER_CSEQ"));
+            curl_easy_setopt(curl, CURLOPT_RTSP_SERVER_CSEQ, (long)ob_get_n(Param1, L"RTSP_SERVER_CSEQ"));
         }
         if(ob_is_defined(Param1, L"WILDCARDMATCH")) {
-            curl_easy_setopt(curl, CURLOPT_WILDCARDMATCH, ob_get_n(Param1, L"WILDCARDMATCH"));
+            curl_easy_setopt(curl, CURLOPT_WILDCARDMATCH, (long)ob_get_n(Param1, L"WILDCARDMATCH"));
         }
         if(ob_is_defined(Param1, L"TRANSFER_ENCODING")) {
-            curl_easy_setopt(curl, CURLOPT_TRANSFER_ENCODING, ob_get_n(Param1, L"TRANSFER_ENCODING"));
+            curl_easy_setopt(curl, CURLOPT_TRANSFER_ENCODING, (long)ob_get_n(Param1, L"TRANSFER_ENCODING"));
         }
         if(ob_is_defined(Param1, L"ACCEPTTIMEOUT_MS")) {
-            curl_easy_setopt(curl, CURLOPT_ACCEPTTIMEOUT_MS, ob_get_n(Param1, L"ACCEPTTIMEOUT_MS"));
+            curl_easy_setopt(curl, CURLOPT_ACCEPTTIMEOUT_MS, (long)ob_get_n(Param1, L"ACCEPTTIMEOUT_MS"));
         }
         if(ob_is_defined(Param1, L"TCP_KEEPALIVE")) {
-            curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, ob_get_n(Param1, L"TCP_KEEPALIVE"));
+            curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, (long)ob_get_n(Param1, L"TCP_KEEPALIVE"));
         }
         if(ob_is_defined(Param1, L"TCP_KEEPIDLE")) {
-            curl_easy_setopt(curl, CURLOPT_TCP_KEEPIDLE, ob_get_n(Param1, L"TCP_KEEPIDLE"));
+            curl_easy_setopt(curl, CURLOPT_TCP_KEEPIDLE, (long)ob_get_n(Param1, L"TCP_KEEPIDLE"));
         }
         if(ob_is_defined(Param1, L"TCP_KEEPINTVL")) {
-            curl_easy_setopt(curl, CURLOPT_TCP_KEEPINTVL, ob_get_n(Param1, L"TCP_KEEPINTVL"));
+            curl_easy_setopt(curl, CURLOPT_TCP_KEEPINTVL, (long)ob_get_n(Param1, L"TCP_KEEPINTVL"));
         }
         if(ob_is_defined(Param1, L"SASL_IR")) {
-            curl_easy_setopt(curl, CURLOPT_SASL_IR, ob_get_n(Param1, L"SASL_IR"));
+            curl_easy_setopt(curl, CURLOPT_SASL_IR, (long)ob_get_n(Param1, L"SASL_IR"));
         }
         if(ob_is_defined(Param1, L"SSL_ENABLE_NPN")) {
-            curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_NPN, ob_get_n(Param1, L"SSL_ENABLE_NPN"));
+            curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_NPN, (long)ob_get_n(Param1, L"SSL_ENABLE_NPN"));
         }
         if(ob_is_defined(Param1, L"SSL_ENABLE_ALPN")) {
-            curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, ob_get_n(Param1, L"SSL_ENABLE_ALPN"));
+            curl_easy_setopt(curl, CURLOPT_SSL_ENABLE_ALPN, (long)ob_get_n(Param1, L"SSL_ENABLE_ALPN"));
         }
         if(ob_is_defined(Param1, L"EXPECT_100_TIMEOUT_MS")) {
-            curl_easy_setopt(curl, CURLOPT_EXPECT_100_TIMEOUT_MS, ob_get_n(Param1, L"EXPECT_100_TIMEOUT_MS"));
+            curl_easy_setopt(curl, CURLOPT_EXPECT_100_TIMEOUT_MS, (long)ob_get_n(Param1, L"EXPECT_100_TIMEOUT_MS"));
         }
         if(ob_is_defined(Param1, L"HEADEROPT")) {
-            curl_easy_setopt(curl, CURLOPT_HEADEROPT, ob_get_n(Param1, L"HEADEROPT"));
+            curl_easy_setopt(curl, CURLOPT_HEADEROPT, (long)ob_get_n(Param1, L"HEADEROPT"));
         }
         if(ob_is_defined(Param1, L"SSL_VERIFYSTATUS")) {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, ob_get_n(Param1, L"SSL_VERIFYSTATUS"));
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, (long)ob_get_n(Param1, L"SSL_VERIFYSTATUS"));
         }
         if(ob_is_defined(Param1, L"SSL_FALSESTART")) {
-            curl_easy_setopt(curl, CURLOPT_SSL_FALSESTART, ob_get_n(Param1, L"SSL_FALSESTART"));
+            curl_easy_setopt(curl, CURLOPT_SSL_FALSESTART, (long)ob_get_n(Param1, L"SSL_FALSESTART"));
         }
         if(ob_is_defined(Param1, L"PATH_AS_IS")) {
-            curl_easy_setopt(curl, CURLOPT_PATH_AS_IS, ob_get_n(Param1, L"PATH_AS_IS"));
+            curl_easy_setopt(curl, CURLOPT_PATH_AS_IS, (long)ob_get_n(Param1, L"PATH_AS_IS"));
         }
         if(ob_is_defined(Param1, L"PIPEWAIT")) {
-            curl_easy_setopt(curl, CURLOPT_PIPEWAIT, ob_get_n(Param1, L"PIPEWAIT"));
+            curl_easy_setopt(curl, CURLOPT_PIPEWAIT, (long)ob_get_n(Param1, L"PIPEWAIT"));
         }
         if(ob_is_defined(Param1, L"STREAM_WEIGHT")) {
-            curl_easy_setopt(curl, CURLOPT_STREAM_WEIGHT, ob_get_n(Param1, L"STREAM_WEIGHT"));
+            curl_easy_setopt(curl, CURLOPT_STREAM_WEIGHT, (long)ob_get_n(Param1, L"STREAM_WEIGHT"));
         }
         if(ob_is_defined(Param1, L"TFTP_NO_OPTIONS")) {
-            curl_easy_setopt(curl, CURLOPT_TFTP_NO_OPTIONS, ob_get_n(Param1, L"TFTP_NO_OPTIONS"));
+            curl_easy_setopt(curl, CURLOPT_TFTP_NO_OPTIONS, (long)ob_get_n(Param1, L"TFTP_NO_OPTIONS"));
         }
         if(ob_is_defined(Param1, L"TCP_FASTOPEN")) {
-            curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, ob_get_n(Param1, L"TCP_FASTOPEN"));
+            curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, (long)ob_get_n(Param1, L"TCP_FASTOPEN"));
         }
         if(ob_is_defined(Param1, L"KEEP_SENDING_ON_ERROR")) {
-            curl_easy_setopt(curl, CURLOPT_KEEP_SENDING_ON_ERROR, ob_get_n(Param1, L"KEEP_SENDING_ON_ERROR"));
+            curl_easy_setopt(curl, CURLOPT_KEEP_SENDING_ON_ERROR, (long)ob_get_n(Param1, L"KEEP_SENDING_ON_ERROR"));
         }
         if(ob_is_defined(Param1, L"PROXY_SSL_VERIFYPEER")) {
-            curl_easy_setopt(curl, CURLOPT_PROXY_SSL_VERIFYPEER, ob_get_n(Param1, L"PROXY_SSL_VERIFYPEER"));
+            curl_easy_setopt(curl, CURLOPT_PROXY_SSL_VERIFYPEER, (long)ob_get_n(Param1, L"PROXY_SSL_VERIFYPEER"));
         }
         if(ob_is_defined(Param1, L"PROXY_SSL_VERIFYHOST")) {
-            curl_easy_setopt(curl, CURLOPT_PROXY_SSL_VERIFYHOST, ob_get_n(Param1, L"PROXY_SSL_VERIFYHOST"));
+            curl_easy_setopt(curl, CURLOPT_PROXY_SSL_VERIFYHOST, (long)ob_get_n(Param1, L"PROXY_SSL_VERIFYHOST"));
         }
         if(ob_is_defined(Param1, L"PROXY_SSL_OPTIONS")) {
-            curl_easy_setopt(curl, CURLOPT_PROXY_SSL_OPTIONS, ob_get_n(Param1, L"PROXY_SSL_OPTIONS"));
+            curl_easy_setopt(curl, CURLOPT_PROXY_SSL_OPTIONS, (long)ob_get_n(Param1, L"PROXY_SSL_OPTIONS"));
         }
         if(ob_is_defined(Param1, L"SUPPRESS_CONNECT_HEADERS")) {
-            curl_easy_setopt(curl, CURLOPT_SUPPRESS_CONNECT_HEADERS, ob_get_n(Param1, L"SUPPRESS_CONNECT_HEADERS"));
+            curl_easy_setopt(curl, CURLOPT_SUPPRESS_CONNECT_HEADERS, (long)ob_get_n(Param1, L"SUPPRESS_CONNECT_HEADERS"));
         }
         if(ob_is_defined(Param1, L"SOCKS5_AUTH")) {
-            curl_easy_setopt(curl, CURLOPT_SOCKS5_AUTH, ob_get_n(Param1, L"SOCKS5_AUTH"));
+            curl_easy_setopt(curl, CURLOPT_SOCKS5_AUTH, (long)ob_get_n(Param1, L"SOCKS5_AUTH"));
         }
         if(ob_is_defined(Param1, L"SSH_COMPRESSION")) {
-            curl_easy_setopt(curl, CURLOPT_SSH_COMPRESSION, ob_get_n(Param1, L"SSH_COMPRESSION"));
+            curl_easy_setopt(curl, CURLOPT_SSH_COMPRESSION, (long)ob_get_n(Param1, L"SSH_COMPRESSION"));
         }
         if(ob_is_defined(Param1, L"HAPPY_EYEBALLS_TIMEOUT_MS")) {
-            curl_easy_setopt(curl, CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS, ob_get_n(Param1, L"HAPPY_EYEBALLS_TIMEOUT_MS"));
+            curl_easy_setopt(curl, CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS, (long)ob_get_n(Param1, L"HAPPY_EYEBALLS_TIMEOUT_MS"));
         }
         if(ob_is_defined(Param1, L"HAPROXYPROTOCOL")) {
-            curl_easy_setopt(curl, CURLOPT_HAPROXYPROTOCOL, ob_get_n(Param1, L"HAPROXYPROTOCOL"));
+            curl_easy_setopt(curl, CURLOPT_HAPROXYPROTOCOL, (long)ob_get_n(Param1, L"HAPROXYPROTOCOL"));
         }
         if(ob_is_defined(Param1, L"DNS_SHUFFLE_ADDRESSES")) {
-            curl_easy_setopt(curl, CURLOPT_DNS_SHUFFLE_ADDRESSES, ob_get_n(Param1, L"DNS_SHUFFLE_ADDRESSES"));
+            curl_easy_setopt(curl, CURLOPT_DNS_SHUFFLE_ADDRESSES, (long)ob_get_n(Param1, L"DNS_SHUFFLE_ADDRESSES"));
         }
         if(ob_is_defined(Param1, L"DISALLOW_USERNAME_IN_URL")) {
-            curl_easy_setopt(curl, CURLOPT_DISALLOW_USERNAME_IN_URL, ob_get_n(Param1, L"DISALLOW_USERNAME_IN_URL"));
+            curl_easy_setopt(curl, CURLOPT_DISALLOW_USERNAME_IN_URL, (long)ob_get_n(Param1, L"DISALLOW_USERNAME_IN_URL"));
         }
         if(ob_is_defined(Param1, L"UPLOAD_BUFFERSIZE")) {
-            curl_easy_setopt(curl, CURLOPT_UPLOAD_BUFFERSIZE, ob_get_n(Param1, L"UPLOAD_BUFFERSIZE"));
+            curl_easy_setopt(curl, CURLOPT_UPLOAD_BUFFERSIZE, (long)ob_get_n(Param1, L"UPLOAD_BUFFERSIZE"));
         }
+        if(ob_is_defined(Param1, L"MAX_SEND_SPEED")) {
+            curl_easy_setopt(curl, CURLOPT_MAX_SEND_SPEED_LARGE, (curl_off_t)ob_get_n(Param1, L"MAX_SEND_SPEED"));
+        }
+        if(ob_is_defined(Param1, L"MAX_SEND_SPEED_LARGE")) {
+            curl_easy_setopt(curl, CURLOPT_MAX_SEND_SPEED_LARGE, (curl_off_t)ob_get_n(Param1, L"MAX_SEND_SPEED_LARGE"));
+        }
+        if(ob_is_defined(Param1, L"MAX_RECV_SPEED")) {
+            curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)ob_get_n(Param1, L"MAX_RECV_SPEED"));
+        }
+        if(ob_is_defined(Param1, L"MAX_RECV_SPEED_LARGE")) {
+            curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)ob_get_n(Param1, L"MAX_RECV_SPEED_LARGE"));
+        }
+        
+        
+        
+        
         if(ob_is_defined(Param1, L"UPKEEP_INTERVAL_MS")) {
-            curl_easy_setopt(curl, CURLOPT_UPKEEP_INTERVAL_MS, ob_get_n(Param1, L"UPKEEP_INTERVAL_MS"));
+            curl_easy_setopt(curl, CURLOPT_UPKEEP_INTERVAL_MS, (long)ob_get_n(Param1, L"UPKEEP_INTERVAL_MS"));
         }
         
         if(ob_get_s(Param1, L"PINNEDPUBLICKEY", &stringValue)) {

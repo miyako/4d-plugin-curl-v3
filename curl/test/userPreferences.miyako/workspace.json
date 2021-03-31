@@ -1,15 +1,15 @@
 ﻿{
 	"editors": [
 		{
-			"type": "explorer"
-		},
-		{
 			"type": "method",
-			"id": 2147483647,
+			"id": 2147483633,
 			"codeDescriptor": {
 				"type": 1,
-				"methodName": "TEST_ftp_upload"
+				"methodName": "TEST_http_301"
 			}
+		},
+		{
+			"type": "explorer"
 		}
 	]
 }

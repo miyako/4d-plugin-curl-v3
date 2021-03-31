@@ -1,7 +1,7 @@
 ﻿{
 	"methods": {
 		"TEST_ftp_upload": {
-			"timeStamp": "2021-03-31T15:17:31.029Z"
+			"timeStamp": "2021-03-31T15:48:56.403Z"
 		},
 		"generate_file_from_template": {
 			"timeStamp": "2019-07-29T04:26:04.000Z",
@@ -37,6 +37,9 @@
 				"invisible": true,
 				"preemptive": "capable"
 			}
+		},
+		"TEST_http_301": {
+			"timeStamp": "2021-03-31T15:58:05.771Z"
 		},
 		"TEST_version_info": {
 			"timeStamp": "2021-03-31T14:28:26.985Z"
