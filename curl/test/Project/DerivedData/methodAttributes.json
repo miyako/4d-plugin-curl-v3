@@ -1,4 +1,4 @@
-﻿{
+{
 	"methods": {
 		"TEST_ftp_upload": {
 			"timeStamp": "2021-03-31T15:48:56.403Z"
@@ -25,10 +25,10 @@
 			}
 		},
 		"update_manifest_json": {
-			"timeStamp": "2019-12-13T04:37:40.000Z",
+			"timeStamp": "2021-05-31T10:44:45.821Z",
 			"attributes": {
 				"invisible": true,
-				"preemptive": "capable"
+				"preemptive": "incapable"
 			}
 		},
 		"generate_project_xcode": {
@@ -39,7 +39,7 @@
 			}
 		},
 		"TEST_http_301": {
-			"timeStamp": "2021-03-31T15:58:05.771Z"
+			"timeStamp": "2021-04-01T06:10:35.704Z"
 		},
 		"TEST_version_info": {
 			"timeStamp": "2021-03-31T14:28:26.985Z"
@@ -76,6 +76,9 @@
 				"invisible": true,
 				"preemptive": "capable"
 			}
+		},
+		"TEST_ftp": {
+			"timeStamp": "2021-05-31T09:53:45.735Z"
 		}
 	}
 }

@@ -1,11 +1,11 @@
-﻿{
+{
 	"editors": [
 		{
 			"type": "method",
-			"id": 2147483633,
+			"id": 2147483643,
 			"codeDescriptor": {
 				"type": 1,
-				"methodName": "TEST_http_301"
+				"methodName": "update_manifest_json"
 			}
 		},
 		{

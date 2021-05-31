@@ -2450,8 +2450,10 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
 
     switch (commandType) {
         case curl_ftp_command_Send:
-        case curl_ftp_command_Receive:
             Param2.fromParamAtIndex(pParams, 2);
+            Param4.fromParamAtIndex(pParams, 3);
+            break;
+        case curl_ftp_command_Receive:
             Param4.fromParamAtIndex(pParams, 3);
             break;
         default:
@@ -2789,7 +2791,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
         }
             break;
         case curl_ftp_command_Receive:
-            Param4.toParamAtIndex(pParams, 2);
+            Param3.toParamAtIndex(pParams, 2);
             break;
         case curl_ftp_command_Delete:
             curl_slist_free_all(h);
