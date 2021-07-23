@@ -1,4 +1,4 @@
-{
+﻿{
 	"Sources/DatabaseMethods/onStartup.4dm": {
 		"left": 322,
 		"top": 651,
@@ -155,12 +155,6 @@
 		"width": 877,
 		"height": 662
 	},
-	"Sources/Methods/update_manifest_json.4dm": {
-		"left": 152,
-		"top": 760,
-		"width": 1129,
-		"height": 731
-	},
 	"Sources/Methods/TEST_PROGRESS.4dm": {
 		"left": 90,
 		"top": 228,
@@ -168,10 +162,10 @@
 		"height": 486
 	},
 	"Sources/Methods/TEST_ftp.4dm": {
-		"left": 905,
-		"top": 291,
+		"left": 269,
+		"top": 233,
 		"width": 961,
-		"height": 400
+		"height": 374
 	},
 	"Sources/Methods/TEST_version_info.4dm": {
 		"left": 220,
@@ -186,21 +180,33 @@
 		"height": 382
 	},
 	"Sources/Methods/TEST_https.4dm": {
-		"left": 291,
-		"top": 235,
+		"left": 569,
+		"top": 382,
 		"width": 961,
-		"height": 408
+		"height": 374
 	},
 	"Sources/Methods/TEST_http.4dm": {
 		"left": 291,
-		"top": 261,
-		"width": 961,
-		"height": 382
+		"top": 287,
+		"width": 881,
+		"height": 449
 	},
-	"Sources/Methods/TEST_http_301.4dm": {
+	"Trash/Methods/(update_manifest_json).4dm": {
+		"left": 152,
+		"top": 760,
+		"width": 1129,
+		"height": 731
+	},
+	"Trash/Methods/(TEST_http_301).4dm": {
 		"left": 905,
 		"top": 291,
 		"width": 961,
 		"height": 350
+	},
+	"Sources/Methods/TEST_ftp_1.4dm": {
+		"left": 122,
+		"top": 269,
+		"width": 961,
+		"height": 374
 	}
 }

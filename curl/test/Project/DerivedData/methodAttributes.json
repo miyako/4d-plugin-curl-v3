@@ -1,7 +1,11 @@
-{
+﻿{
 	"methods": {
-		"TEST_ftp_upload": {
-			"timeStamp": "2021-03-31T15:48:56.403Z"
+		"generate_constants_xlf": {
+			"timeStamp": "2019-07-29T04:26:04.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
+			}
 		},
 		"generate_file_from_template": {
 			"timeStamp": "2019-07-29T04:26:04.000Z",
@@ -10,6 +14,9 @@
 				"preemptive": "capable"
 			}
 		},
+		"generate_project": {
+			"timeStamp": "2021-03-30T07:42:53.000Z"
+		},
 		"generate_project_infoplist": {
 			"timeStamp": "2019-07-02T13:51:21.000Z",
 			"attributes": {
@@ -17,18 +24,25 @@
 				"preemptive": "capable"
 			}
 		},
-		"generate_constants_xlf": {
-			"timeStamp": "2019-07-29T04:26:04.000Z",
+		"generate_project_plugin_stub": {
+			"timeStamp": "2019-07-23T08:36:58.000Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"
 			}
 		},
-		"update_manifest_json": {
-			"timeStamp": "2021-05-31T10:44:45.821Z",
+		"generate_project_source": {
+			"timeStamp": "2019-07-02T14:36:13.000Z",
 			"attributes": {
 				"invisible": true,
-				"preemptive": "incapable"
+				"preemptive": "capable"
+			}
+		},
+		"generate_project_vs": {
+			"timeStamp": "2019-07-24T08:49:03.000Z",
+			"attributes": {
+				"invisible": true,
+				"preemptive": "capable"
 			}
 		},
 		"generate_project_xcode": {
@@ -38,47 +52,26 @@
 				"preemptive": "capable"
 			}
 		},
-		"TEST_http_301": {
-			"timeStamp": "2021-04-01T06:10:35.704Z"
+		"TEST_ftp": {
+			"timeStamp": "2021-07-23T23:37:31.649Z"
 		},
-		"TEST_version_info": {
-			"timeStamp": "2021-03-31T14:28:26.985Z"
+		"TEST_ftp_1": {
+			"timeStamp": "2021-07-23T23:36:29.330Z"
+		},
+		"TEST_ftp_upload": {
+			"timeStamp": "2021-03-31T15:48:56.000Z"
+		},
+		"TEST_http": {
+			"timeStamp": "2021-03-31T15:26:06.000Z"
+		},
+		"TEST_https": {
+			"timeStamp": "2021-03-31T14:34:44.000Z"
 		},
 		"TEST_PROGRESS": {
 			"timeStamp": "2021-03-31T07:57:31.000Z"
 		},
-		"generate_project": {
-			"timeStamp": "2021-03-30T07:42:53.000Z"
-		},
-		"generate_project_vs": {
-			"timeStamp": "2019-07-24T08:49:03.000Z",
-			"attributes": {
-				"invisible": true,
-				"preemptive": "capable"
-			}
-		},
-		"TEST_http": {
-			"timeStamp": "2021-03-31T15:26:06.294Z"
-		},
-		"generate_project_plugin_stub": {
-			"timeStamp": "2019-07-23T08:36:58.000Z",
-			"attributes": {
-				"invisible": true,
-				"preemptive": "capable"
-			}
-		},
-		"TEST_https": {
-			"timeStamp": "2021-03-31T14:34:44.414Z"
-		},
-		"generate_project_source": {
-			"timeStamp": "2019-07-02T14:36:13.000Z",
-			"attributes": {
-				"invisible": true,
-				"preemptive": "capable"
-			}
-		},
-		"TEST_ftp": {
-			"timeStamp": "2021-05-31T09:53:45.735Z"
+		"TEST_version_info": {
+			"timeStamp": "2021-03-31T14:28:26.000Z"
 		}
 	}
 }

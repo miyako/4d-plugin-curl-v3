@@ -585,12 +585,12 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 meth
     auto startTime = std::chrono::high_resolution_clock::now();//time(0);
         
     PA_Variable    cbparams[2];
+
+    cbparams[0] = PA_CreateVariable(eVK_Object);
+    cbparams[1] = PA_CreateVariable(eVK_Unistring);
     
     if(method_id)
     {
-        cbparams[0] = PA_CreateVariable(eVK_Object);
-        cbparams[1] = PA_CreateVariable(eVK_Unistring);
-        
         //$2 is userInfo (static)
         
         PA_SetUnistring((&(cbparams[1].uValue.fString)),
@@ -698,24 +698,21 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 meth
                     {
                         startTime = now;
                         
-                        if(method_id)
+                        std::lock_guard<std::mutex> lock(mutexMcurl);
+                        
+                        PA_ObjectRef transferInfo = PA_CreateObject();
+                        curl_get_info(curl, transferInfo);
+                        
+                        PA_SetObjectVariable(&cbparams[0], transferInfo);
+                        
+                        PA_Variable statusCode = PA_ExecuteMethodByID(method_id, cbparams, 2);
+                        if(PA_GetVariableKind(statusCode) == eVK_Boolean)
                         {
-                            std::lock_guard<std::mutex> lock(mutexMcurl);
-                            
-                            PA_ObjectRef transferInfo = PA_CreateObject();
-                            curl_get_info(curl, transferInfo);
-                            
-                            PA_SetObjectVariable(&cbparams[0], transferInfo);
-
-                            PA_Variable statusCode = PA_ExecuteMethodByID(method_id, cbparams, 2);
-                            if(PA_GetVariableKind(statusCode) == eVK_Boolean)
+                            if(PA_GetBooleanVariable(statusCode))
                             {
-                                if(PA_GetBooleanVariable(statusCode))
-                                {
-                                    /* abort */
-                                    result = CURLE_ABORTED_BY_CALLBACK;
-                                    goto curl_abort_transfer;
-                                }
+                                /* abort */
+                                result = CURLE_ABORTED_BY_CALLBACK;
+                                goto curl_abort_transfer;
                             }
                         }
                     }
@@ -2233,14 +2230,15 @@ void _cURL(PA_PluginParameters params) {
 }
 
 static protocol_type_t curl_set_options_for_ftp(CURL *curl,
-                                         PA_ObjectRef Param1,
-                                         CPathString& request_path,
-                                         CPathString& response_path,
-                                         C_TEXT& userInfo,
-                                         std::string& ie,
-                                         std::string& oe,
-                                         std::string& path,
-                                         BOOL removeFileName = FALSE) {
+                                                PA_ObjectRef Param1,
+                                                CPathString& request_path,
+                                                CPathString& response_path,
+                                                C_TEXT& userInfo,
+                                                std::string& ie,
+                                                std::string& oe,
+                                                std::string& path,
+                                                curl_ftp_command_t commandType,
+                                                BOOL removeFileName = FALSE) {
     
     protocol_type_t protocol = PROTOCOL_TYPE_UNKNOWN;
     
@@ -2311,6 +2309,20 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
                 {
                     protocol = PROTOCOL_TYPE_FTP;
                 }
+                
+                switch (commandType) {
+                    case curl_ftp_command_MakeDir:
+                    {
+                        if(url_for_ftp.size() > 0) {
+                            if(url_for_ftp.at(path.size() - 1) != '/')
+                                url_for_ftp += '/';
+                        }
+                    }
+                        break;
+                    default:
+                        break;
+                }
+                
                 curl_easy_setopt(curl, CURLOPT_URL, url_for_ftp.c_str());
             }
         }
@@ -2414,25 +2426,27 @@ static void curl_unescape_path(CURL *curl, std::string& path) {
 
 static void remove_trailing_separator(CUTF8String& path) {
     
-    size_t pos = path.length() -1;
-    
-    if((path.compare(pos, 1, (const uint8_t *)"/") == 0))
-    {
-        path = path.substr(0, pos);
+    if(path.length() > 1) {
+        size_t pos = path.length() -1;
+        
+        if((path.compare(pos, 1, (const uint8_t *)"/") == 0))
+        {
+            path = path.substr(0, pos);
+        }
     }
-    
 }
 
 #if VERSIONWIN
 static void remove_trailing_separator(CUTF16String& path) {
     
-    size_t pos = path.length() -1;
-    
-    if((path.compare(pos, 1, (const PA_Unichar *)L"\\") == 0))
-    {
-        path = path.substr(0, pos);
+    if(path.length() > 1) {
+        size_t pos = path.length() -1;
+        
+        if((path.compare(pos, 1, (const PA_Unichar *)L"\\") == 0))
+        {
+            path = path.substr(0, pos);
+        }
     }
-    
 }
 #endif
 
@@ -2477,7 +2491,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     protocol_type_t protocol = curl_set_options_for_ftp(curl,
                                                         Param1,
                                                         request_path, response_path,
-                                                        userInfo, ie, oe, path);
+                                                        userInfo, ie, oe, path, commandType);
     std::string rename_to;
     
     switch (commandType) {

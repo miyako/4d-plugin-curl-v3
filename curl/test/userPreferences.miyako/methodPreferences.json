@@ -1,4 +1,4 @@
-{
+﻿{
 	"Sources/Methods/generate_project_xcode.4dm": {
 		"startSelection": 0,
 		"endSelection": 0,
@@ -188,15 +188,6 @@
 		"bookmarks": [],
 		"stamp": "2019-07-07T00:13:49.000Z"
 	},
-	"Sources/Methods/update_manifest_json.4dm": {
-		"startSelection": 45,
-		"endSelection": 45,
-		"firstSelectedLine": 10,
-		"lastSelectedLine": 10,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2021-05-31T10:44:45.821Z"
-	},
 	"Sources/Methods/TEST_PROGRESS.4dm": {
 		"startSelection": 9,
 		"endSelection": 9,
@@ -207,13 +198,13 @@
 		"stamp": "2021-03-31T07:57:31.000Z"
 	},
 	"Sources/Methods/TEST_ftp.4dm": {
-		"startSelection": 7,
-		"endSelection": 7,
-		"firstSelectedLine": 10,
-		"lastSelectedLine": 10,
+		"startSelection": 24,
+		"endSelection": 24,
+		"firstSelectedLine": 7,
+		"lastSelectedLine": 7,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2021-05-31T10:44:41.432Z"
+		"stamp": "2021-07-23T23:38:04.566Z"
 	},
 	"Sources/Methods/TEST_version_info.4dm": {
 		"startSelection": 27,
@@ -234,10 +225,10 @@
 		"stamp": "2021-03-31T15:48:56.403Z"
 	},
 	"Sources/Methods/TEST_https.4dm": {
-		"startSelection": 24,
-		"endSelection": 24,
-		"firstSelectedLine": 16,
-		"lastSelectedLine": 16,
+		"startSelection": 18,
+		"endSelection": 18,
+		"firstSelectedLine": 14,
+		"lastSelectedLine": 14,
 		"folding": [],
 		"bookmarks": [],
 		"stamp": "2021-03-31T14:34:44.414Z"
@@ -251,13 +242,13 @@
 		"bookmarks": [],
 		"stamp": "2021-03-31T15:26:06.294Z"
 	},
-	"Sources/Methods/TEST_http_301.4dm": {
-		"startSelection": 9,
-		"endSelection": 9,
-		"firstSelectedLine": 10,
-		"lastSelectedLine": 10,
+	"Sources/Methods/TEST_ftp_1.4dm": {
+		"startSelection": 0,
+		"endSelection": 0,
+		"firstSelectedLine": 7,
+		"lastSelectedLine": 7,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2021-04-01T06:10:35.704Z"
+		"stamp": "2021-07-23T23:38:28.044Z"
 	}
 }
