@@ -1936,65 +1936,65 @@ static bool curl_set_options(CURL *curl,
         
         /* array string */
         
-        if(curl_slist_connect_to) {
+//        if(curl_slist_connect_to) {
             if(ob_is_defined(Param1, L"CONNECT_TO")) {
                 curl_easy_setopt_array(curl, CURLOPT_CONNECT_TO, ob_get_c(Param1, L"CONNECT_TO"), curl_slist_connect_to);
             }
-        }
+//        }
 
-        if(curl_slist_proxy_header) {
+//        if(curl_slist_proxy_header) {
             if(ob_is_defined(Param1, L"PROXYHEADER")) {
                 curl_easy_setopt_array(curl, CURLOPT_PROXYHEADER, ob_get_c(Param1, L"PROXYHEADER"), curl_slist_proxy_header);
             }
-        }
+//        }
         
-        if(curl_slist_http_header) {
+//        if(curl_slist_http_header) {
             if(ob_is_defined(Param1, L"HTTPHEADER")) {
                 curl_easy_setopt_array(curl, CURLOPT_HTTPHEADER, ob_get_c(Param1, L"HTTPHEADER"), curl_slist_http_header);
             }
-        }
+//        }
 
-        if(curl_slist_http_200_aliases) {
+//        if(curl_slist_http_200_aliases) {
             if(ob_is_defined(Param1, L"HTTP200ALIASES")) {
                 curl_easy_setopt_array(curl, CURLOPT_HTTP200ALIASES, ob_get_c(Param1, L"HTTP200ALIASES"), curl_slist_http_200_aliases);
             }
-        }
+//        }
         
-        if(curl_slist_resolve) {
+//        if(curl_slist_resolve) {
             if(ob_is_defined(Param1, L"RESOLVE")) {
                 curl_easy_setopt_array(curl, CURLOPT_RESOLVE, ob_get_c(Param1, L"RESOLVE"), curl_slist_resolve);
             }
-        }
+//        }
 
-        if(curl_slist_mail_rcpt) {
+//        if(curl_slist_mail_rcpt) {
             if(ob_is_defined(Param1, L"MAIL_RCPT")) {
                 curl_easy_setopt_array(curl, CURLOPT_MAIL_RCPT, ob_get_c(Param1, L"MAIL_RCPT"), curl_slist_mail_rcpt);
             }
-        }
+//        }
         
-        if(curl_slist_prequote) {
+//        if(curl_slist_prequote) {
             if(ob_is_defined(Param1, L"PREQUOTE")) {
                 curl_easy_setopt_array(curl, CURLOPT_PREQUOTE, ob_get_c(Param1, L"PREQUOTE"), curl_slist_prequote);
             }
-        }
+//        }
 
-        if(curl_slist_postquote) {
+//        if(curl_slist_postquote) {
             if(ob_is_defined(Param1, L"POSTQUOTE")) {
                 curl_easy_setopt_array(curl, CURLOPT_POSTQUOTE, ob_get_c(Param1, L"POSTQUOTE"), curl_slist_postquote);
             }
-        }
+//        }
 
-        if(curl_slist_quote) {
+//        if(curl_slist_quote) {
             if(ob_is_defined(Param1, L"QUOTE")) {
                 curl_easy_setopt_array(curl, CURLOPT_QUOTE, ob_get_c(Param1, L"QUOTE"), curl_slist_quote);
             }
-        }
+//        }
 
-        if(curl_slist_telnet_options) {
+//        if(curl_slist_telnet_options) {
             if(ob_is_defined(Param1, L"TELNETOPTIONS")) {
                 curl_easy_setopt_array(curl, CURLOPT_TELNETOPTIONS, ob_get_c(Param1, L"TELNETOPTIONS"), curl_slist_telnet_options);
             }
-        }
+//        }
     }
     return isAtomic;
 }
