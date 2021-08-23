@@ -1,5 +1,10 @@
 ﻿{
-	"discuss.4D.com": {},
+	"discuss.4D.com": {
+		"methods": [
+			"TEST_ftp_1",
+			"TEST_http_hdr"
+		]
+	},
 	"export_project": {
 		"methods": [
 			"generate_constants_xlf",
@@ -10,6 +15,16 @@
 			"generate_project_source",
 			"generate_project_vs",
 			"generate_project_xcode"
+		]
+	},
+	"TEST": {
+		"methods": [
+			"TEST_ftp",
+			"TEST_ftp_upload",
+			"TEST_http",
+			"TEST_https",
+			"TEST_PROGRESS",
+			"TEST_version_info"
 		]
 	},
 	"trash": {}
