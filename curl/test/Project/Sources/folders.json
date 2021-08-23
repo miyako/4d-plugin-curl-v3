@@ -1,10 +1,4 @@
 ﻿{
-	"discuss.4D.com": {
-		"methods": [
-			"TEST_ftp_1",
-			"TEST_http_hdr"
-		]
-	},
 	"export_project": {
 		"methods": [
 			"generate_constants_xlf",
@@ -15,6 +9,12 @@
 			"generate_project_source",
 			"generate_project_vs",
 			"generate_project_xcode"
+		]
+	},
+	"issues": {
+		"methods": [
+			"issue 1",
+			"issue 9"
 		]
 	},
 	"TEST": {

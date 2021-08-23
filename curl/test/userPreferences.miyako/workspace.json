@@ -1,15 +1,18 @@
 ﻿{
 	"editors": [
 		{
-			"type": "explorer"
-		},
-		{
 			"type": "method",
-			"id": 2147483642,
+			"id": 2147483643,
 			"codeDescriptor": {
 				"type": 1,
-				"methodName": "TEST_http_hdr"
+				"methodName": "issue 1"
 			}
+		},
+		{
+			"type": "toolbox"
+		},
+		{
+			"type": "explorer"
 		}
 	]
 }
