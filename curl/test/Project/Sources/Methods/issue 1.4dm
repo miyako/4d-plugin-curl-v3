@@ -1,7 +1,7 @@
 //%attributes = {}
 /*
 
-stfp on windows
+stfp
 
 */
 

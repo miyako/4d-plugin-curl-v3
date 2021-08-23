@@ -2319,10 +2319,11 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
                 }
                 
                 switch (commandType) {
+                    case curl_ftp_command_RemoveDir:
                     case curl_ftp_command_MakeDir:
                     {
                         if(url_for_ftp.size() > 0) {
-                            if(url_for_ftp.at(path.size() - 1) != '/')
+                            if(url_for_ftp.at(url_for_ftp.size() - 1) != '/')
                                 url_for_ftp += '/';
                         }
                     }
@@ -2632,14 +2633,13 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                     quote = std::string((const char *)"mkdir \"/")
                     .append(path)
                     .append((const char *)"\"");
-                    h = curl_slist_append(h, (const char *)quote.c_str());
                     break;
                     
                 default:
                     quote = std::string((const char *)"MKD ").append(path);
-                    h = curl_slist_append(h, (const char *)quote.c_str());
                     break;
             }
+            h = curl_slist_append(h, (const char *)quote.c_str());
             curl_easy_setopt(curl, CURLOPT_QUOTE, h);
             break;
         case curl_ftp_command_PrintDir:
@@ -2660,7 +2660,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                 case PROTOCOL_TYPE_SFTP:
                     quote = std::string((const char *)"rmdir \"/")
                     .append(path)
-                    .append((const char *)"\"");/* rm takes an absolute path */
+                    .append((const char *)"\"");
                     break;
                     
                 default:
@@ -2668,18 +2668,8 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                     .append(path);
                     break;
             }
-            
             h = curl_slist_append(h, (const char *)quote.c_str());
-            
-            switch (protocol) {
-                case PROTOCOL_TYPE_SFTP:
-                    curl_easy_setopt(curl, CURLOPT_QUOTE, h);
-                    break;
-                    
-                default:
-                    curl_easy_setopt(curl, CURLOPT_POSTQUOTE, h);
-                    break;
-            }
+            curl_easy_setopt(curl, CURLOPT_QUOTE, h);
             break;
         case curl_ftp_command_Rename:
             apply_input_encoding(path, ie);
@@ -2702,18 +2692,8 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                     quote = std::string((const char *)"RNTO ").append(rename_to);
                     break;
             }
-            
             h = curl_slist_append(h, (const char *)quote.c_str());
-            
-            //    switch (protocol) {
-            //        case PROTOCOL_TYPE_SFTP:
-            //            curl_easy_setopt(curl, CURLOPT_QUOTE, h);
-            //            break;
-            //
-            //        default:
-                        curl_easy_setopt(curl, CURLOPT_POSTQUOTE, h);
-            //            break;
-            //    }
+            curl_easy_setopt(curl, CURLOPT_POSTQUOTE, h);
             break;
         case curl_ftp_command_Send:
             curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
@@ -2745,18 +2725,8 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                     .append(path);/* DELE takes a relative path;quote are not allowed */
                     break;
             }
-            
             h = curl_slist_append(h, (const char *)quote.c_str());
-            
-            switch (protocol) {
-                case PROTOCOL_TYPE_SFTP:
-                    curl_easy_setopt(curl, CURLOPT_QUOTE, h);
-                    break;
-                    
-                default:
-                    curl_easy_setopt(curl, CURLOPT_POSTQUOTE, h);
-                    break;
-            }
+            curl_easy_setopt(curl, CURLOPT_POSTQUOTE, h);
             break;
         default:
             break;

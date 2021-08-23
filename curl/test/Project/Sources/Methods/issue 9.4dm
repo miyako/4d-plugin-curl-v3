@@ -38,6 +38,6 @@ End if
 $options.SSL_VERIFYPEER:=0
 $options.SSL_VERIFYHOST:=0
 
-$options.URL:="sftp://100.64.1.57/Users/miyako/Desktop/uploaded.zip"
+$options.URL:="sftp://100.64.1.57/Users/miyako/Desktop/test/uploaded.zip"
 
 $status:=cURL_FTP_Send ($options)

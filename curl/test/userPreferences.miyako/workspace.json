@@ -2,17 +2,25 @@
 	"editors": [
 		{
 			"type": "method",
-			"id": 2147483643,
+			"id": 2147483646,
 			"codeDescriptor": {
 				"type": 1,
-				"methodName": "issue 1"
+				"methodName": "issue 5"
+			}
+		},
+		{
+			"type": "explorer"
+		},
+		{
+			"type": "method",
+			"id": 2147483635,
+			"codeDescriptor": {
+				"type": 1,
+				"methodName": "issue 9"
 			}
 		},
 		{
 			"type": "toolbox"
-		},
-		{
-			"type": "explorer"
 		}
 	]
 }

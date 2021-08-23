@@ -5,5 +5,19 @@
 			"type": 1,
 			"methodName": "issue 9"
 		}
+	},
+	{
+		"line": 18,
+		"method": {
+			"type": 1,
+			"methodName": "issue 5_2"
+		}
+	},
+	{
+		"line": 20,
+		"method": {
+			"type": 1,
+			"methodName": "issue 5"
+		}
 	}
 ]

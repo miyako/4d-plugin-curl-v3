@@ -243,21 +243,39 @@
 		"stamp": "2021-03-31T15:26:06.294Z"
 	},
 	"Sources/Methods/issue 9.4dm": {
-		"startSelection": 53,
-		"endSelection": 59,
-		"firstSelectedLine": 13,
-		"lastSelectedLine": 13,
+		"startSelection": 60,
+		"endSelection": 60,
+		"firstSelectedLine": 39,
+		"lastSelectedLine": 39,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2021-08-23T12:45:08.649Z"
+		"stamp": "2021-08-23T14:03:09.803Z"
 	},
 	"Sources/Methods/issue 1.4dm": {
-		"startSelection": 0,
-		"endSelection": 0,
-		"firstSelectedLine": 16,
-		"lastSelectedLine": 16,
+		"startSelection": 4,
+		"endSelection": 4,
+		"firstSelectedLine": 2,
+		"lastSelectedLine": 2,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2021-08-23T12:51:35.958Z"
+		"stamp": "2021-08-23T13:54:52.813Z"
+	},
+	"Sources/Methods/issue 5.4dm": {
+		"startSelection": 25,
+		"endSelection": 25,
+		"firstSelectedLine": 15,
+		"lastSelectedLine": 15,
+		"folding": [],
+		"bookmarks": [],
+		"stamp": "2021-08-23T14:38:29.362Z"
+	},
+	"Sources/Methods/issue 5_2.4dm": {
+		"startSelection": 34,
+		"endSelection": 34,
+		"firstSelectedLine": 2,
+		"lastSelectedLine": 2,
+		"folding": [],
+		"bookmarks": [],
+		"stamp": "2021-08-23T14:35:59.541Z"
 	}
 }
