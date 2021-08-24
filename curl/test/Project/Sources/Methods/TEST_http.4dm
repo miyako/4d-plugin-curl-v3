@@ -16,6 +16,6 @@ $options.MAXREDIRS:=10
 
 $callback:="TEST_PROGRESS"
 
-C_BLOB:C604($request;$reponse)
+C_BLOB:C604($request;$response)
 
-$status:=cURL ($options;$request;$reponse;$callback)
+$status:=cURL ($options;$request;$response;$callback)

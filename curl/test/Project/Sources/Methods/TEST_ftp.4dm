@@ -1,9 +1,0 @@
-//%attributes = {}
-$options:=New object:C1471
-$options.URL:="ftp://test.rebex.net/readme.txt"
-$options.USE_SSL:="USESSL_TRY"
-$options.USERNAME:="demo"
-$options.PASSWORD:="password"
-  //$options.SSL_VERIFYHOST:=0
-  //$options.SSL_VERIFYPEER:=0
-$status:=cURL ($options)

@@ -2,14 +2,14 @@
 	"editors": [
 		{
 			"type": "method",
-			"id": 2147483635,
+			"id": 2147483647,
 			"codeDescriptor": {
 				"type": 1,
-				"methodName": "issue 9"
+				"methodName": "TEST_sftp"
 			}
 		},
 		{
-			"type": "toolbox"
+			"type": "explorer"
 		}
 	]
 }

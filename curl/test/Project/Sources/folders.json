@@ -13,15 +13,12 @@
 	},
 	"issues": {
 		"methods": [
-			"issue 1",
-			"issue 5",
-			"issue 5_2",
-			"issue 9"
+			"issue 5a",
+			"issue 5b"
 		]
 	},
 	"TEST": {
 		"methods": [
-			"TEST_ftp",
 			"TEST_ftp_upload",
 			"TEST_http",
 			"TEST_https",

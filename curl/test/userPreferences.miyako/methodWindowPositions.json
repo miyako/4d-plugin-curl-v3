@@ -161,12 +161,6 @@
 		"width": 961,
 		"height": 486
 	},
-	"Sources/Methods/TEST_ftp.4dm": {
-		"left": 269,
-		"top": 233,
-		"width": 961,
-		"height": 374
-	},
 	"Sources/Methods/TEST_version_info.4dm": {
 		"left": 220,
 		"top": 228,
@@ -203,28 +197,34 @@
 		"width": 961,
 		"height": 350
 	},
-	"Sources/Methods/issue 9.4dm": {
-		"left": 698,
-		"top": 220,
-		"width": 951,
-		"height": 718
-	},
-	"Sources/Methods/issue 1.4dm": {
-		"left": 544,
-		"top": 322,
-		"width": 946,
-		"height": 757
-	},
-	"Sources/Methods/issue 5.4dm": {
+	"Sources/Methods/issue 5a.4dm": {
 		"left": 187,
 		"top": 216,
 		"width": 946,
 		"height": 757
 	},
-	"Sources/Methods/issue 5_2.4dm": {
+	"Sources/Methods/issue 5b.4dm": {
 		"left": 140,
 		"top": 392,
 		"width": 946,
 		"height": 757
+	},
+	"Sources/Methods/TEST_sftp.4dm": {
+		"left": 928,
+		"top": 133,
+		"width": 946,
+		"height": 757
+	},
+	"Trash/Methods/(issue 9).4dm": {
+		"left": 698,
+		"top": 220,
+		"width": 951,
+		"height": 718
+	},
+	"Trash/Methods/(TEST_ftp).4dm": {
+		"left": 426,
+		"top": 469,
+		"width": 966,
+		"height": 480
 	}
 }

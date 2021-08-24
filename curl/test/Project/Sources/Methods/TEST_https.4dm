@@ -13,6 +13,6 @@ $options.BUFFERSIZE:=2000000
 
 $callback:="TEST_PROGRESS"
 
-C_BLOB:C604($request;$reponse)
+C_BLOB:C604($request;$response)
 
-$status:=cURL ($options;$request;$reponse;$callback)  //callback(Object,Text)
+$status:=cURL ($options;$request;$response;$callback)  //callback(Object,Text)
