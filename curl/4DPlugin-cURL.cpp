@@ -574,8 +574,21 @@ static CURLcode curl_perform_atomic(CURL *curl, PA_ObjectRef returnValue) {
     return result;
 }
 
-static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 method_id, C_TEXT& userInfo, PA_ObjectRef returnValue) {
+static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& methodName, C_TEXT& userInfo, PA_ObjectRef returnValue) {
         
+	PA_long32 method_id = 0;
+	
+	bool execute_callback_method = false;
+
+	if (methodName.length()) {
+		method_id = PA_GetMethodID((PA_Unichar *)methodName.c_str());
+		if (method_id == 0) {
+			execute_callback_method = true;
+		}
+	}
+	
+	PA_Unistring method = PA_CreateUnistring((PA_Unichar *)methodName.c_str());
+
     CUTF16String info;
     CURLMcode mc = CURLM_OK; /* not used to abort */
     CURLcode result = CURLE_OK;
@@ -584,18 +597,25 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 meth
         
     auto startTime = std::chrono::high_resolution_clock::now();//time(0);
         
-    PA_Variable    cbparams[2];
-
-    cbparams[0] = PA_CreateVariable(eVK_Object);
-    cbparams[1] = PA_CreateVariable(eVK_Unistring);
-    
-    if(method_id)
-    {
-        //$2 is userInfo (static)
-        
-        PA_SetUnistring((&(cbparams[1].uValue.fString)),
-                        (PA_Unichar *)userInfo.getUTF16StringPtr());
-    }
+    PA_Variable    cbparams[4];
+  
+  	if (method_id)
+	{
+		cbparams[0] = PA_CreateVariable(eVK_Object);
+		cbparams[1] = PA_CreateVariable(eVK_Unistring);
+		PA_SetUnistring((&(cbparams[1].uValue.fString)),
+			(PA_Unichar *)userInfo.getUTF16StringPtr());
+	}
+	if (execute_callback_method)
+	{
+		cbparams[0] = PA_CreateVariable(eVK_Unistring);
+		cbparams[1] = PA_CreateVariable(eVK_Boolean);
+		cbparams[2] = PA_CreateVariable(eVK_Object);
+		cbparams[3] = PA_CreateVariable(eVK_Unistring);
+		PA_SetStringVariable(&cbparams[0], &method);
+		PA_SetUnistring((&(cbparams[3].uValue.fString)),
+			(PA_Unichar *)userInfo.getUTF16StringPtr());
+	}
     
     int running_handles = 0;
     
@@ -689,7 +709,7 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 meth
                 }
             {
 
-                if(method_id)
+                if((method_id)||(execute_callback_method))
                 {
                     auto now = std::chrono::high_resolution_clock::now();//time(0);
                     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
@@ -703,18 +723,33 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 meth
                         PA_ObjectRef transferInfo = PA_CreateObject();
                         curl_get_info(curl, transferInfo);
                         
-                        PA_SetObjectVariable(&cbparams[0], transferInfo);
+                        PA_SetObjectVariable(&cbparams[2], transferInfo);
                         
-                        PA_Variable statusCode = PA_ExecuteMethodByID(method_id, cbparams, 2);
-                        if(PA_GetVariableKind(statusCode) == eVK_Boolean)
-                        {
-                            if(PA_GetBooleanVariable(statusCode))
-                            {
-                                /* abort */
-                                result = CURLE_ABORTED_BY_CALLBACK;
-                                goto curl_abort_transfer;
-                            }
-                        }
+						if (execute_callback_method) {
+							PA_ExecuteCommandByID(1007 /*EXECUTE METHOD*/, cbparams, 4);
+							PA_Variable statusCode = cbparams[1];
+							if (PA_GetVariableKind(statusCode) == eVK_Boolean)
+							{
+								if (PA_GetBooleanVariable(statusCode))
+								{
+									/* abort */
+									result = CURLE_ABORTED_BY_CALLBACK;
+									goto curl_abort_transfer;
+								}
+							}
+						}
+						else {
+							PA_Variable statusCode = PA_ExecuteMethodByID(method_id, cbparams, 2);
+							if (PA_GetVariableKind(statusCode) == eVK_Boolean)
+							{
+								if (PA_GetBooleanVariable(statusCode))
+								{
+									/* abort */
+									result = CURLE_ABORTED_BY_CALLBACK;
+									goto curl_abort_transfer;
+								}
+							}
+						}
                     }
                 }else
                 {
@@ -739,10 +774,7 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 meth
     }while((running_handles));
     
 curl_abort_transfer:
-    
-//    PA_ClearVariable(&cbparams[0]);
-//    PA_ClearVariable(&cbparams[1]);
-    
+        
     struct CURLMsg *m;
     int msgq = 0;
     
@@ -777,6 +809,7 @@ curl_abort_transfer:
     
     PA_ClearVariable(&cbparams[0]);
     PA_ClearVariable(&cbparams[1]);
+	PA_ClearVariable(&cbparams[2]);
     
     return result;
 }
@@ -2200,8 +2233,8 @@ void _cURL(PA_PluginParameters params) {
         
     }else
     {
-        PA_long32 method_id = PA_GetMethodID((PA_Unichar *)Param4.getUTF16StringPtr());
-        status = curl_perform_non_atomic(mcurl, curl, method_id, userInfo, returnValue);
+		CUTF16String methodName = (PA_Unichar *)Param4.getUTF16StringPtr();
+        status = curl_perform_non_atomic(mcurl, curl, methodName, userInfo, returnValue);
     }
     
     ob_set_n(returnValue, "status", status);
@@ -2474,6 +2507,38 @@ static void remove_trailing_separator(CUTF16String& path) {
 }
 #endif
 
+std::istream& safeGetline(std::istream& is, std::string& t)
+{
+	t.clear();
+
+	// The characters in the stream are read one-by-one using a std::streambuf.
+	// That is faster than reading them one-by-one using the std::istream.
+	// Code that uses streambuf this way must be guarded by a sentry object.
+	// The sentry object performs various tasks,
+	// such as thread synchronization and updating the stream state.
+
+	std::istream::sentry se(is, true);
+	std::streambuf* sb = is.rdbuf();
+
+	for (;;) {
+		int c = sb->sbumpc();
+		switch (c) {
+		case '\n':
+			return is;
+		case '\r':
+			if (sb->sgetc() == '\n')
+				sb->sbumpc();
+			return is;
+		case std::streambuf::traits_type::eof():
+			// Also handle the case when the last line has no line ending
+			if (t.empty())
+				is.setstate(std::ios::eofbit);
+			return is;
+		default:
+			t += (char)c;
+		}
+	}
+}
 void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     
     PA_ObjectRef Param1 = PA_GetObjectParameter(params, 1); /* options */
@@ -2749,8 +2814,8 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
         
     CURLcode status = CURLE_OK;
     
-    PA_long32 method_id = PA_GetMethodID((PA_Unichar *)Param4.getUTF16StringPtr());
-    status = curl_perform_non_atomic(mcurl, curl, method_id, userInfo, returnValue);
+	CUTF16String methodName = (PA_Unichar *)Param4.getUTF16StringPtr();
+    status = curl_perform_non_atomic(mcurl, curl, methodName, userInfo, returnValue);
     
     ob_set_n(returnValue, "status", status);
     
@@ -2767,14 +2832,12 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
             
             std::istringstream is(dirlist);
             PA_CollectionRef directories = PA_CreateCollection();
-            for (std::string line; getline(is, line); )
+            for (std::string line; safeGetline(is, line); )
             {
                 struct ftpparse r;
                 int found = ftpparse(&r, (char *)line.c_str(), (int)line.size());
                 if (!found){
-                    PA_Variable v = PA_CreateVariable(eVK_Null);
-                    PA_SetObjectVariable(&v, f);
-                    
+                    PA_Variable v = PA_CreateVariable(eVK_Null);                    
                     PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
                 }
                 else{
@@ -2814,7 +2877,6 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                     }
                                         
                     time_t mtime = r.mtime;
-                    char ts[256];
                     
                     switch (r.mtimetype) {
                         case FTPPARSE_MTIME_UNKNOWN:
@@ -2833,14 +2895,16 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                             break;
                     }
                     
+					std::vector<uint8_t> buf(32);
+					memset((char *)&buf[0], 0, buf.size());
+
                     if(r.mtimetype == FTPPARSE_MTIME_LOCAL) {
-                        strftime(ts, 256, "%Y-%m-%dT%H%:M%:S%z",  localtime(&mtime));
+                        strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H%:M%:S%z",  localtime(&mtime));
                     }else{
-                        strftime(ts, 256, "%Y-%m-%dT%H:%M:%S%z",  gmtime(&mtime));
+                        strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H:%M:%S%z",  gmtime(&mtime));
                     }
 
-                    std::string __ts(ts, strlen(ts));
-                    ob_set_s(f, L"mtime", __ts.c_str());
+                    ob_set_s(f, L"mtime", (char *)&buf[0]);
                     
                     PA_Variable v = PA_CreateVariable(eVK_Object);
                     PA_SetObjectVariable(&v, f);
