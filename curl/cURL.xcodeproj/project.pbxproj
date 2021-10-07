@@ -48,6 +48,8 @@
 		D155A54A26135ABF0015464C /* C_LONGINT.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A54826135ABF0015464C /* C_LONGINT.h */; };
 		D155A54B26135ABF0015464C /* C_LONGINT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A54926135ABF0015464C /* C_LONGINT.cpp */; };
 		D157E67E261461A600F340B7 /* libiconv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D157E67D261461A600F340B7 /* libiconv.a */; };
+		D1BF53F7270EB85400F6E1EE /* ftpparse.h in Headers */ = {isa = PBXBuildFile; fileRef = D1BF53F6270EB85400F6E1EE /* ftpparse.h */; };
+		D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */ = {isa = PBXBuildFile; fileRef = D1BF53F9270EB85800F6E1EE /* ftpparse.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -111,6 +113,8 @@
 		D157E66B26145FEC00F340B7 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		D157E6702614602200F340B7 /* libiconv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiconv.a; path = "../../4d-plugin-curl-ftp/ftp/a/libiconv.a"; sourceTree = "<group>"; };
 		D157E67D261461A600F340B7 /* libiconv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiconv.a; path = a/libiconv.a; sourceTree = "<group>"; };
+		D1BF53F6270EB85400F6E1EE /* ftpparse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ftpparse.h; path = include/ftpparse.h; sourceTree = "<group>"; };
+		D1BF53F9270EB85800F6E1EE /* ftpparse.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = ftpparse.c; path = include/ftpparse.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -206,6 +210,8 @@
 			children = (
 				18B684FE06944F8800CC6A1E /* 4DPlugin-cURL.cpp */,
 				D120937E13534DCC00A72CAA /* 4DPlugin-cURL.h */,
+				D1BF53F9270EB85800F6E1EE /* ftpparse.c */,
+				D1BF53F6270EB85400F6E1EE /* ftpparse.h */,
 				18B684ED06944F2000CC6A1E /* 4D Plugin API */,
 			);
 			name = Source;
@@ -266,6 +272,7 @@
 				D155A54A26135ABF0015464C /* C_LONGINT.h in Headers */,
 				D155A525261332130015464C /* ufopen.h in Headers */,
 				18B684F706944F2000CC6A1E /* 4DPluginAPI.h in Headers */,
+				D1BF53F7270EB85400F6E1EE /* ftpparse.h in Headers */,
 				18B684F806944F2000CC6A1E /* EntryPoints.h in Headers */,
 				18B684F906944F2000CC6A1E /* Flags.h in Headers */,
 				18B684FA06944F2000CC6A1E /* PrivateTypes.h in Headers */,
@@ -377,6 +384,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */,
 				D155A51926130F900015464C /* C_BLOB.cpp in Sources */,
 				D155A526261332130015464C /* ufopen.c in Sources */,
 				D155A54B26135ABF0015464C /* C_LONGINT.cpp in Sources */,
@@ -436,7 +444,7 @@
 					"$(PROJECT_DIR)/a",
 				);
 				LIBRARY_STYLE = Bundle;
-				MARKETING_VERSION = 4.1.2;
+				MARKETING_VERSION = 4.2.0;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
@@ -487,7 +495,7 @@
 					"$(PROJECT_DIR)/a",
 				);
 				LIBRARY_STYLE = Bundle;
-				MARKETING_VERSION = 4.1.2;
+				MARKETING_VERSION = 4.2.0;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
@@ -536,7 +544,7 @@
 					"$(PROJECT_DIR)/a",
 				);
 				LIBRARY_STYLE = Bundle;
-				MARKETING_VERSION = 4.1.2;
+				MARKETING_VERSION = 4.2.0;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";

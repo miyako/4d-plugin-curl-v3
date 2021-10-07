@@ -1,7 +1,7 @@
 ﻿{
 	"methods": {
 		"TEST_ftp_upload": {
-			"timeStamp": "2021-08-24T01:16:49.020Z"
+			"timeStamp": "2021-08-24T01:16:49.000Z"
 		},
 		"generate_file_from_template": {
 			"timeStamp": "2019-07-29T04:26:04.000Z",
@@ -32,10 +32,13 @@
 			}
 		},
 		"issue 5b": {
-			"timeStamp": "2021-08-23T14:35:59.541Z"
+			"timeStamp": "2021-08-23T14:35:59.000Z"
 		},
 		"issue 5a": {
-			"timeStamp": "2021-08-23T14:38:29.362Z"
+			"timeStamp": "2021-08-23T14:38:29.000Z"
+		},
+		"TEST_ftp_dirlist": {
+			"timeStamp": "2021-10-07T05:51:10.000Z"
 		},
 		"TEST_version_info": {
 			"timeStamp": "2021-03-31T14:28:26.000Z"
@@ -54,10 +57,10 @@
 			}
 		},
 		"TEST_sftp": {
-			"timeStamp": "2021-08-24T01:18:58.720Z"
+			"timeStamp": "2021-08-24T01:19:45.000Z"
 		},
 		"TEST_http": {
-			"timeStamp": "2021-08-24T01:14:52.997Z"
+			"timeStamp": "2021-08-24T01:14:52.000Z"
 		},
 		"generate_project_plugin_stub": {
 			"timeStamp": "2019-07-23T08:36:58.000Z",
@@ -67,7 +70,7 @@
 			}
 		},
 		"TEST_https": {
-			"timeStamp": "2021-08-24T01:14:45.629Z"
+			"timeStamp": "2021-08-24T01:14:45.000Z"
 		},
 		"generate_project_source": {
 			"timeStamp": "2019-07-02T14:36:13.000Z",

@@ -26,6 +26,8 @@
 
 #include "iconv.h"
 
+#include "ftpparse.h"
+
 #pragma mark -
 
 void cURL_VersionInfo(PA_PluginParameters params);

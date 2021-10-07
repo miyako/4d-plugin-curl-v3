@@ -29,6 +29,10 @@
     <ClCompile Include="4D Plugin API\Classes\C_LONGINT.cpp" />
     <ClCompile Include="4D Plugin API\Classes\C_TEXT.cpp" />
     <ClCompile Include="4DPlugin-cURL.cpp" />
+    <ClCompile Include="include\ftpparse.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsCpp</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsCpp</CompileAs>
+    </ClCompile>
     <ClCompile Include="support\4DPlugin-JSON.cpp" />
     <ClCompile Include="support\ufopen.c" />
   </ItemGroup>
@@ -43,6 +47,7 @@
     <ClInclude Include="4D Plugin API\PrivateTypes.h" />
     <ClInclude Include="4D Plugin API\PublicTypes.h" />
     <ClInclude Include="4DPlugin-cURL.h" />
+    <ClInclude Include="include\ftpparse.h" />
     <ClInclude Include="support\4DPlugin-JSON.h" />
     <ClInclude Include="support\ufopen.h" />
   </ItemGroup>

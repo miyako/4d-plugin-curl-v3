@@ -22,6 +22,9 @@
     <ClCompile Include="4D Plugin API\Classes\C_BLOB.cpp" />
     <ClCompile Include="4D Plugin API\Classes\C_LONGINT.cpp" />
     <ClCompile Include="4D Plugin API\Classes\C_TEXT.cpp" />
+    <ClCompile Include="include\ftpparse.c">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="4D Plugin API\4DPluginAPI.h">
@@ -50,6 +53,9 @@
     <ClInclude Include="4D Plugin API\Classes\C_LONGINT.h" />
     <ClInclude Include="4D Plugin API\Classes\C_TEXT.h" />
     <ClInclude Include="4D Plugin API\Classes\C_TYPES.h" />
+    <ClInclude Include="include\ftpparse.h">
+      <Filter>Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="4D Plugin API\4DPluginAPI.def">
