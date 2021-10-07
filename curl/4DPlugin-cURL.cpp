@@ -740,8 +740,8 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, PA_long32 meth
     
 curl_abort_transfer:
     
-    PA_ClearVariable(&cbparams[0]);
-    PA_ClearVariable(&cbparams[1]);
+//    PA_ClearVariable(&cbparams[0]);
+//    PA_ClearVariable(&cbparams[1]);
     
     struct CURLMsg *m;
     int msgq = 0;
@@ -754,6 +754,16 @@ curl_abort_transfer:
         if(m && (m->msg == CURLMSG_DONE))
         {
             result = m->data.result;
+            
+            //callback one last time
+            std::lock_guard<std::mutex> lock(mutexMcurl);
+            
+            PA_ObjectRef transferInfo = PA_CreateObject();
+            curl_get_info(curl, transferInfo);
+            
+            PA_SetObjectVariable(&cbparams[0], transferInfo);
+            
+            PA_ExecuteMethodByID(method_id, cbparams, 2);
         }
         
         PA_ObjectRef transferInfo = PA_CreateObject();
@@ -762,6 +772,9 @@ curl_abort_transfer:
         
         curl_multi_remove_handle(mcurl, curl);
     }
+    
+    PA_ClearVariable(&cbparams[0]);
+    PA_ClearVariable(&cbparams[1]);
     
     return result;
 }
