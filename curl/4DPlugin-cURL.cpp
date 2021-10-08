@@ -722,10 +722,9 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
                         
                         PA_ObjectRef transferInfo = PA_CreateObject();
                         curl_get_info(curl, transferInfo);
-                        
-                        PA_SetObjectVariable(&cbparams[2], transferInfo);
-                        
+
 						if (execute_callback_method) {
+                            PA_SetObjectVariable(&cbparams[2], transferInfo);
 							PA_ExecuteCommandByID(1007 /*EXECUTE METHOD*/, cbparams, 4);
 							PA_Variable statusCode = cbparams[1];
 							if (PA_GetVariableKind(statusCode) == eVK_Boolean)
@@ -739,6 +738,7 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
 							}
 						}
 						else {
+                            PA_SetObjectVariable(&cbparams[0], transferInfo);
 							PA_Variable statusCode = PA_ExecuteMethodByID(method_id, cbparams, 2);
 							if (PA_GetVariableKind(statusCode) == eVK_Boolean)
 							{
@@ -787,17 +787,20 @@ curl_abort_transfer:
         {
             result = m->data.result;
             
-            if(method_id)
+            if((method_id)||(execute_callback_method))
             {
                 //callback one last time
                 PA_ObjectRef transferInfo = PA_CreateObject();
                 curl_get_info(curl, transferInfo);
                 
-                PA_SetObjectVariable(&cbparams[0], transferInfo);
-                
-                PA_ExecuteMethodByID(method_id, cbparams, 2);
+                if (execute_callback_method) {
+                    PA_SetObjectVariable(&cbparams[2], transferInfo);
+                    PA_ExecuteCommandByID(1007 /*EXECUTE METHOD*/, cbparams, 4);
+                }else{
+                    PA_SetObjectVariable(&cbparams[0], transferInfo);
+                    PA_ExecuteMethodByID(method_id, cbparams, 2);
+                }
             }
-
         }
         
         PA_ObjectRef transferInfo = PA_CreateObject();
@@ -2831,7 +2834,9 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
             ob_set_s(returnValue, L"dirList", dirlist.c_str());
             
             std::istringstream is(dirlist);
+            
             PA_CollectionRef directories = PA_CreateCollection();
+            
             for (std::string line; safeGetline(is, line); )
             {
                 struct ftpparse r;
@@ -2839,6 +2844,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                 if (!found){
                     PA_Variable v = PA_CreateVariable(eVK_Null);                    
                     PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
+                    PA_ClearVariable(&v);
                 }
                 else{
                     PA_ObjectRef f = PA_CreateObject();
@@ -2910,6 +2916,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                     PA_SetObjectVariable(&v, f);
                     
                     PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
+                    PA_ClearVariable(&v);
                 }
             }
             ob_set_c(returnValue, L"ftpparse", directories);
