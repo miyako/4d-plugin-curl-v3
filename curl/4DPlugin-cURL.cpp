@@ -810,9 +810,19 @@ curl_abort_transfer:
         curl_multi_remove_handle(mcurl, curl);
     }
     
-    PA_ClearVariable(&cbparams[0]);
-    PA_ClearVariable(&cbparams[1]);
-	PA_ClearVariable(&cbparams[2]);
+    
+    if (method_id)
+    {
+        PA_ClearVariable(&cbparams[0]);//object (transferInfo)
+        PA_ClearVariable(&cbparams[1]);//string (userInfo)
+    }
+    if (execute_callback_method)
+    {
+        PA_ClearVariable(&cbparams[0]);//string (method)
+//        PA_ClearVariable(&cbparams[1]);//bool (statusCode) don't clear this
+        PA_ClearVariable(&cbparams[2]);//object (transferInfo)
+        PA_ClearVariable(&cbparams[3]);//string (userInfo)
+    }
     
     return result;
 }
