@@ -2096,6 +2096,25 @@ static bool curl_set_debug_option(CURL *curl,
                     debug_folder_path = (const PA_Unichar *)_path.c_str();
                     if(debug_folder_path.at(debug_folder_path.size() - 1) != L'\\') debug_folder_path += L'\\';
 #endif
+                    CUTF8String _id;
+                    if(ob_get_s(Param1, L"DEBUG_ID", &_id)){
+                        if(_id.length())
+                        {
+                            C_TEXT t;
+                            t.setUTF8String((const uint8_t *)_id.c_str(), (uint32_t)_id.length());
+#if VERSIONMAC
+                            CUTF8String _folder;
+                            t.copyPath(&_folder);
+                            debug_folder_path += (const uint8_t *)_folder.c_str();
+                            if(debug_folder_path.at(debug_folder_path.size() - 1) != '/') debug_folder_path += '/';
+#else
+                            CUTF16String _folder;
+                            t.copyUTF16String(&_folder);
+                            debug_folder_path += (const PA_Unichar *)_folder.c_str();
+                            if(debug_folder_path.at(debug_folder_path.size() - 1) != L'\\') debug_folder_path += L'\\';
+#endif
+                        }
+                    }
                     isDebugEnabled = TRUE;
                 }
             }

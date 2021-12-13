@@ -1,3 +1,8 @@
 ﻿{
-	"forms": {}
+	"forms": {
+		"フォーム1": {
+			"timeStamp": "2021-12-08T13:29:14.790Z",
+			"destination": "detailScreen"
+		}
+	}
 }

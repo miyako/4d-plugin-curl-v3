@@ -2,6 +2,14 @@
 	"editors": [
 		{
 			"type": "explorer"
+		},
+		{
+			"type": "method",
+			"id": 2147483630,
+			"codeDescriptor": {
+				"type": 1,
+				"methodName": "TEST_http_apple"
+			}
 		}
 	]
 }
