@@ -3,3 +3,4 @@ curl/test/Project/DerivedData/CompiledCode/*
 curl/test/userPreferences.miyako/*
 curl/test/Data/*
 curl/test/Libraries/lib4d-arm64.dylib
+curl/build/*

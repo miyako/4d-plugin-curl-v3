@@ -307,10 +307,32 @@ static size_t curl_write_function(void *buffer,
     return len;
 }
 
+static void convert_string_to_unistring(std::string& stringValue, CUTF16String& utf16value);
+
 static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
     
     if(transferInfo) {
      
+        struct curl_certinfo *ci;
+        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CERTINFO, &ci)) {
+            PA_CollectionRef certs = PA_CreateCollection();
+            for(unsigned int i = 0; i < ci->num_of_certs; ++i) {
+                struct curl_slist *slist;
+                for(slist = ci->certinfo[i]; slist; slist = slist->next) {
+                    std::string stringValue = slist->data;
+                    CUTF16String utf16value;
+                    convert_string_to_unistring(stringValue, utf16value);
+                    PA_Variable v = PA_CreateVariable(eVK_Unistring);
+                    PA_Unistring value = PA_CreateUnistring((PA_Unichar *)utf16value.c_str());
+                    PA_SetStringVariable(&v, &value);
+                    PA_SetCollectionElement(certs, PA_GetCollectionLength(certs), v);
+                    //value belongs to v, do not call PA_DisposeUnistring
+                    PA_ClearVariable(&v);
+                }
+            }
+            ob_set_c(transferInfo, "certInfo", certs);
+        }
+        
         long responseCode, connectCode, fileTime,
         redirectCount, headerSize, requestSize, lastSocket,
         sslVerifyResult, localPort, primaryPort, numConnects,

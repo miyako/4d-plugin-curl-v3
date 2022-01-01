@@ -14,8 +14,8 @@
             filePath = "4DPlugin-cURL.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "688"
-            endingLineNumber = "688"
+            startingLineNumber = "710"
+            endingLineNumber = "710"
             landmarkName = "curl_perform_non_atomic(mcurl, curl, methodName, userInfo, returnValue)"
             landmarkType = "9">
          </BreakpointContent>
@@ -30,9 +30,25 @@
             filePath = "4DPlugin-cURL.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "687"
-            endingLineNumber = "687"
+            startingLineNumber = "709"
+            endingLineNumber = "709"
             landmarkName = "curl_perform_non_atomic(mcurl, curl, methodName, userInfo, returnValue)"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "7A006C32-18B6-40B2-B7F7-0303659F84BD"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "4DPlugin-cURL.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "360"
+            endingLineNumber = "360"
+            landmarkName = "curl_get_info(curl, transferInfo)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
