@@ -1,4 +1,4 @@
-﻿{
+{
 	"Sources/DatabaseMethods/onStartup.4dm": {
 		"left": 322,
 		"top": 651,
@@ -234,9 +234,15 @@
 		"height": 757
 	},
 	"Sources/Methods/TEST_http_apple.4dm": {
-		"left": 607,
-		"top": 319,
-		"width": 723,
-		"height": 574
+		"left": 385,
+		"top": 351,
+		"width": 836,
+		"height": 581
+	},
+	"Sources/Methods/issue 12.4dm": {
+		"left": 385,
+		"top": 323,
+		"width": 836,
+		"height": 609
 	}
 }
