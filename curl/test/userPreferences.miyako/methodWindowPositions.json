@@ -162,10 +162,10 @@
 		"height": 486
 	},
 	"Sources/Methods/TEST_version_info.4dm": {
-		"left": 220,
-		"top": 228,
-		"width": 1178,
-		"height": 523
+		"left": 594,
+		"top": 381,
+		"width": 961,
+		"height": 428
 	},
 	"Sources/Methods/TEST_ftp_upload.4dm": {
 		"left": 291,
@@ -174,10 +174,10 @@
 		"height": 382
 	},
 	"Sources/Methods/TEST_https.4dm": {
-		"left": 569,
-		"top": 382,
+		"left": 594,
+		"top": 409,
 		"width": 961,
-		"height": 374
+		"height": 400
 	},
 	"Sources/Methods/TEST_http.4dm": {
 		"left": 291,
@@ -244,5 +244,11 @@
 		"top": 323,
 		"width": 836,
 		"height": 609
+	},
+	"Sources/Methods/TEST_ftp_14.4dm": {
+		"left": 716,
+		"top": 111,
+		"width": 1114,
+		"height": 784
 	}
 }
