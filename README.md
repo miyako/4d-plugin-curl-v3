@@ -8,7 +8,7 @@ Generic network client based on libcurl.
 
 #### changes since v2
 
-* macOS library version update: from `libcurl-7.62.0` to `libcurl-7.75.0` 
+* macOS library version update: from `libcurl-7.62.0` to ~~`libcurl-7.75.0`~~ `libcurl-7.80.0`
 
 * Windows library version update: from `libcurl-7.62.0` to `libcurl-7.74.0-DEV`
 
