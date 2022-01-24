@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -19,7 +19,6 @@
 		D13116A91A03ACB700DE1322 /* 4DPluginAPI.c in Sources */ = {isa = PBXBuildFile; fileRef = D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */; settings = {COMPILER_FLAGS = "-Wno-multichar"; }; };
 		D134D4AC1A030BA0008D14EF /* manifest.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = D134D4A91A030B06008D14EF /* manifest.json */; };
 		D155A50726130E820015464C /* libunistring.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FB26130E820015464C /* libunistring.a */; };
-		D155A50826130E820015464C /* libssh2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FC26130E820015464C /* libssh2.a */; };
 		D155A50926130E820015464C /* libmodman.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FD26130E820015464C /* libmodman.a */; };
 		D155A50A26130E820015464C /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FE26130E820015464C /* libcrypto.a */; };
 		D155A50B26130E820015464C /* libproxy.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FF26130E820015464C /* libproxy.a */; };
@@ -48,6 +47,10 @@
 		D155A54A26135ABF0015464C /* C_LONGINT.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A54826135ABF0015464C /* C_LONGINT.h */; };
 		D155A54B26135ABF0015464C /* C_LONGINT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A54926135ABF0015464C /* C_LONGINT.cpp */; };
 		D157E67E261461A600F340B7 /* libiconv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D157E67D261461A600F340B7 /* libiconv.a */; };
+		D1B903A4279E6566001792B4 /* libssh2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FC26130E820015464C /* libssh2.a */; };
+		D1B903A5279E6961001792B4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53526133F470015464C /* Security.framework */; platformFilter = maccatalyst; };
+		D1B903A7279E6A60001792B4 /* librtmp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A6279E6A4C001792B4 /* librtmp.a */; };
+		D1B903A9279E6ABC001792B4 /* GSS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A8279E6ABC001792B4 /* GSS.framework */; platformFilter = maccatalyst; };
 		D1BF53F7270EB85400F6E1EE /* ftpparse.h in Headers */ = {isa = PBXBuildFile; fileRef = D1BF53F6270EB85400F6E1EE /* ftpparse.h */; };
 		D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */ = {isa = PBXBuildFile; fileRef = D1BF53F9270EB85800F6E1EE /* ftpparse.c */; };
 /* End PBXBuildFile section */
@@ -111,8 +114,10 @@
 		D155A54826135ABF0015464C /* C_LONGINT.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = C_LONGINT.h; path = "4D Plugin API/Classes/C_LONGINT.h"; sourceTree = "<group>"; };
 		D155A54926135ABF0015464C /* C_LONGINT.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = C_LONGINT.cpp; path = "4D Plugin API/Classes/C_LONGINT.cpp"; sourceTree = "<group>"; };
 		D157E66B26145FEC00F340B7 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
-		D157E6702614602200F340B7 /* libiconv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiconv.a; path = "../../4d-plugin-curl-ftp/ftp/a/libiconv.a"; sourceTree = "<group>"; };
 		D157E67D261461A600F340B7 /* libiconv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiconv.a; path = a/libiconv.a; sourceTree = "<group>"; };
+		D1B903A3279E6329001792B4 /* ssh-keychain.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "ssh-keychain.tbd"; path = "usr/lib/ssh-keychain.tbd"; sourceTree = SDKROOT; };
+		D1B903A6279E6A4C001792B4 /* librtmp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = librtmp.a; path = a/librtmp.a; sourceTree = "<group>"; };
+		D1B903A8279E6ABC001792B4 /* GSS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GSS.framework; path = System/Library/Frameworks/GSS.framework; sourceTree = SDKROOT; };
 		D1BF53F6270EB85400F6E1EE /* ftpparse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ftpparse.h; path = include/ftpparse.h; sourceTree = "<group>"; };
 		D1BF53F9270EB85800F6E1EE /* ftpparse.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = ftpparse.c; path = include/ftpparse.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -122,14 +127,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D155A546261346DD0015464C /* libbrotlidec-static.a in Frameworks */,
+				D1B903A5279E6961001792B4 /* Security.framework in Frameworks */,
 				D155A53C26133FAF0015464C /* SystemConfiguration.framework in Frameworks */,
 				D155A53926133F950015464C /* JavaScriptCore.framework in Frameworks */,
 				D155A53326133F3D0015464C /* LDAP.framework in Frameworks */,
 				D130064F12F02D9700702C0E /* Cocoa.framework in Frameworks */,
+				D1B903A9279E6ABC001792B4 /* GSS.framework in Frameworks */,
+				D155A546261346DD0015464C /* libbrotlidec-static.a in Frameworks */,
+				D1B903A4279E6566001792B4 /* libssh2.a in Frameworks */,
 				D155A51126130E820015464C /* libnghttp2.a in Frameworks */,
 				D155A50A26130E820015464C /* libcrypto.a in Frameworks */,
 				D155A50B26130E820015464C /* libproxy.a in Frameworks */,
+				D1B903A7279E6A60001792B4 /* librtmp.a in Frameworks */,
 				D155A50926130E820015464C /* libmodman.a in Frameworks */,
 				D155A50D26130E820015464C /* libidn2.a in Frameworks */,
 				D155A51026130E820015464C /* libjsoncpp.a in Frameworks */,
@@ -137,11 +146,10 @@
 				D155A50726130E820015464C /* libunistring.a in Frameworks */,
 				D155A50C26130E820015464C /* libz.a in Frameworks */,
 				D155A545261346DD0015464C /* libbrotlicommon-static.a in Frameworks */,
+				D155A544261346DD0015464C /* libbrotlienc-static.a in Frameworks */,
 				D155A53026133EB50015464C /* libcurl.a in Frameworks */,
 				D155A51226130E820015464C /* libssl.a in Frameworks */,
 				D155A53F261345690015464C /* libzstd.a in Frameworks */,
-				D155A544261346DD0015464C /* libbrotlienc-static.a in Frameworks */,
-				D155A50826130E820015464C /* libssh2.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -250,7 +258,9 @@
 		D16FBB3C22A4C07E008F0416 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D157E6702614602200F340B7 /* libiconv.a */,
+				D1B903A8279E6ABC001792B4 /* GSS.framework */,
+				D1B903A6279E6A4C001792B4 /* librtmp.a */,
+				D1B903A3279E6329001792B4 /* ssh-keychain.tbd */,
 				D157E66B26145FEC00F340B7 /* libiconv.tbd */,
 				D155A53B26133FAF0015464C /* SystemConfiguration.framework */,
 				D155A53826133F950015464C /* JavaScriptCore.framework */,
@@ -436,7 +446,11 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
-				HEADER_SEARCH_PATHS = "include/**";
+				HEADER_SEARCH_PATHS = (
+					include/json,
+					include/curl_mac,
+					include,
+				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				LIBRARY_SEARCH_PATHS = (
@@ -444,7 +458,8 @@
 					"$(PROJECT_DIR)/a",
 				);
 				LIBRARY_STYLE = Bundle;
-				MARKETING_VERSION = 4.4.3;
+				MARKETING_VERSION = 4.4.4;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
@@ -487,7 +502,11 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
-				HEADER_SEARCH_PATHS = "include/**";
+				HEADER_SEARCH_PATHS = (
+					include/json,
+					include/curl_mac,
+					include,
+				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				LIBRARY_SEARCH_PATHS = (
@@ -495,7 +514,8 @@
 					"$(PROJECT_DIR)/a",
 				);
 				LIBRARY_STYLE = Bundle;
-				MARKETING_VERSION = 4.4.3;
+				MARKETING_VERSION = 4.4.4;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
@@ -536,7 +556,11 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
-				HEADER_SEARCH_PATHS = "include/**";
+				HEADER_SEARCH_PATHS = (
+					include/json,
+					include/curl_mac,
+					include,
+				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				LIBRARY_SEARCH_PATHS = (
@@ -544,7 +568,8 @@
 					"$(PROJECT_DIR)/a",
 				);
 				LIBRARY_STYLE = Bundle;
-				MARKETING_VERSION = 4.4.3;
+				MARKETING_VERSION = 4.4.4;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
@@ -601,8 +626,14 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				HEADER_SEARCH_PATHS = (
+					include/json,
+					include/curl_mac,
+					include,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				OBJROOT = "$(SRCROOT)/build";
+				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
 				SYMROOT = "$(SRCROOT)/test/Plugins";
 			};
@@ -647,8 +678,14 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				HEADER_SEARCH_PATHS = (
+					include/json,
+					include/curl_mac,
+					include,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				OBJROOT = "$(SRCROOT)/build";
+				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
 				SYMROOT = "$(SRCROOT)/test/Plugins";
 			};
@@ -693,7 +730,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				HEADER_SEARCH_PATHS = (
+					include/json,
+					include/curl_mac,
+					include,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
 				SYMROOT = "$(SRCROOT)/test/Plugins";
 			};
