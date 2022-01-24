@@ -631,7 +631,7 @@
 					include/curl_mac,
 					include,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				OBJROOT = "$(SRCROOT)/build";
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
@@ -683,7 +683,7 @@
 					include/curl_mac,
 					include,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				OBJROOT = "$(SRCROOT)/build";
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
@@ -735,7 +735,7 @@
 					include/curl_mac,
 					include,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
 				SYMROOT = "$(SRCROOT)/test/Plugins";
