@@ -1763,11 +1763,14 @@ static bool curl_set_options(CURL *curl,
             curl_easy_setopt(curl, CURLOPT_SSL_SESSIONID_CACHE, (long)ob_get_n(Param1, L"SSL_SESSIONID_CACHE"));
         }
         
-        long SSH_AUTH_TYPES = CURLSSH_AUTH_PUBLICKEY|CURLSSH_AUTH_PASSWORD;
+        long SSH_AUTH_TYPES = CURLSSH_AUTH_ANY;
+        
+//        CURLSSH_AUTH_PUBLICKEY|CURLSSH_AUTH_PASSWORD;
         
         if(ob_is_defined(Param1, L"SSH_AUTH_TYPES")) {
             SSH_AUTH_TYPES = (long)ob_get_n(Param1, L"SSH_AUTH_TYPES");
         }
+        
         //disable these
         //SSH_AUTH_TYPES &= ~(CURLSSH_AUTH_AGENT);
         
