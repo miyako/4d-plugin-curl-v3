@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -19,10 +19,18 @@
 		D130064F12F02D9700702C0E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D130064E12F02D9700702C0E /* Cocoa.framework */; };
 		D13116A91A03ACB700DE1322 /* 4DPluginAPI.c in Sources */ = {isa = PBXBuildFile; fileRef = D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */; settings = {COMPILER_FLAGS = "-Wno-multichar"; }; };
 		D134D4AC1A030BA0008D14EF /* manifest.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = D134D4A91A030B06008D14EF /* manifest.json */; };
+		D13FF02727A1A72C001C2786 /* GSS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A8279E6ABC001792B4 /* GSS.framework */; };
+		D13FF02827A1A737001C2786 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53526133F470015464C /* Security.framework */; };
+		D13FF02927A1A745001C2786 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53B26133FAF0015464C /* SystemConfiguration.framework */; };
+		D13FF03027A1A7E1001C2786 /* liblber.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D13FF02E27A1A7E1001C2786 /* liblber.a */; };
+		D13FF03127A1A7E1001C2786 /* libldap.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D13FF02F27A1A7E1001C2786 /* libldap.a */; };
+		D13FF03327A1A7F5001C2786 /* libsasl2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D13FF03227A1A7F5001C2786 /* libsasl2.tbd */; };
+		D13FF03527A1A8AE001C2786 /* Kerberos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D13FF03427A1A8AE001C2786 /* Kerberos.framework */; };
+		D13FF03627A1A929001C2786 /* libproxy.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FF26130E820015464C /* libproxy.a */; };
+		D13FF04127A1AB3F001C2786 /* libiconv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D13FF03827A1A9A4001C2786 /* libiconv.a */; };
 		D155A50726130E820015464C /* libunistring.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FB26130E820015464C /* libunistring.a */; };
 		D155A50926130E820015464C /* libmodman.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FD26130E820015464C /* libmodman.a */; };
 		D155A50A26130E820015464C /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FE26130E820015464C /* libcrypto.a */; };
-		D155A50B26130E820015464C /* libproxy.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FF26130E820015464C /* libproxy.a */; };
 		D155A50C26130E820015464C /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50026130E820015464C /* libz.a */; };
 		D155A50D26130E820015464C /* libidn2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50126130E820015464C /* libidn2.a */; };
 		D155A51026130E820015464C /* libjsoncpp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50426130E820015464C /* libjsoncpp.a */; };
@@ -38,20 +46,15 @@
 		D155A52B2613351E0015464C /* 4DPlugin-JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A5292613351E0015464C /* 4DPlugin-JSON.cpp */; };
 		D155A52C2613351E0015464C /* 4DPlugin-JSON.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A52A2613351E0015464C /* 4DPlugin-JSON.h */; };
 		D155A53026133EB50015464C /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A52F26133EB50015464C /* libcurl.a */; };
-		D155A53326133F3D0015464C /* LDAP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53226133F3D0015464C /* LDAP.framework */; };
 		D155A53926133F950015464C /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53826133F950015464C /* JavaScriptCore.framework */; };
-		D155A53C26133FAF0015464C /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53B26133FAF0015464C /* SystemConfiguration.framework */; };
 		D155A53F261345690015464C /* libzstd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53E261345690015464C /* libzstd.a */; };
 		D155A544261346DD0015464C /* libbrotlienc-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A541261346DD0015464C /* libbrotlienc-static.a */; };
 		D155A545261346DD0015464C /* libbrotlicommon-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A542261346DD0015464C /* libbrotlicommon-static.a */; };
 		D155A546261346DD0015464C /* libbrotlidec-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A543261346DD0015464C /* libbrotlidec-static.a */; };
 		D155A54A26135ABF0015464C /* C_LONGINT.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A54826135ABF0015464C /* C_LONGINT.h */; };
 		D155A54B26135ABF0015464C /* C_LONGINT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A54926135ABF0015464C /* C_LONGINT.cpp */; };
-		D157E67E261461A600F340B7 /* libiconv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D157E67D261461A600F340B7 /* libiconv.a */; };
 		D1B903A4279E6566001792B4 /* libssh2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FC26130E820015464C /* libssh2.a */; };
-		D1B903A5279E6961001792B4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53526133F470015464C /* Security.framework */; platformFilter = maccatalyst; };
 		D1B903A7279E6A60001792B4 /* librtmp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A6279E6A4C001792B4 /* librtmp.a */; };
-		D1B903A9279E6ABC001792B4 /* GSS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A8279E6ABC001792B4 /* GSS.framework */; platformFilter = maccatalyst; };
 		D1BF53F7270EB85400F6E1EE /* ftpparse.h in Headers */ = {isa = PBXBuildFile; fileRef = D1BF53F6270EB85400F6E1EE /* ftpparse.h */; };
 		D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */ = {isa = PBXBuildFile; fileRef = D1BF53F9270EB85800F6E1EE /* ftpparse.c */; };
 /* End PBXBuildFile section */
@@ -83,6 +86,14 @@
 		D130064E12F02D9700702C0E /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = 4DPluginAPI.c; sourceTree = "<group>"; };
 		D134D4A91A030B06008D14EF /* manifest.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		D13FF02C27A1A7C4001C2786 /* libldap.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libldap.tbd; path = usr/lib/libldap.tbd; sourceTree = SDKROOT; };
+		D13FF02E27A1A7E1001C2786 /* liblber.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblber.a; path = a/mojave/liblber.a; sourceTree = "<group>"; };
+		D13FF02F27A1A7E1001C2786 /* libldap.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libldap.a; path = a/mojave/libldap.a; sourceTree = "<group>"; };
+		D13FF03227A1A7F5001C2786 /* libsasl2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsasl2.tbd; path = usr/lib/libsasl2.tbd; sourceTree = SDKROOT; };
+		D13FF03427A1A8AE001C2786 /* Kerberos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kerberos.framework; path = System/Library/Frameworks/Kerberos.framework; sourceTree = SDKROOT; };
+		D13FF03827A1A9A4001C2786 /* libiconv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiconv.a; path = a/mojave/libiconv.a; sourceTree = "<group>"; };
+		D13FF03A27A1A9BB001C2786 /* liblibiconv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblibiconv.a; path = a/mojave/liblibiconv.a; sourceTree = "<group>"; };
+		D13FF03C27A1AA96001C2786 /* libiconv-plug.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libiconv-plug.a"; path = "a/mojave/libiconv-plug.a"; sourceTree = "<group>"; };
 		D14D10DD1A03A8A5008B3411 /* constants.xlf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = constants.xlf; sourceTree = "<group>"; };
 		D155A4FB26130E820015464C /* libunistring.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libunistring.a; path = a/libunistring.a; sourceTree = "<group>"; };
 		D155A4FC26130E820015464C /* libssh2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssh2.a; path = a/libssh2.a; sourceTree = "<group>"; };
@@ -128,22 +139,25 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D1B903A5279E6961001792B4 /* Security.framework in Frameworks */,
-				D155A53C26133FAF0015464C /* SystemConfiguration.framework in Frameworks */,
+				D13FF04127A1AB3F001C2786 /* libiconv.a in Frameworks */,
+				D13FF03327A1A7F5001C2786 /* libsasl2.tbd in Frameworks */,
+				D13FF03027A1A7E1001C2786 /* liblber.a in Frameworks */,
+				D13FF03127A1A7E1001C2786 /* libldap.a in Frameworks */,
+				D13FF03527A1A8AE001C2786 /* Kerberos.framework in Frameworks */,
 				D155A53926133F950015464C /* JavaScriptCore.framework in Frameworks */,
-				D155A53326133F3D0015464C /* LDAP.framework in Frameworks */,
 				D130064F12F02D9700702C0E /* Cocoa.framework in Frameworks */,
-				D1B903A9279E6ABC001792B4 /* GSS.framework in Frameworks */,
-				D155A546261346DD0015464C /* libbrotlidec-static.a in Frameworks */,
+				D13FF02727A1A72C001C2786 /* GSS.framework in Frameworks */,
+				D13FF02827A1A737001C2786 /* Security.framework in Frameworks */,
+				D13FF02927A1A745001C2786 /* SystemConfiguration.framework in Frameworks */,
+				D13FF03627A1A929001C2786 /* libproxy.a in Frameworks */,
 				D1B903A4279E6566001792B4 /* libssh2.a in Frameworks */,
+				D155A546261346DD0015464C /* libbrotlidec-static.a in Frameworks */,
 				D155A51126130E820015464C /* libnghttp2.a in Frameworks */,
 				D155A50A26130E820015464C /* libcrypto.a in Frameworks */,
-				D155A50B26130E820015464C /* libproxy.a in Frameworks */,
 				D1B903A7279E6A60001792B4 /* librtmp.a in Frameworks */,
 				D155A50926130E820015464C /* libmodman.a in Frameworks */,
 				D155A50D26130E820015464C /* libidn2.a in Frameworks */,
 				D155A51026130E820015464C /* libjsoncpp.a in Frameworks */,
-				D157E67E261461A600F340B7 /* libiconv.a in Frameworks */,
 				D155A50726130E820015464C /* libunistring.a in Frameworks */,
 				D155A50C26130E820015464C /* libz.a in Frameworks */,
 				D155A545261346DD0015464C /* libbrotlicommon-static.a in Frameworks */,
@@ -260,6 +274,14 @@
 		D16FBB3C22A4C07E008F0416 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D13FF03C27A1AA96001C2786 /* libiconv-plug.a */,
+				D13FF03A27A1A9BB001C2786 /* liblibiconv.a */,
+				D13FF03827A1A9A4001C2786 /* libiconv.a */,
+				D13FF03427A1A8AE001C2786 /* Kerberos.framework */,
+				D13FF03227A1A7F5001C2786 /* libsasl2.tbd */,
+				D13FF02E27A1A7E1001C2786 /* liblber.a */,
+				D13FF02F27A1A7E1001C2786 /* libldap.a */,
+				D13FF02C27A1A7C4001C2786 /* libldap.tbd */,
 				D1B903A8279E6ABC001792B4 /* GSS.framework */,
 				D1B903A6279E6A4C001792B4 /* librtmp.a */,
 				D1B903A3279E6329001792B4 /* ssh-keychain.tbd */,
@@ -458,6 +480,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/lib",
 					"$(PROJECT_DIR)/a",
+					"$(PROJECT_DIR)/a/mojave",
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
@@ -515,6 +538,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/lib",
 					"$(PROJECT_DIR)/a",
+					"$(PROJECT_DIR)/a/mojave",
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
@@ -570,6 +594,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/lib",
 					"$(PROJECT_DIR)/a",
+					"$(PROJECT_DIR)/a/mojave",
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;

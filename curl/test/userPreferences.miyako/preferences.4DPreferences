@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><preferences stamp="118">
+﻿<?xml version="1.0" encoding="UTF-8"?><preferences stamp="120">
 	<com.4d>
 		<database>
 			<data_storage data_path="Data/data.4DD"/>
@@ -7,7 +7,7 @@
 	</com.4d>
 	<internal_prefs_4d>
 		<windows>
-			<window name="main" left="40" top="323" width="600" height="450"/>
+			<window name="main" left="103" top="345" width="600" height="450"/>
 		</windows>
 		<explorer default_page="7"/>
 	</internal_prefs_4d>
