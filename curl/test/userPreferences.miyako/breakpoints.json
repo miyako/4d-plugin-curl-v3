@@ -1,1 +1,9 @@
-[]
+[
+	{
+		"line": 10,
+		"method": {
+			"type": 1,
+			"methodName": "TEST_version_info"
+		}
+	}
+]
