@@ -15,6 +15,8 @@
 		18B684FF06944F8800CC6A1E /* 4DPlugin-cURL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 18B684FE06944F8800CC6A1E /* 4DPlugin-cURL.cpp */; };
 		8D01CCCA0486CAD60068D4B7 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C167DFE841241C02AAC07 /* InfoPlist.strings */; };
 		D10A3284279F1FF600B865C4 /* ssh-keychain.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A3279E6329001792B4 /* ssh-keychain.tbd */; };
+		D10E131B27A1AC2E00EF700B /* libldap.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D13FF02C27A1A7C4001C2786 /* libldap.tbd */; };
+		D10E131C27A1AC4300EF700B /* LDAP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53226133F3D0015464C /* LDAP.framework */; };
 		D120937F13534DCC00A72CAA /* 4DPlugin-cURL.h in Headers */ = {isa = PBXBuildFile; fileRef = D120937E13534DCC00A72CAA /* 4DPlugin-cURL.h */; };
 		D130064F12F02D9700702C0E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D130064E12F02D9700702C0E /* Cocoa.framework */; };
 		D13116A91A03ACB700DE1322 /* 4DPluginAPI.c in Sources */ = {isa = PBXBuildFile; fileRef = D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */; settings = {COMPILER_FLAGS = "-Wno-multichar"; }; };
@@ -139,6 +141,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D10E131C27A1AC4300EF700B /* LDAP.framework in Frameworks */,
+				D10E131B27A1AC2E00EF700B /* libldap.tbd in Frameworks */,
 				D13FF04127A1AB3F001C2786 /* libiconv.a in Frameworks */,
 				D13FF03327A1A7F5001C2786 /* libsasl2.tbd in Frameworks */,
 				D13FF03027A1A7E1001C2786 /* liblber.a in Frameworks */,
@@ -484,7 +488,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 4.4.11;
+				MARKETING_VERSION = 4.4.12;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -542,7 +546,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 4.4.11;
+				MARKETING_VERSION = 4.4.12;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -598,7 +602,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 4.4.11;
+				MARKETING_VERSION = 4.4.12;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
