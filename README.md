@@ -53,7 +53,47 @@ Generic network client based on libcurl.
 }
 ```
 
+* Apple Silicon
 
+```4d
+{
+	"version": "7.81.0",
+	"version_num": 479488,
+	"host": "Darwin",
+	"features": 363397789,
+	"ssl_version": "OpenSSL/1.1.1m",
+	"libz_version": "1.2.11",
+	"protocols": [
+		"dict",
+		"file",
+		"ftp",
+		"ftps",
+		"gopher",
+		"gophers",
+		"http",
+		"https",
+		"imap",
+		"imaps",
+		"ldap",
+		"mqtt",
+		"pop3",
+		"pop3s",
+		"rtsp",
+		"scp",
+		"sftp",
+		"smb",
+		"smbs",
+		"smtp",
+		"smtps",
+		"telnet",
+		"tftp"
+	],
+	"libssh_version": "libssh2/1.9.0",
+	"brotli_version": "1.0.9",
+	"nghttp2_version": "1.46.0",
+	"zstd_version": "1.5.1"
+}
+```
 
 
 
