@@ -1,4 +1,4 @@
-![version](https://img.shields.io/badge/version-17%2B-3E8B93)
+![version](https://img.shields.io/badge/version-19%2B-5682DF)
 ![platform](https://img.shields.io/static/v1?label=platform&message=mac-intel%20|%20mac-arm%20|%20win-64&color=blue)
 [![license](https://img.shields.io/github/license/miyako/4d-plugin-curl-v3)](LICENSE)
 ![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-curl-v3/total)
@@ -6,104 +6,9 @@
 # 4d-plugin-curl-v3
 Generic network client based on libcurl.
 
-# Composite plugin 
-
-* Intel/Rosetta
-
-```
-{
-	"version": "7.81.0",
-	"version_num": 479488,
-	"host": "x86_64-apple-darwin18.7.0",
-	"features": 368035741,
-	"ssl_version": "(SecureTransport) OpenSSL/1.1.1m",
-	"libz_version": "1.2.11",
-	"protocols": [
-		"dict",
-		"file",
-		"ftp",
-		"ftps",
-		"gopher",
-		"gophers",
-		"http",
-		"https",
-		"imap",
-		"imaps",
-		"ldap",
-		"ldaps",
-		"mqtt",
-		"pop3",
-		"pop3s",
-		"rtmp",
-		"rtsp",
-		"scp",
-		"sftp",
-		"smb",
-		"smbs",
-		"smtp",
-		"smtps",
-		"telnet",
-		"tftp"
-	],
-	"libidn": "2.3.2",
-	"libssh_version": "libssh2/1.10.0",
-	"brotli_version": "1.0.9",
-	"nghttp2_version": "1.46.0",
-	"zstd_version": "1.5.2"
-}
-```
-
-* Apple Silicon
-
-```4d
-{
-	"version": "7.81.0",
-	"version_num": 479488,
-	"host": "Darwin",
-	"features": 363397789,
-	"ssl_version": "OpenSSL/1.1.1m",
-	"libz_version": "1.2.11",
-	"protocols": [
-		"dict",
-		"file",
-		"ftp",
-		"ftps",
-		"gopher",
-		"gophers",
-		"http",
-		"https",
-		"imap",
-		"imaps",
-		"ldap",
-		"mqtt",
-		"pop3",
-		"pop3s",
-		"rtsp",
-		"scp",
-		"sftp",
-		"smb",
-		"smbs",
-		"smtp",
-		"smtps",
-		"telnet",
-		"tftp"
-	],
-	"libssh_version": "libssh2/1.9.0",
-	"brotli_version": "1.0.9",
-	"nghttp2_version": "1.46.0",
-	"zstd_version": "1.5.1"
-}
-```
-
-
-
-
-
-
-
 #### changes since v2
 
-* macOS library version update: from `libcurl-7.62.0` to ~~`libcurl-7.75.0`~~ `libcurl-7.81.0`
+* macOS library version update: from `libcurl-7.62.0` to ~~`libcurl-7.75.0`~~ `libcurl-7.80.0`
 
 * Windows library version update: from `libcurl-7.62.0` to `libcurl-7.74.0-DEV`
 
