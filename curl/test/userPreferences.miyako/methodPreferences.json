@@ -1,76 +1,4 @@
 {
-	"Sources/Methods/generate_project_xcode.4dm": {
-		"startSelection": 0,
-		"endSelection": 0,
-		"firstSelectedLine": 21,
-		"lastSelectedLine": 21,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2019-07-02T13:57:13.196Z"
-	},
-	"Sources/Methods/generate_constants_xlf.4dm": {
-		"startSelection": 75,
-		"endSelection": 75,
-		"firstSelectedLine": 13,
-		"lastSelectedLine": 13,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2019-07-29T04:26:04.177Z"
-	},
-	"Sources/Methods/generate_project_vs.4dm": {
-		"startSelection": 19,
-		"endSelection": 19,
-		"firstSelectedLine": 12,
-		"lastSelectedLine": 12,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2019-07-24T08:49:03.338Z"
-	},
-	"Sources/Methods/generate_project.4dm": {
-		"startSelection": 27,
-		"endSelection": 27,
-		"firstSelectedLine": 1,
-		"lastSelectedLine": 1,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2021-03-30T07:42:53.300Z"
-	},
-	"Sources/Methods/generate_project_source.4dm": {
-		"startSelection": 18,
-		"endSelection": 18,
-		"firstSelectedLine": 5,
-		"lastSelectedLine": 5,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2019-07-02T14:36:13.407Z"
-	},
-	"Sources/Methods/generate_file_from_template.4dm": {
-		"startSelection": 12,
-		"endSelection": 12,
-		"firstSelectedLine": 32,
-		"lastSelectedLine": 32,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2019-07-29T04:26:04.720Z"
-	},
-	"Sources/Methods/generate_project_plugin_stub.4dm": {
-		"startSelection": 33,
-		"endSelection": 33,
-		"firstSelectedLine": 48,
-		"lastSelectedLine": 48,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2019-07-02T14:18:29.030Z"
-	},
-	"Sources/Methods/generate_project_infoplist.4dm": {
-		"startSelection": 17,
-		"endSelection": 17,
-		"firstSelectedLine": 11,
-		"lastSelectedLine": 11,
-		"folding": [],
-		"bookmarks": [],
-		"stamp": "2019-07-02T13:51:21.190Z"
-	},
 	"Sources/Forms/フォーム1/ObjectMethods/ボタン.4dm": {
 		"startSelection": 58,
 		"endSelection": 58,
@@ -198,13 +126,13 @@
 		"stamp": "2021-03-31T07:57:31.000Z"
 	},
 	"Sources/Methods/TEST_version_info.4dm": {
-		"startSelection": 33,
-		"endSelection": 33,
-		"firstSelectedLine": 8,
-		"lastSelectedLine": 8,
+		"startSelection": 0,
+		"endSelection": 0,
+		"firstSelectedLine": 0,
+		"lastSelectedLine": 0,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2022-01-26T16:25:20.169Z"
+		"stamp": "2022-02-02T01:13:34.842Z"
 	},
 	"Sources/Methods/TEST_ftp_upload.4dm": {
 		"startSelection": 25,

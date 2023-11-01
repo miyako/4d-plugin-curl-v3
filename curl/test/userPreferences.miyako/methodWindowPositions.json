@@ -23,54 +23,6 @@
 		"width": 1138,
 		"height": 592
 	},
-	"Sources/Methods/generate_project_xcode.4dm": {
-		"left": 511,
-		"top": 304,
-		"width": 1129,
-		"height": 787
-	},
-	"Sources/Methods/generate_constants_xlf.4dm": {
-		"left": 478,
-		"top": 165,
-		"width": 1129,
-		"height": 762
-	},
-	"Sources/Methods/generate_project_vs.4dm": {
-		"left": 478,
-		"top": 165,
-		"width": 1129,
-		"height": 762
-	},
-	"Sources/Methods/generate_project.4dm": {
-		"left": 908,
-		"top": 423,
-		"width": 699,
-		"height": 504
-	},
-	"Sources/Methods/generate_project_source.4dm": {
-		"left": 511,
-		"top": 304,
-		"width": 1129,
-		"height": 787
-	},
-	"Sources/Methods/generate_file_from_template.4dm": {
-		"left": 478,
-		"top": 165,
-		"width": 1129,
-		"height": 762
-	},
-	"Sources/Methods/generate_project_plugin_stub.4dm": {
-		"left": 500,
-		"top": 130,
-		"width": 720,
-		"height": 399
-	},
-	"Sources/Methods/generate_project_infoplist.4dm": {
-		"left": 305,
-		"top": 248,
-		"width": 1129,
-		"height": 762
-	},
 	"Sources/Forms/フォーム1/ObjectMethods/ボタン.4dm": {
 		"left": 490,
 		"top": 229,
@@ -164,7 +116,7 @@
 	"Sources/Methods/TEST_version_info.4dm": {
 		"left": 594,
 		"top": 381,
-		"width": 961,
+		"width": 965,
 		"height": 428
 	},
 	"Sources/Methods/TEST_ftp_upload.4dm": {
@@ -250,5 +202,53 @@
 		"top": 111,
 		"width": 1114,
 		"height": 784
+	},
+	"Trash/Methods/(generate_project_source).4dm": {
+		"left": 511,
+		"top": 304,
+		"width": 1129,
+		"height": 787
+	},
+	"Trash/Methods/(generate_project_plugin_stub).4dm": {
+		"left": 500,
+		"top": 130,
+		"width": 720,
+		"height": 399
+	},
+	"Trash/Methods/(generate_project_vs).4dm": {
+		"left": 478,
+		"top": 165,
+		"width": 1129,
+		"height": 762
+	},
+	"Trash/Methods/(generate_project).4dm": {
+		"left": 908,
+		"top": 423,
+		"width": 699,
+		"height": 504
+	},
+	"Trash/Methods/(generate_project_xcode).4dm": {
+		"left": 511,
+		"top": 304,
+		"width": 1129,
+		"height": 787
+	},
+	"Trash/Methods/(generate_constants_xlf).4dm": {
+		"left": 478,
+		"top": 165,
+		"width": 1129,
+		"height": 762
+	},
+	"Trash/Methods/(generate_project_infoplist).4dm": {
+		"left": 305,
+		"top": 248,
+		"width": 1129,
+		"height": 762
+	},
+	"Trash/Methods/(generate_file_from_template).4dm": {
+		"left": 478,
+		"top": 165,
+		"width": 1129,
+		"height": 762
 	}
 }
