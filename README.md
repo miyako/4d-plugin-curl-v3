@@ -113,7 +113,7 @@ Value|Type|Description
 [READDATA](https://curl.haxx.se/libcurl/c/CURLOPT_READDATA.html) |TEXT|use file path instead of ``request``
 [WRITEDATA](https://curl.haxx.se/libcurl/c/CURLOPT_WRITEDATA.html) |TEXT|use file path instead of ``response``
 AUTOPROXY |LONGINT|``1`` to use ``libproxy``
-ATOMIC |LONGINT|``1`` to use simple (as opposed to multiple) API
+ATOMIC |BOOLEAN|``True`` to use simple (as opposed to multiple) API
 [DEBUG](https://curl.haxx.se/libcurl/c/CURLOPT_VERBOSE.html) |TEXT|folder path to create log paths
 
 ---
