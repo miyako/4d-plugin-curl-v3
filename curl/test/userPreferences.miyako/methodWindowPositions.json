@@ -115,9 +115,9 @@
 	},
 	"Sources/Methods/TEST_version_info.4dm": {
 		"left": 594,
-		"top": 381,
+		"top": 689,
 		"width": 965,
-		"height": 428
+		"height": 372
 	},
 	"Sources/Methods/TEST_ftp_upload.4dm": {
 		"left": 291,
@@ -250,5 +250,11 @@
 		"top": 165,
 		"width": 1129,
 		"height": 762
+	},
+	"Sources/Methods/issue 18.4dm": {
+		"left": 167,
+		"top": 170,
+		"width": 965,
+		"height": 400
 	}
 }

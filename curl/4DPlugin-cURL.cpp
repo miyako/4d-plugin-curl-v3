@@ -2747,11 +2747,21 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     
     struct curl_slist *h = NULL;
     
+    bool useMLSD = false;
+    if(ob_is_defined(Param1, L"FTP_USE_MLSD")) {
+        useMLSD = ob_get_b(Param1, L"FTP_USE_MLSD");
+    }
+    
     std::string quote;
         
     switch (commandType) {
         case curl_ftp_command_GetDirList:
-            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "LIST");
+            if(useMLSD){
+                curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "MLSD");
+            }
+            else{
+                curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "LIST");
+            }
             curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
             curl_easy_setopt(curl, CURLOPT_HEADER, 1L);
             break;
@@ -2891,89 +2901,129 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
             
             PA_CollectionRef directories = PA_CreateCollection();
             
-            for (std::string line; safeGetline(is, line); )
-            {
-                struct ftpparse r;
-                int found = ftpparse(&r, (char *)line.c_str(), (int)line.size());
-                if (!found){
-                    PA_Variable v = PA_CreateVariable(eVK_Null);                    
-                    PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
-                    PA_ClearVariable(&v);
-                }
-                else{
+            if(useMLSD){
+                //ftpparse does not support MLSD
+                for (std::string line; safeGetline(is, line); )
+                {
+                    size_t pos, found;
+                    found = 0;
+                    std::string kvp, key, value;
+                    
                     PA_ObjectRef f = PA_CreateObject();
                     
-                    std::string name(r.name, r.namelen);
-                    ob_set_s(f, L"name", name.c_str());
-                    
-                    std::string __id(r.id, r.idlen);
-                    ob_set_s(f, L"id", __id.c_str());
-                    
-                    ob_set_n(f, L"flagtrycwd", r.flagtrycwd);
-                    ob_set_n(f, L"flagtryretr", r.flagtryretr);
-                    ob_set_n(f, L"size", r.size);
-                    
-                    switch (r.sizetype) {
-                        case FTPPARSE_SIZE_UNKNOWN:
-                            ob_set_s(f, L"sizetype", "UNKNOWN");
-                            break;
-                        case FTPPARSE_SIZE_BINARY:
-                            ob_set_s(f, L"sizetype", "BINARY");
-                            break;
-                        case FTPPARSE_SIZE_ASCII:
-                            ob_set_s(f, L"sizetype", "ASCII");
-                            break;
+                    for(pos = line.find(';'); pos != CUTF8String::npos; pos = line.find(';', found))
+                    {
+                        kvp = line.substr(found, pos-found);
+                        found = pos + 1;
+                        size_t _pos = kvp.find('=', 0);
+                        if(_pos != CUTF8String::npos)
+                        {
+                            key = kvp.substr(0, _pos);
+                            value = kvp.substr(_pos + 1);
+                            ob_set_s(f, key.c_str(), value.c_str());
+                        }
                     }
                     
-                    ob_set_n(f, L"sizetype", r.sizetype);
-                    
-                    switch (r.idtype) {
-                        case FTPPARSE_ID_UNKNOWN:
-                            ob_set_s(f, L"idtype", "UNKNOWN");
-                            break;
-                        case FTPPARSE_ID_FULL:
-                            ob_set_s(f, L"idtype", "BINARY");
-                            break;
-                    }
-                                        
-                    time_t mtime = r.mtime;
-                    
-                    switch (r.mtimetype) {
-                        case FTPPARSE_MTIME_UNKNOWN:
-                            ob_set_s(f, L"mtimetype", "UNKNOWN");
-                            break;
-                        case FTPPARSE_MTIME_LOCAL:
-                            ob_set_s(f, L"mtimetype", "LOCAL");
-                            break;
-                        case FTPPARSE_MTIME_REMOTEMINUTE:
-                            ob_set_s(f, L"mtimetype", "REMOTEMINUTE");
-                            break;
-                        case FTPPARSE_MTIME_REMOTEDAY:
-                            ob_set_s(f, L"mtimetype", "REMOTEDAY");
-                            break;
-                        default:
-                            break;
-                    }
-                    
-					std::vector<uint8_t> buf(32);
-					memset((char *)&buf[0], 0, buf.size());
-
-                    if(r.mtimetype == FTPPARSE_MTIME_LOCAL) {
-                        strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H%:M%:S%z",  localtime(&mtime));
+                    std::string path = line.substr(found, line.length()-found);
+                    if(path.length() != 0)
+                    {
+                        ob_set_s(f, L"path", path.c_str());
+                        
+                        PA_Variable v = PA_CreateVariable(eVK_Object);
+                        PA_SetObjectVariable(&v, f);
+                        
+                        PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
+                        PA_ClearVariable(&v);
                     }else{
-                        strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H:%M:%S%z",  gmtime(&mtime));
+                        PA_DisposeObject(f);
                     }
-
-                    ob_set_s(f, L"mtime", (char *)&buf[0]);
-                    
-                    PA_Variable v = PA_CreateVariable(eVK_Object);
-                    PA_SetObjectVariable(&v, f);
-                    
-                    PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
-                    PA_ClearVariable(&v);
+                }
+            }else{
+                for (std::string line; safeGetline(is, line); )
+                {
+                    struct ftpparse r;
+                    int found = ftpparse(&r, (char *)line.c_str(), (int)line.size());
+                    if (!found){
+                        PA_Variable v = PA_CreateVariable(eVK_Null);
+                        PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
+                        PA_ClearVariable(&v);
+                    }
+                    else{
+                        PA_ObjectRef f = PA_CreateObject();
+                        
+                        std::string name(r.name, r.namelen);
+                        ob_set_s(f, L"name", name.c_str());
+                        
+                        std::string __id(r.id, r.idlen);
+                        ob_set_s(f, L"id", __id.c_str());
+                        
+                        ob_set_n(f, L"flagtrycwd", r.flagtrycwd);
+                        ob_set_n(f, L"flagtryretr", r.flagtryretr);
+                        ob_set_n(f, L"size", r.size);
+                        
+                        switch (r.sizetype) {
+                            case FTPPARSE_SIZE_UNKNOWN:
+                                ob_set_s(f, L"sizetype", "UNKNOWN");
+                                break;
+                            case FTPPARSE_SIZE_BINARY:
+                                ob_set_s(f, L"sizetype", "BINARY");
+                                break;
+                            case FTPPARSE_SIZE_ASCII:
+                                ob_set_s(f, L"sizetype", "ASCII");
+                                break;
+                        }
+                        
+                        ob_set_n(f, L"sizetype", r.sizetype);
+                        
+                        switch (r.idtype) {
+                            case FTPPARSE_ID_UNKNOWN:
+                                ob_set_s(f, L"idtype", "UNKNOWN");
+                                break;
+                            case FTPPARSE_ID_FULL:
+                                ob_set_s(f, L"idtype", "BINARY");
+                                break;
+                        }
+                        
+                        time_t mtime = r.mtime;
+                        
+                        switch (r.mtimetype) {
+                            case FTPPARSE_MTIME_UNKNOWN:
+                                ob_set_s(f, L"mtimetype", "UNKNOWN");
+                                break;
+                            case FTPPARSE_MTIME_LOCAL:
+                                ob_set_s(f, L"mtimetype", "LOCAL");
+                                break;
+                            case FTPPARSE_MTIME_REMOTEMINUTE:
+                                ob_set_s(f, L"mtimetype", "REMOTEMINUTE");
+                                break;
+                            case FTPPARSE_MTIME_REMOTEDAY:
+                                ob_set_s(f, L"mtimetype", "REMOTEDAY");
+                                break;
+                            default:
+                                break;
+                        }
+                        
+                        std::vector<uint8_t> buf(32);
+                        memset((char *)&buf[0], 0, buf.size());
+                        
+                        if(r.mtimetype == FTPPARSE_MTIME_LOCAL) {
+                            strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H%:M%:S%z",  localtime(&mtime));
+                        }else{
+                            strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H:%M:%S%z",  gmtime(&mtime));
+                        }
+                        
+                        ob_set_s(f, L"mtime", (char *)&buf[0]);
+                        
+                        PA_Variable v = PA_CreateVariable(eVK_Object);
+                        PA_SetObjectVariable(&v, f);
+                        
+                        PA_SetCollectionElement(directories, PA_GetCollectionLength(directories), v);
+                        PA_ClearVariable(&v);
+                    }
                 }
             }
             ob_set_c(returnValue, L"ftpparse", directories);
+
         }
             break;
         case curl_ftp_command_GetFileInfo:

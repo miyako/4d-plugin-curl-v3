@@ -1,11 +1,19 @@
 {
 	"editors": [
 		{
+			"type": "method",
+			"id": 2147483647,
+			"codeDescriptor": {
+				"type": 1,
+				"methodName": "issue 18"
+			}
+		},
+		{
 			"type": "explorer"
 		},
 		{
 			"type": "method",
-			"id": 2147483638,
+			"id": 2147483641,
 			"codeDescriptor": {
 				"type": 1,
 				"methodName": "TEST_version_info"
