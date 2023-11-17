@@ -115,7 +115,7 @@ Value|Type|Description
 AUTOPROXY |LONGINT|``1`` to use ``libproxy``
 ATOMIC |BOOLEAN|``True`` to use simple (as opposed to multiple) API
 [DEBUG](https://curl.haxx.se/libcurl/c/CURLOPT_VERBOSE.html) |TEXT|folder path to create log paths
-`FTP_USE_MLSD`|BOOLEAN|``True`` to use `MLSD` instead of `LIST`
+FTP_USE_MLSD|BOOLEAN|``True`` to use `MLSD` instead of `LIST`
 
 ---
 
