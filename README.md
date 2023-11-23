@@ -114,7 +114,7 @@ Value|Type|Description
 [WRITEDATA](https://curl.haxx.se/libcurl/c/CURLOPT_WRITEDATA.html) |TEXT|use file path instead of ``response``
 AUTOPROXY |LONGINT|``1`` to use ``libproxy``
 ATOMIC |BOOLEAN|``True`` to use simple (as opposed to multiple) API
-[DEBUG](https://curl.haxx.se/libcurl/c/CURLOPT_VERBOSE.html) |TEXT|folder path to create log paths
+[DEBUG](https://curl.haxx.se/libcurl/c/CURLOPT_VERBOSE.html) |TEXT|folder path to create log files
 FTP_USE_MLSD|BOOLEAN|``True`` to use `MLSD` instead of `LIST`
 
 ---
