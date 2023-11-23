@@ -5,5 +5,19 @@
 			"type": 1,
 			"methodName": "TEST_version_info"
 		}
+	},
+	{
+		"line": 5,
+		"method": {
+			"type": 1,
+			"methodName": "TEST_sftp"
+		}
+	},
+	{
+		"line": 13,
+		"method": {
+			"type": 1,
+			"methodName": "issue 5b1"
+		}
 	}
 ]

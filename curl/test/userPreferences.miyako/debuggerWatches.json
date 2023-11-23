@@ -1,6 +1,6 @@
-﻿[
+[
 	{
 		"type": 66,
-		"formula": "$status"
+		"formula": "$result.status"
 	}
 ]

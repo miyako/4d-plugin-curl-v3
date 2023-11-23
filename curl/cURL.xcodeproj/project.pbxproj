@@ -12,14 +12,13 @@
 		18B684F906944F2000CC6A1E /* Flags.h in Headers */ = {isa = PBXBuildFile; fileRef = 18B684F206944F2000CC6A1E /* Flags.h */; };
 		18B684FA06944F2000CC6A1E /* PrivateTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 18B684F306944F2000CC6A1E /* PrivateTypes.h */; };
 		18B684FB06944F2000CC6A1E /* PublicTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 18B684F406944F2000CC6A1E /* PublicTypes.h */; };
-		18B684FF06944F8800CC6A1E /* 4DPlugin-cURL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 18B684FE06944F8800CC6A1E /* 4DPlugin-cURL.cpp */; };
+		18B684FF06944F8800CC6A1E /* 4DPlugin-cURL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 18B684FE06944F8800CC6A1E /* 4DPlugin-cURL.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		8D01CCCA0486CAD60068D4B7 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C167DFE841241C02AAC07 /* InfoPlist.strings */; };
 		D10A3284279F1FF600B865C4 /* ssh-keychain.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A3279E6329001792B4 /* ssh-keychain.tbd */; };
-		D10E131B27A1AC2E00EF700B /* libldap.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D13FF02C27A1A7C4001C2786 /* libldap.tbd */; };
 		D10E131C27A1AC4300EF700B /* LDAP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53226133F3D0015464C /* LDAP.framework */; };
 		D120937F13534DCC00A72CAA /* 4DPlugin-cURL.h in Headers */ = {isa = PBXBuildFile; fileRef = D120937E13534DCC00A72CAA /* 4DPlugin-cURL.h */; };
 		D130064F12F02D9700702C0E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D130064E12F02D9700702C0E /* Cocoa.framework */; };
-		D13116A91A03ACB700DE1322 /* 4DPluginAPI.c in Sources */ = {isa = PBXBuildFile; fileRef = D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */; settings = {COMPILER_FLAGS = "-Wno-multichar"; }; };
+		D13116A91A03ACB700DE1322 /* 4DPluginAPI.c in Sources */ = {isa = PBXBuildFile; fileRef = D13116A81A03ACB700DE1322 /* 4DPluginAPI.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D134D4AC1A030BA0008D14EF /* manifest.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = D134D4A91A030B06008D14EF /* manifest.json */; };
 		D13FF02727A1A72C001C2786 /* GSS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A8279E6ABC001792B4 /* GSS.framework */; };
 		D13FF02827A1A737001C2786 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53526133F470015464C /* Security.framework */; };
@@ -39,13 +38,13 @@
 		D155A51126130E820015464C /* libnghttp2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50526130E820015464C /* libnghttp2.a */; };
 		D155A51226130E820015464C /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50626130E820015464C /* libssl.a */; };
 		D155A51826130F900015464C /* C_TYPES.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A51526130F900015464C /* C_TYPES.h */; };
-		D155A51926130F900015464C /* C_BLOB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A51626130F900015464C /* C_BLOB.cpp */; };
+		D155A51926130F900015464C /* C_BLOB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A51626130F900015464C /* C_BLOB.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D155A51A26130F900015464C /* C_BLOB.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A51726130F900015464C /* C_BLOB.h */; };
 		D155A51F26130FBC0015464C /* C_TEXT.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A51D26130FBC0015464C /* C_TEXT.h */; };
-		D155A52026130FBC0015464C /* C_TEXT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A51E26130FBC0015464C /* C_TEXT.cpp */; };
+		D155A52026130FBC0015464C /* C_TEXT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A51E26130FBC0015464C /* C_TEXT.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D155A525261332130015464C /* ufopen.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A523261332130015464C /* ufopen.h */; };
-		D155A526261332130015464C /* ufopen.c in Sources */ = {isa = PBXBuildFile; fileRef = D155A524261332130015464C /* ufopen.c */; };
-		D155A52B2613351E0015464C /* 4DPlugin-JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A5292613351E0015464C /* 4DPlugin-JSON.cpp */; };
+		D155A526261332130015464C /* ufopen.c in Sources */ = {isa = PBXBuildFile; fileRef = D155A524261332130015464C /* ufopen.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		D155A52B2613351E0015464C /* 4DPlugin-JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A5292613351E0015464C /* 4DPlugin-JSON.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D155A52C2613351E0015464C /* 4DPlugin-JSON.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A52A2613351E0015464C /* 4DPlugin-JSON.h */; };
 		D155A53026133EB50015464C /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A52F26133EB50015464C /* libcurl.a */; };
 		D155A53926133F950015464C /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53826133F950015464C /* JavaScriptCore.framework */; };
@@ -54,11 +53,11 @@
 		D155A545261346DD0015464C /* libbrotlicommon-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A542261346DD0015464C /* libbrotlicommon-static.a */; };
 		D155A546261346DD0015464C /* libbrotlidec-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A543261346DD0015464C /* libbrotlidec-static.a */; };
 		D155A54A26135ABF0015464C /* C_LONGINT.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A54826135ABF0015464C /* C_LONGINT.h */; };
-		D155A54B26135ABF0015464C /* C_LONGINT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A54926135ABF0015464C /* C_LONGINT.cpp */; };
+		D155A54B26135ABF0015464C /* C_LONGINT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A54926135ABF0015464C /* C_LONGINT.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D1B903A4279E6566001792B4 /* libssh2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FC26130E820015464C /* libssh2.a */; };
 		D1B903A7279E6A60001792B4 /* librtmp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A6279E6A4C001792B4 /* librtmp.a */; };
 		D1BF53F7270EB85400F6E1EE /* ftpparse.h in Headers */ = {isa = PBXBuildFile; fileRef = D1BF53F6270EB85400F6E1EE /* ftpparse.h */; };
-		D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */ = {isa = PBXBuildFile; fileRef = D1BF53F9270EB85800F6E1EE /* ftpparse.c */; };
+		D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */ = {isa = PBXBuildFile; fileRef = D1BF53F9270EB85800F6E1EE /* ftpparse.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -142,7 +141,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D10E131C27A1AC4300EF700B /* LDAP.framework in Frameworks */,
-				D10E131B27A1AC2E00EF700B /* libldap.tbd in Frameworks */,
 				D13FF04127A1AB3F001C2786 /* libiconv.a in Frameworks */,
 				D13FF03327A1A7F5001C2786 /* libsasl2.tbd in Frameworks */,
 				D13FF03027A1A7E1001C2786 /* liblber.a in Frameworks */,
@@ -484,11 +482,10 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/lib",
 					"$(PROJECT_DIR)/a",
-					"$(PROJECT_DIR)/a/mojave",
 				);
 				LIBRARY_STYLE = Bundle;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 4.5.0;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 4.6.0;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -542,11 +539,10 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/lib",
 					"$(PROJECT_DIR)/a",
-					"$(PROJECT_DIR)/a/mojave",
 				);
 				LIBRARY_STYLE = Bundle;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 4.5.0;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 4.6.0;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -598,11 +594,10 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/lib",
 					"$(PROJECT_DIR)/a",
-					"$(PROJECT_DIR)/a/mojave",
 				);
 				LIBRARY_STYLE = Bundle;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 4.5.0;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 4.6.0;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
