@@ -12,6 +12,8 @@ Generic network client based on libcurl.
 
 * Windows library version update: from `libcurl-7.62.0` to `libcurl-7.74.0-DEV`
 
+vcpkg configuration: `[brotli,c-ares,core,http2,idn2,non-http,openssl,schannel,ssh,ssl,sspi,winldap]` --triplet x64-windows-static`
+
 * callback frequency increased: from every `1` second to every `100` milliseconds max
 
 * removed Windows 32-bit support
