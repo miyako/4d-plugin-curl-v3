@@ -14,7 +14,7 @@ Generic network client based on libcurl.
 
 vcpkg configuration: `[brotli,c-ares,core,http2,idn2,non-http,openssl,schannel,ssh,ssl,sspi,winldap,zstd] --triplet x64-windows-static`
 
-* missing protocol on Windows: gophers, ldaps, rtmp, rtmpe, rtmps, rtmpt, rtmpte, rtmpts
+* missing protocol on Windows: rtmp, rtmpe, rtmps, rtmpt, rtmpte, rtmpts
 
 * callback frequency increased: from every `1` second to every `100` milliseconds max
 
