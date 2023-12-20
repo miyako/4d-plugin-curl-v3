@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>BuildMachineOSBuild</key>
-	<string>23B81</string>
+	<string>23C64</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>4.6.1</string>
+	<string>4.6.2</string>
 	<key>CFBundleSignature</key>
 	<string>4D06</string>
 	<key>CFBundleSupportedPlatforms</key>
