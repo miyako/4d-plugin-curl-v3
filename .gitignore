@@ -6,6 +6,4 @@ curl/test/Libraries/lib4d-arm64.dylib
 curl/build/*
 curl/.vs/*
 curl/Objs/*
-curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.exp
-curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.lib
 curl/test/userPreferences.*
