@@ -1,43 +1,43 @@
 {
 	"methods": {
 		"issue 12": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"issue 18": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"issue 5a": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"issue 5b": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_ftp_14": {
-			"timeStamp": "2023-12-20T00:33:49.262Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_ftp_dirlist": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_ftp_upload": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_http": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_https": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_http_apple": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_PROGRESS": {
-			"timeStamp": "2023-12-20T00:33:49.262Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_sftp": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		},
 		"TEST_version_info": {
-			"timeStamp": "2023-12-20T00:33:49.264Z"
+			"timeStamp": "2023-12-20T00:33:49Z"
 		}
 	}
 }
