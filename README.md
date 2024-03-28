@@ -6,14 +6,14 @@
 # 4d-plugin-curl-v3
 Generic network client based on libcurl.
 
-#### changes since v2
-
 * macOS library version:
   * `libcurl-8.4.0`
-  * `openssl-3.1.4`
+  * `openssl-3.2.1`
   * `libz-1.2.11`
   * `libssh2-1.11.0`
-  * `nghttp2-1.58.0` `openldap-2.6.6`
+  * `brotli-1.0.9`
+  * `nghttp2-1.58.0`
+  * `zstd-1.5.1`
 
 * Windows library version:
   * `libcurl-8.4.0`
