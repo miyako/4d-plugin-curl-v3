@@ -6,11 +6,23 @@
 # 4d-plugin-curl-v3
 Generic network client based on libcurl.
 
-#### changes since v2
+* macOS library version:
+  * `libcurl-8.6.0`
+  * `openssl-3.2.1`
+  * `libz-1.2.11`
+  * `libssh2-1.11.0`
+  * `brotli-1.0.9`
+  * `nghttp2-1.58.0`
+  * `zstd-1.5.1`
 
-* macOS library version update: from `libcurl-7.62.0` to ~~`libcurl-7.75.0`~~ ~~`libcurl-7.81.0`~~ `libcurl-8.4.0` `openssl-3.1.4` `libssh2-1.11.0_1` `nghttp2-1.58.0` `openldap-2.6.6`
-
-* Windows library version update: from `libcurl-7.62.0` to ~~`libcurl-7.74.0`~~ `libcurl-8.4.0` `openssl-3.1.4` `libssh2-1.11.0_1` `nghttp2-1.58.0` 
+* Windows library version:
+  * `libcurl-8.6.0`
+  * `openssl-3.2.0 (Schannel)`
+  * `libz-1.3`
+  * `libssh2-1.11.0`
+  * `brotli-1.1.0`
+  * `nghttp2-1.58.0`
+  * `zstd-1.5.5`
 
 vcpkg configuration: `[brotli,c-ares,core,http2,idn2,non-http,openssl,schannel,ssh,ssl,sspi,winldap,zstd] --triplet x64-windows-static`
 

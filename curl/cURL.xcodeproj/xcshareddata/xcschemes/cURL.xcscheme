@@ -43,7 +43,7 @@
       <PathRunnable
          runnableDebuggingMode = "0"
          BundleIdentifier = "com.4D.4D"
-         FilePath = "/Applications/4D v19 R8/4D.app">
+         FilePath = "/Applications/4D v20 R3/4D.app">
       </PathRunnable>
    </LaunchAction>
    <ProfileAction
