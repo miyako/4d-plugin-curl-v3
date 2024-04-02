@@ -7,7 +7,7 @@
 Generic network client based on libcurl.
 
 * macOS library version:
-  * `libcurl-8.4.0`
+  * `libcurl-8.6.0`
   * `openssl-3.2.1`
   * `libz-1.2.11`
   * `libssh2-1.11.0`
@@ -16,7 +16,7 @@ Generic network client based on libcurl.
   * `zstd-1.5.1`
 
 * Windows library version:
-  * `libcurl-8.4.0`
+  * `libcurl-8.6.0`
   * `openssl-3.2.0 (Schannel)`
   * `libz-1.3`
   * `libssh2-1.11.0`
