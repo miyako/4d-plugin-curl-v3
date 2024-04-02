@@ -46,7 +46,6 @@
 		D155A526261332130015464C /* ufopen.c in Sources */ = {isa = PBXBuildFile; fileRef = D155A524261332130015464C /* ufopen.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D155A52B2613351E0015464C /* 4DPlugin-JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D155A5292613351E0015464C /* 4DPlugin-JSON.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D155A52C2613351E0015464C /* 4DPlugin-JSON.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A52A2613351E0015464C /* 4DPlugin-JSON.h */; };
-		D155A53026133EB50015464C /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A52F26133EB50015464C /* libcurl.a */; };
 		D155A53926133F950015464C /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53826133F950015464C /* JavaScriptCore.framework */; };
 		D155A53F261345690015464C /* libzstd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A53E261345690015464C /* libzstd.a */; };
 		D155A544261346DD0015464C /* libbrotlienc-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A541261346DD0015464C /* libbrotlienc-static.a */; };
@@ -58,6 +57,7 @@
 		D1B903A7279E6A60001792B4 /* librtmp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B903A6279E6A4C001792B4 /* librtmp.a */; };
 		D1BF53F7270EB85400F6E1EE /* ftpparse.h in Headers */ = {isa = PBXBuildFile; fileRef = D1BF53F6270EB85400F6E1EE /* ftpparse.h */; };
 		D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */ = {isa = PBXBuildFile; fileRef = D1BF53F9270EB85800F6E1EE /* ftpparse.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		D1D0595B2BB6385B001D59DC /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A52F26133EB50015464C /* libcurl.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -141,6 +141,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D10E131C27A1AC4300EF700B /* LDAP.framework in Frameworks */,
+				D1D0595B2BB6385B001D59DC /* libcurl.a in Frameworks */,
 				D13FF04127A1AB3F001C2786 /* libiconv.a in Frameworks */,
 				D13FF03327A1A7F5001C2786 /* libsasl2.tbd in Frameworks */,
 				D13FF03027A1A7E1001C2786 /* liblber.a in Frameworks */,
@@ -164,7 +165,6 @@
 				D155A50C26130E820015464C /* libz.a in Frameworks */,
 				D155A545261346DD0015464C /* libbrotlicommon-static.a in Frameworks */,
 				D155A544261346DD0015464C /* libbrotlienc-static.a in Frameworks */,
-				D155A53026133EB50015464C /* libcurl.a in Frameworks */,
 				D155A51226130E820015464C /* libssl.a in Frameworks */,
 				D10A3284279F1FF600B865C4 /* ssh-keychain.tbd in Frameworks */,
 				D155A53F261345690015464C /* libzstd.a in Frameworks */,
@@ -485,7 +485,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 4.6.2;
+				MARKETING_VERSION = 4.6.3;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -542,7 +542,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 4.6.2;
+				MARKETING_VERSION = 4.6.3;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -597,7 +597,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 4.6.2;
+				MARKETING_VERSION = 4.6.3;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
