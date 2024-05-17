@@ -7,8 +7,8 @@
 Generic network client based on libcurl.
 
 * macOS library version:
-  * `libcurl-8.6.0`
-  * `openssl-3.2.1`
+  * `libcurl-8.7.1`
+  * `openssl-3.3.0`
   * `libz-1.2.11`
   * `libssh2-1.11.0`
   * `brotli-1.0.9`
