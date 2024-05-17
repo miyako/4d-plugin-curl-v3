@@ -7,3 +7,5 @@ curl/build/*
 curl/.vs/*
 curl/Objs/*
 curl/test/userPreferences.*
+curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.lib
+curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.exp
