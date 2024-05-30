@@ -485,7 +485,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 4.7.2;
+				MARKETING_VERSION = 4.7.3;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -542,7 +542,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 4.7.2;
+				MARKETING_VERSION = 4.7.3;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -597,7 +597,7 @@
 				);
 				LIBRARY_STYLE = Bundle;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 4.7.2;
+				MARKETING_VERSION = 4.7.3;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -664,7 +664,7 @@
 				OBJROOT = "$(SRCROOT)/build";
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
-				SYMROOT = "$(SRCROOT)/test/Plugins";
+				SYMROOT = "/Users/miyako/Downloads/curllib test cases for Miyako/cURL_test_cases/app/curllib_test.4dbase/Plugins";
 			};
 			name = Development;
 		};
