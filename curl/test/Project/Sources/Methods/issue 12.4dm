@@ -8,5 +8,5 @@ $options.URL:="https://www.apple.com/"
 $options.CERTINFO:=1
 $options.CAINFO:=Folder:C1567(fk resources folder:K87:11).file("cacert-2021-01-19.pem").platformPath
 
-$status:=cURL($options; $request; $response; $request)
+$status:=cURL($options; $request; $response)
 

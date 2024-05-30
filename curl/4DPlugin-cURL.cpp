@@ -11,7 +11,7 @@
 #include "4DPlugin-cURL.h"
 
 std::mutex mutexPf;
-//std::mutex mutexMcurl;
+std::mutex mutexMcurl;
 
 pxProxyFactory *pf = NULL;
 CURLM *gmcurl = NULL;
@@ -22,8 +22,6 @@ static void OnStartup() {
     
     if(1)
     {
-//        std::lock_guard<std::mutex> lock(mutexMcurl);
-        
         gmcurl = curl_multi_init();
     }
     
@@ -40,8 +38,6 @@ static void OnExit() {
     
     if(gmcurl)
     {
-//        std::lock_guard<std::mutex> lock(mutexMcurl);
-        
         curl_multi_cleanup(gmcurl);
         gmcurl = NULL;
     }
@@ -584,9 +580,7 @@ static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
 static CURLcode curl_perform_atomic(CURL *curl, PA_ObjectRef returnValue) {
     
     CURLcode result = CURLE_OK;
-    
-//    std::lock_guard<std::mutex> lock(mutexMcurl);
-    
+        
     result = curl_easy_perform(curl);
         
     PA_ObjectRef transferInfo = PA_CreateObject();
@@ -643,9 +637,13 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
     
     if(1)
     {
-//        std::lock_guard<std::mutex> lock(mutexMcurl);
-        
+        std::lock_guard<std::mutex> lock(mutexMcurl);
         curl_multi_add_handle(mcurl, curl);
+    }
+    
+    if(1)
+    {
+        std::lock_guard<std::mutex> lock(mutexMcurl);
         curl_multi_perform(mcurl, &running_handles);
     }
     
@@ -723,14 +721,12 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
             default:
                 if(1)
                 {
-//                    std::lock_guard<std::mutex> lock(mutexMcurl);
-                    
-                    /* timeout or readable/writable sockets */
+                    std::lock_guard<std::mutex> lock(mutexMcurl);
                     mc = curl_multi_perform(mcurl, &running_handles);
-                    /* callback method */
                 }
             {
 
+                /* callback method */
                 if((method_id)||(execute_callback_method))
                 {
                     auto now = std::chrono::high_resolution_clock::now();//time(0);
@@ -828,10 +824,12 @@ curl_abort_transfer:
         PA_ObjectRef transferInfo = PA_CreateObject();
         curl_get_info(curl, transferInfo);
         ob_set_o(returnValue, "transferInfo", transferInfo);
-        
-        curl_multi_remove_handle(mcurl, curl);
     }
     
+    if (1) {
+        std::lock_guard<std::mutex> lock(mutexMcurl);
+        curl_multi_remove_handle(mcurl, curl);
+    }
     
     if (method_id)
     {

@@ -14,8 +14,8 @@
             filePath = "4DPlugin-cURL.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "914"
-            endingLineNumber = "914"
+            startingLineNumber = "912"
+            endingLineNumber = "912"
             landmarkName = "cURL_VersionInfo(params)"
             landmarkType = "9">
          </BreakpointContent>
