@@ -7,13 +7,13 @@
 Generic network client based on libcurl.
 
 * macOS library version:
-  * ~~`libcurl-8.7.1`~~ `libcurl-8.4.0`
-  * ~~`openssl-3.3.0`~~ `openssl-3.1.4` see https://github.com/miyako/4d-plugin-curl-v3/issues/25
+  * `libcurl-8.9.1`
+  * `openssl-3.3.1` 
   * `libz-1.2.11`
   * `libssh2-1.11.0`
   * `brotli-1.0.9`
-  * `nghttp2-1.58.0`
-  * `zstd-1.5.1`
+  * `nghttp2-1.61.0`
+  * `zstd-1.5.6`
 
 * Windows library version:
   * `libcurl-8.7.0-DEV`
