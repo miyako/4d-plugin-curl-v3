@@ -16,12 +16,12 @@ Generic network client based on libcurl.
   * `zstd-1.5.6`
 
 * Windows library version:
-  * `libcurl-8.7.0-DEV`
-  * `openssl-3.3.0 (Schannel)`
-  * `libz-1.3`
+  * `libcurl-8.9.1`
+  * `openssl-3.3.1 (Schannel)`
+  * `libz-1.3.1`
   * `libssh2-1.11.0`
   * `brotli-1.1.0`
-  * `nghttp2-1.58.0`
+  * `nghttp2-1.62.1`
   * `zstd-1.5.5`
 
 vcpkg configuration: `[brotli,c-ares,core,http2,idn2,non-http,openssl,schannel,ssh,ssl,sspi,winldap,zstd] --triplet x64-windows-static`
