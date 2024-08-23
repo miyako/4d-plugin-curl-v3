@@ -130,7 +130,11 @@ static size_t curl_read_function(void *buffer,
         
         if(f)
         {
+#if VERSIONMAC
             fseek(f, ctx->pos, SEEK_SET);
+#else
+            _fseeki64(f, ctx->pos, SEEK_SET);
+#endif
             len = fread(buffer, size, nmemb, f);
             ctx->pos += len;
             fclose(f);
@@ -2244,8 +2248,14 @@ void _cURL(PA_PluginParameters params) {
     FILE *f = CPathOpen (request_ctx.path, CPathRead);
     if(f)
     {
+#if VERSIONMAC
         fseek(f, 0L, SEEK_END);
         request_ctx.size = (curl_off_t)ftell(f);
+#else
+        _fseeki64(f, 0L, SEEK_END);
+        request_ctx.size = (curl_off_t)_ftelli64(f);
+#endif
+
         fclose(f);
         
         if(request_ctx.size != -1L)
@@ -2708,8 +2718,13 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     FILE *f = CPathOpen (request_ctx.path, CPathRead);
     if(f)
     {
+#if VERSIONMAC
         fseek(f, 0L, SEEK_END);
         request_ctx.size = (curl_off_t)ftell(f);
+#else
+        _fseeki64(f, 0L, SEEK_END);
+        request_ctx.size = (curl_off_t)_ftelli64(f);
+#endif
         fclose(f);
         
         if(request_ctx.size != -1L)
