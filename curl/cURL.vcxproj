@@ -103,7 +103,7 @@
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)$(ProjectName).4dbase\plugins\$(ProjectName).bundle\contents\windows\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(ProjectName).4dbase\plugins\$(ProjectName).bundle\contents\windows64\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)test\Plugins\cURL.bundle\Contents\Windows64</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)Objs\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Objs\$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
@@ -153,7 +153,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>preemptive;include\libjson;include\curl;include;4D Plugin API\Classes;4D Plugin API;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>support;include\libjson;include\curl;include;4D Plugin API\Classes;4D Plugin API;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NGHTTP2_STATICLIB;CURL_STATICLIB;WIN64;WIN32;_DEBUG;_WINDOWS;_USRDLL;MY4DPLUGIN_EXPORTS;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -171,8 +171,10 @@
       <ModuleDefinitionFile>.\4D Plugin API\4DPluginAPI.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>lib\64;C:\Users\miyako\Documents\vcpkg\vcpkg-master\installed\x64-windows-static\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>jsoncpp.lib;cares.lib;nghttp2.lib;Wldap32.lib;Crypt32.lib;ssleay32.lib;libeay32.lib;zlib.lib;libssh2.lib;libcurl-d.lib;ws2_32.lib;legacy_stdio_definitions.lib;modman.lib;libproxy.lib;libjson.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\miyako\Documents\GitHub\4d-plugin-curl-v3\curl\lib\64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>brotlicommon.lib;brotlidec.lib;brotlienc.lib;cares.lib;charset.lib;iconv.lib;idn2.lib;libcrypto.lib;libcurl-d.lib;libssh2.lib;libssl.lib;nghttp2.lib;unistring.lib;zlib.lib;zstd.lib;Wldap32.lib;Crypt32.lib;msvcrtd.lib;libcmtd.lib;ws2_32.lib;legacy_stdio_definitions.lib;modman.lib;libproxy.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -221,7 +223,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalLibraryDirectories>lib\64;C:\Users\miyako\Documents\vcpkg\vcpkg-master\installed\x64-windows-static\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>brotlicommon.lib;brotlidec.lib;brotlienc.lib;cares.lib;charset.lib;iconv.lib;idn2.lib;libcrypto.lib;libcurl.lib;libssh2.lib;libssl.lib;nghttp2.lib;unistring.lib;zlib.lib;zstd.lib;jsoncpp.lib;Wldap32.lib;Crypt32.lib;msvcrt.lib;libcmt.lib;ws2_32.lib;legacy_stdio_definitions.lib;modman.lib;libproxy.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>brotlicommon.lib;brotlidec.lib;brotlienc.lib;cares.lib;charset.lib;iconv.lib;idn2.lib;libcrypto.lib;libcurl.lib;libssh2.lib;libssl.lib;nghttp2.lib;unistring.lib;zlib.lib;zstd.lib;Wldap32.lib;Crypt32.lib;msvcrt.lib;libcmt.lib;ws2_32.lib;legacy_stdio_definitions.lib;modman.lib;libproxy.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

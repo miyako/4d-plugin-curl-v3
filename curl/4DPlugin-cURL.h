@@ -68,6 +68,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType);
 #define CPathString CUTF16String
 #define CPathOpen _wfopen
 #define CPathSeek _fseeki64
+#define CPathTell _ftelli64
 #define CPathAppend L"ab"
 #define CPathCreate L"wb"
 #define CPathRead L"rb"
