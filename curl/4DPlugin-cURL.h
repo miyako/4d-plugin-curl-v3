@@ -68,6 +68,11 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType);
 #define CPathAppend L"ab"
 #define CPathCreate L"wb"
 #define CPathRead L"rb"
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <io.h>
+#include <stdio.h>
 #endif
 
 #if VERSIONMAC

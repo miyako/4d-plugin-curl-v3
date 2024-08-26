@@ -2245,25 +2245,60 @@ void _cURL(PA_PluginParameters params) {
     
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)Param2.getBytesLength());
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)Param2.getBytesLength());
-    FILE *f = CPathOpen (request_ctx.path, CPathRead);
-    if(f)
-    {
+    
 #if VERSIONMAC
-        fseek(f, 0L, SEEK_END);
-        request_ctx.size = (curl_off_t)ftell(f);
+        FILE* f = CPathOpen(request_ctx.path, CPathRead);
+        if (f)
+        {
+            fseek(f, 0L, SEEK_END);
+            request_ctx.size = (curl_off_t)ftell(f);
+        }
+        fclose(f);
 #else
+    FILE* f = NULL;
+    if (!_wfopen_s(&f, request_ctx.path, CPathRead))
+    {
         _fseeki64(f, 0L, SEEK_END);
         request_ctx.size = (curl_off_t)_ftelli64(f);
+        fclose(f);
+    }
+
+    struct __stat64 st;
+    _wstat64(request_ctx.path, &st);
+    request_ctx.size = st.st_size;
+
+        int fh = _wopen(request_ctx.path, _O_BINARY);
+        if (fh != -1)
+        {
+            request_ctx.size = _lseeki64(fh, 0L, SEEK_END);
+            request_ctx.size = _telli64(fh);
+            _close(fh);
+        }
+        HANDLE h = CreateFileW(request_ctx.path,          
+            GENERIC_READ,         
+            FILE_SHARE_READ,              
+            NULL,                   
+            OPEN_EXISTING,             
+            FILE_ATTRIBUTE_NORMAL,  
+            NULL);           
+        if (h) {
+            LARGE_INTEGER __size;
+            GetFileSizeEx(h, &__size);
+
+            CloseHandle(h);
+        }
+
+    
 #endif
 
-        fclose(f);
+
         
         if(request_ctx.size != -1L)
         {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, request_ctx.size);
             curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, request_ctx.size);
         }
-    }
+
     
     response_ctx.use_path = response_path.length();
     
