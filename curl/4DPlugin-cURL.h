@@ -58,6 +58,8 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType);
 #if VERSIONMAC
 #define CPathString CUTF8String
 #define CPathOpen fopen
+#define CPathSeek fseek
+#define CPathTell ftell
 #define CPathAppend "ab"
 #define CPathCreate "wb"
 #define CPathRead "rb"
@@ -65,6 +67,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType);
 #include <Shlobj.h>
 #define CPathString CUTF16String
 #define CPathOpen _wfopen
+#define CPathSeek _fseeki64
 #define CPathAppend L"ab"
 #define CPathCreate L"wb"
 #define CPathRead L"rb"
