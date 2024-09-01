@@ -495,7 +495,6 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SECTORDER_FLAGS = "";
-				SYMROOT = "$(SRCROOT)/test/Plugins";
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
