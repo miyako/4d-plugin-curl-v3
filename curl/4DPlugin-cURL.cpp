@@ -2973,7 +2973,8 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                         
                         time_t mtime = r.mtime;
                         
-                        switch (r.mtimetype) {
+                        if (mtime >= 0) {
+                            switch (r.mtimetype) {
                             case FTPPARSE_MTIME_UNKNOWN:
                                 ob_set_s(f, L"mtimetype", "UNKNOWN");
                                 break;
@@ -2988,18 +2989,20 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                                 break;
                             default:
                                 break;
+                            }
+
+                            std::vector<uint8_t> buf(32);
+                            memset((char*)&buf[0], 0, buf.size());
+
+                            if (r.mtimetype == FTPPARSE_MTIME_LOCAL) {
+                                strftime((char*)&buf[0], buf.size(), "%Y-%m-%dT%H%:M%:S%z", localtime(&mtime));
+                            }
+                            else {
+                                strftime((char*)&buf[0], buf.size(), "%Y-%m-%dT%H:%M:%S%z", gmtime(&mtime));
+                            }
+
+                            ob_set_s(f, L"mtime", (char*)&buf[0]);
                         }
-                        
-                        std::vector<uint8_t> buf(32);
-                        memset((char *)&buf[0], 0, buf.size());
-                        
-                        if(r.mtimetype == FTPPARSE_MTIME_LOCAL) {
-                            strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H%:M%:S%z",  localtime(&mtime));
-                        }else{
-                            strftime((char *)&buf[0], buf.size(), "%Y-%m-%dT%H:%M:%S%z",  gmtime(&mtime));
-                        }
-                        
-                        ob_set_s(f, L"mtime", (char *)&buf[0]);
                         
                         PA_Variable v = PA_CreateVariable(eVK_Object);
                         PA_SetObjectVariable(&v, f);
