@@ -664,7 +664,7 @@
 				OBJROOT = "$(SRCROOT)/build";
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
-				SYMROOT = "/Users/miyako/Downloads/curllib test cases for Miyako/cURL_test_cases/app/curllib_test.4dbase/Plugins";
+				SYMROOT = "$(SRCROOT)/test/Plugins";
 			};
 			name = Development;
 		};
