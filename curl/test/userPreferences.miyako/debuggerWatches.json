@@ -1,6 +1,16 @@
 [
 	{
-		"type": 66,
-		"formula": "$result.status"
+		"codeDescriptorWatches": [
+			{
+				"path": "issue 19",
+				"watches": [
+					{
+						"type": 66,
+						"formula": "$status",
+						"expanded": true
+					}
+				]
+			}
+		]
 	}
 ]
