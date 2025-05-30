@@ -2340,7 +2340,7 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
                                                 curl_ftp_command_t commandType,
                                                 BOOL removeFileName = FALSE) {
     
-    protocol_type_t protocol = PROTOCOL_TYPE_UNKNOWN;
+    protocol_type_t protocol = PROTOCOL_TYPE_FTP/*PROTOCOL_TYPE_UNKNOWN*/;
     
     curl_set_options(curl, Param1, request_path, response_path, userInfo,
                      NULL, NULL, NULL, NULL,
