@@ -10,3 +10,4 @@ curl/test/userPreferences.*
 curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.lib
 curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.exp
 curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.pdb
+curl/test/Project/Sources/Methods/ignore*.4dm
