@@ -17,14 +17,14 @@ Generic network client based on libcurl.
 
 * Windows library version:
   * `libcurl-8.9.1`
-  * `openssl-3.3.1 (Schannel)`
+  * `openssl-3.5.0`
   * `libz-1.3.1`
-  * `libssh2-1.11.0`
+  * `libssh2-1.11.1`
   * `brotli-1.1.0`
-  * `nghttp2-1.62.1`
-  * `zstd-1.5.5`
+  * `nghttp2-1.65.0`
+  * `zstd-1.5.7`
 
-vcpkg configuration: `[brotli,c-ares,core,http2,idn2,non-http,openssl,schannel,ssh,ssl,sspi,winldap,zstd] --triplet x64-windows-static`
+vcpkg configuration: `[brotli,c-ares,core,http2,idn2,non-http,openssl,ssh,ssl,sspi,winldap,zstd] --triplet x64-windows-static`
 
 * missing protocol on Windows: rtmp, rtmpe, rtmps, rtmpt, rtmpte, rtmpts
 
