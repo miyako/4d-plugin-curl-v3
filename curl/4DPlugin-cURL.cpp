@@ -349,6 +349,18 @@ static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
         }
 
         if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &contentLengthDownloadT)) {
+            // CHANGED: Ensure consistency for 0-byte files queried via SFTP
+            if(contentLengthDownloadT == -1)
+            {
+                char *url = NULL;
+                if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url)) && url)
+                {
+                    if(strncmp(url, "sftp://", 7) == 0)
+                    {
+                        contentLengthDownloadT = 0;
+                    }
+                }
+            }
             ob_set_n(transferInfo, "contentLengthDownload", contentLengthDownloadT);
         }
 
