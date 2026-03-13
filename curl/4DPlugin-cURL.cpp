@@ -3022,8 +3022,14 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
             PA_ObjectRef fileInfo = PA_CreateObject();
             if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &fileSize))
             {
-                ob_set_n(fileInfo, L"size", fileSize);
+                // CHANGED: Handle libcurl returning -1 for 0-byte SFTP files
+                if(fileSize == -1 && protocol == PROTOCOL_TYPE_SFTP)
+                {
+                    fileSize = 0;
+                }
             }
+            ob_set_n(fileInfo, L"size", fileSize);
+            
             long _fileTime;
             if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_FILETIME, &_fileTime))
             {
