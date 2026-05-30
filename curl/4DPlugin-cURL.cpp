@@ -119,31 +119,41 @@ static size_t curl_read_function(void *buffer,
                           size_t size,
                           size_t nmemb,
                           http_ctx *ctx) {
-    
+
     size_t len = size * nmemb;
-    
-    if(ctx->size)
+
+    if (ctx->size)
     {
-        FILE *f;
-        
-        f = CPathOpen (ctx->path, CPathRead);
-        
-        if(f)
+        if (!ctx->upload_file)
         {
-            CPathSeek(f, ctx->pos, SEEK_SET);
-            len = fread(buffer, size, nmemb, f);
-            ctx->pos += len;
-            fclose(f);
-        }else
-        {
-            len = 0;
+            ctx->upload_file = CPathOpen(ctx->path, CPathRead);
+            if (ctx->upload_file)
+                CPathSeek(ctx->upload_file, ctx->pos, SEEK_SET);
         }
-    }else
+
+        len = ctx->upload_file ? fread(buffer, size, nmemb, ctx->upload_file) : 0;
+
+        if (len == 0 && ctx->upload_file && !feof(ctx->upload_file))
+        {
+            // Error (not EOF) — attempt one reopen as recovery
+            fclose(ctx->upload_file);
+            ctx->upload_file = CPathOpen(ctx->path, CPathRead);
+            if (ctx->upload_file)
+            {
+                CPathSeek(ctx->upload_file, ctx->pos, SEEK_SET);
+                len = fread(buffer, size, nmemb, ctx->upload_file);
+            }
+            if (len == 0) return CURL_READFUNC_ABORT;
+        }
+
+        ctx->pos += len;
+    }
+    else
     {
         const uint8_t *ptr = ctx->data->getBytesPtrForSize((uint32_t *)&len);
-        if(ptr) memcpy(buffer, ptr, len);
+        if (ptr) memcpy(buffer, ptr, len);
     }
-    
+
     return len;
 }
 
@@ -203,90 +213,121 @@ static size_t curl_debug_function(CURL *curl,
                                   size_t size,
                                   http_debug_ctx *ctx) {
 
-       #if VERSIONMAC
-           std::string path;
-           path = (const char *)ctx->path;
-       #else
-           std::wstring path;
-           path = (const wchar_t *)ctx->path;
-       #endif
-           
-           curl_off_t  *f_size = NULL;
-           
-           switch (type)
-           {
-               case CURLINFO_TEXT:
-                   path += LOG_CURLINFO_TEXT;
-                   f_size = &ctx->size_CURLINFO_TEXT;
-                   break;
-               case CURLINFO_HEADER_IN:
-                   path += LOG_CURLINFO_HEADER_IN;
-                   f_size = &ctx->size_CURLINFO_HEADER_IN;
-                   break;
-               case CURLINFO_HEADER_OUT:
-                   path += LOG_CURLINFO_HEADER_OUT;
-                   f_size = &ctx->size_CURLINFO_HEADER_OUT;
-                   break;
-               case CURLINFO_DATA_IN:
-                   path += LOG_CURLINFO_DATA_IN;
-                   f_size = &ctx->size_CURLINFO_DATA_IN;
-                   break;
-               case CURLINFO_DATA_OUT:
-                   path += LOG_CURLINFO_DATA_OUT;
-                   f_size = &ctx->size_CURLINFO_DATA_OUT;
-                   break;
-               case CURLINFO_SSL_DATA_OUT:
-                   path += LOG_CURLINFO_SSL_DATA_IN;
-                   f_size = &ctx->size_CURLINFO_SSL_DATA_IN;
-                   break;
-               case CURLINFO_SSL_DATA_IN:
-                   path += LOG_CURLINFO_SSL_DATA_OUT;
-                   f_size = &ctx->size_CURLINFO_SSL_DATA_OUT;
-                   break;
-               case CURLINFO_END:
-                   break;
-           }
+    #if VERSIONMAC
+        std::string path = (const char *)ctx->path;
+    #else
+        std::wstring path = (const wchar_t *)ctx->path;
+    #endif
 
-           create_parent_folder((path_t *)path.c_str());
-           FILE *f = CPathOpen ((path_t *)path.c_str(), *f_size ? CPathAppend : CPathCreate);
-           
-           if(f)
-           {
-               *f_size += size;
-               fwrite(data, size, sizeof(char), f);
-               fclose(f);
-           }
+    curl_off_t  *f_size      = NULL;
+    FILE       **f_handle    = NULL;
 
-           return 0;
-       }
+    switch (type)
+    {
+        case CURLINFO_TEXT:
+            path     += LOG_CURLINFO_TEXT;
+            f_size   = &ctx->size_CURLINFO_TEXT;
+            f_handle = &ctx->file_CURLINFO_TEXT;
+            break;
+        case CURLINFO_HEADER_IN:
+            path     += LOG_CURLINFO_HEADER_IN;
+            f_size   = &ctx->size_CURLINFO_HEADER_IN;
+            f_handle = &ctx->file_CURLINFO_HEADER_IN;
+            break;
+        case CURLINFO_HEADER_OUT:
+            path     += LOG_CURLINFO_HEADER_OUT;
+            f_size   = &ctx->size_CURLINFO_HEADER_OUT;
+            f_handle = &ctx->file_CURLINFO_HEADER_OUT;
+            break;
+        case CURLINFO_DATA_IN:
+            path     += LOG_CURLINFO_DATA_IN;
+            f_size   = &ctx->size_CURLINFO_DATA_IN;
+            f_handle = &ctx->file_CURLINFO_DATA_IN;
+            break;
+        case CURLINFO_DATA_OUT:
+            path     += LOG_CURLINFO_DATA_OUT;
+            f_size   = &ctx->size_CURLINFO_DATA_OUT;
+            f_handle = &ctx->file_CURLINFO_DATA_OUT;
+            break;
+        case CURLINFO_SSL_DATA_OUT:          // fixed: was using _IN label
+            path     += LOG_CURLINFO_SSL_DATA_OUT;
+            f_size   = &ctx->size_CURLINFO_SSL_DATA_OUT;
+            f_handle = &ctx->file_CURLINFO_SSL_DATA_OUT;
+            break;
+        case CURLINFO_SSL_DATA_IN:           // fixed: was using _OUT label
+            path     += LOG_CURLINFO_SSL_DATA_IN;
+            f_size   = &ctx->size_CURLINFO_SSL_DATA_IN;
+            f_handle = &ctx->file_CURLINFO_SSL_DATA_IN;
+            break;
+        case CURLINFO_END:
+            return 0;
+    }
+
+    if (!f_size || !f_handle)
+        return 0;
+
+    if (!*f_handle)
+    {
+        create_parent_folder((path_t *)path.c_str());
+        *f_handle = CPathOpen((path_t *)path.c_str(), *f_size ? CPathAppend : CPathCreate);
+    }
+
+    if (*f_handle)
+    {
+        size_t written = fwrite(data, sizeof(char), size, *f_handle);
+        if (written == 0)
+        {
+            // Error — attempt one reopen in append mode as recovery
+            fclose(*f_handle);
+            *f_handle = CPathOpen((path_t *)path.c_str(), CPathAppend);
+            if (*f_handle)
+                written = fwrite(data, sizeof(char), size, *f_handle);
+        }
+        if (written > 0)
+            *f_size += written;
+    }
+
+    return 0; // debug callbacks must always return 0
+}
 
 static size_t curl_write_function(void *buffer,
                            size_t size,
                            size_t nmemb,
                            http_ctx *ctx) {
-    
+
     size_t len = size * nmemb;
-    
-    if(ctx->use_path)
+
+    if (ctx->use_path)
     {
-        create_parent_folder((path_t *)ctx->path);
-        FILE *f = CPathOpen (ctx->path, ctx->size ? CPathAppend : CPathCreate);
-        
-        if(f)
+        if (!ctx->download_file)
         {
-            ctx->size += len;
-            fwrite(buffer, size, nmemb, f);
-            fclose(f);
-        }else
-        {
-            len = 0;
+            create_parent_folder((path_t *)ctx->path);
+            ctx->download_file = CPathOpen(ctx->path, ctx->size ? CPathAppend : CPathCreate);
         }
-        
-    }else
+
+        if (ctx->download_file)
+        {
+            size_t written = fwrite(buffer, size, nmemb, ctx->download_file);
+            if (written == 0)
+            {
+                // Error — attempt one reopen in append mode as recovery
+                fclose(ctx->download_file);
+                ctx->download_file = CPathOpen(ctx->path, CPathAppend);
+                if (ctx->download_file)
+                    written = fwrite(buffer, size, nmemb, ctx->download_file);
+                if (written == 0) return 0; // signals error to libcurl
+            }
+            ctx->size += written * size;
+            return written * size;
+        }
+
+        return 0; // failed to open — signals error to libcurl
+    }
+    else
     {
         ctx->data->addBytes((const uint8_t *)buffer, (unsigned int)len);
     }
-    
+
     return len;
 }
 
@@ -2203,7 +2244,7 @@ void _cURL(PA_PluginParameters params) {
     request_ctx.data = &Param2; /* request */
     request_ctx.size = 0L;
     request_ctx.use_path = false;
-    
+        
     http_ctx response_ctx;
     response_ctx.pos = 0L;
     response_ctx.data = &Param3;/* response */
@@ -2233,9 +2274,9 @@ void _cURL(PA_PluginParameters params) {
                              debug_folder_path))
     {
 #if VERSIONMAC
-        debug_ctx.path = (const char *)debug_folder_path.c_str();
+        debug_ctx.path = (char *)debug_folder_path.c_str();
 #else
-        debug_ctx.path = (const wchar_t *)debug_folder_path.c_str();
+        debug_ctx.path = (wchar_t *)debug_folder_path.c_str();
 #endif
         
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
@@ -2244,11 +2285,11 @@ void _cURL(PA_PluginParameters params) {
     }
 
 #if VERSIONMAC
-    request_ctx.path = (const char *)request_path.c_str();
-    response_ctx.path = (const char *)response_path.c_str();
+    request_ctx.path = (char *)request_path.c_str();
+    response_ctx.path = (char *)response_path.c_str();
 #else
-    request_ctx.path = (const wchar_t *)request_path.c_str();
-    response_ctx.path = (const wchar_t *)response_path.c_str();
+    request_ctx.path = (wchar_t *)request_path.c_str();
+    response_ctx.path = (wchar_t *)response_path.c_str();
 #endif
     
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)Param2.getBytesLength());
@@ -2333,8 +2374,26 @@ void _cURL(PA_PluginParameters params) {
     
     if(curl_slist_telnet_options)
         curl_slist_free_all(curl_slist_telnet_options);
-    
+        
     curl_easy_cleanup(curl);
+    
+    for (FILE **fh : {
+        &request_ctx.upload_file,
+        &request_ctx.download_file,
+        &response_ctx.upload_file,
+        &response_ctx.download_file,
+        &header_ctx.upload_file,
+        &header_ctx.download_file,
+        &debug_ctx.file_CURLINFO_TEXT,
+        &debug_ctx.file_CURLINFO_HEADER_IN,
+        &debug_ctx.file_CURLINFO_HEADER_OUT,
+        &debug_ctx.file_CURLINFO_DATA_IN,
+        &debug_ctx.file_CURLINFO_DATA_OUT,
+        &debug_ctx.file_CURLINFO_SSL_DATA_IN,
+        &debug_ctx.file_CURLINFO_SSL_DATA_OUT
+    }) {
+        if (*fh) { fclose(*fh); *fh = nullptr; }
+    }
     
     PA_SetBlobParameter(params, 3, (void*)Param3.getBytesPtr(), Param3.getBytesLength());
     

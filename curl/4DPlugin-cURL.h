@@ -115,32 +115,41 @@ typedef wchar_t path_t;
 #include "C_BLOB.h"
 #include "C_LONGINT.h"
 
-typedef struct
-{
-    
-    C_BLOB *data;
-    
-    const path_t *path;
-    size_t pos;/* for read */
-    curl_off_t size;/* for write */
-    
-    bool use_path;
-    
-}http_ctx;
+struct http_ctx {
 
-typedef struct
-{
-    const path_t *path;
-    
-    curl_off_t size_CURLINFO_TEXT;
-    curl_off_t size_CURLINFO_HEADER_IN;
-    curl_off_t size_CURLINFO_HEADER_OUT;
-    curl_off_t size_CURLINFO_DATA_IN;
-    curl_off_t size_CURLINFO_DATA_OUT;
-    curl_off_t size_CURLINFO_SSL_DATA_IN;
-    curl_off_t size_CURLINFO_SSL_DATA_OUT;
+    // --- upload (read) ---
+    path_t      *path;
+    long long    pos;                     // current read position (was likely size_t or off_t)
+    curl_off_t   size;                    // total upload size; 0 means use data blob instead of file
+    FILE        *upload_file   = nullptr; // ADD: cached handle; NULL until first read attempt
 
-}http_debug_ctx;
+    // --- download (write) ---
+    bool         use_path;
+    FILE        *download_file = nullptr; // ADD: cached handle; NULL until first write attempt
+
+    // --- in-memory data (read or write when not using path) ---
+    C_BLOB      *data;
+};
+
+struct http_debug_ctx {
+    path_t      *path;
+
+    curl_off_t   size_CURLINFO_TEXT;
+    curl_off_t   size_CURLINFO_HEADER_IN;
+    curl_off_t   size_CURLINFO_HEADER_OUT;
+    curl_off_t   size_CURLINFO_DATA_IN;
+    curl_off_t   size_CURLINFO_DATA_OUT;
+    curl_off_t   size_CURLINFO_SSL_DATA_IN;
+    curl_off_t   size_CURLINFO_SSL_DATA_OUT;
+
+    FILE        *file_CURLINFO_TEXT          = nullptr;
+    FILE        *file_CURLINFO_HEADER_IN     = nullptr;
+    FILE        *file_CURLINFO_HEADER_OUT    = nullptr;
+    FILE        *file_CURLINFO_DATA_IN       = nullptr;
+    FILE        *file_CURLINFO_DATA_OUT      = nullptr;
+    FILE        *file_CURLINFO_SSL_DATA_IN   = nullptr;
+    FILE        *file_CURLINFO_SSL_DATA_OUT  = nullptr;
+};
 
 #define MAX_LENGTH_FOR_PATH 1024
 
