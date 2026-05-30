@@ -165,13 +165,12 @@ static bool create_folder(path_t *absolute_path) {
     
 #if VERSIONMAC
     NSString *path = (NSString *)CFStringCreateWithFileSystemRepresentation(kCFAllocatorDefault, absolute_path);
-    NSFileManager *fm = [[NSFileManager alloc]init];
+    NSFileManager *fm = [NSFileManager defaultManager];
     success = [fm createDirectoryAtPath:path
             withIntermediateDirectories:YES
                              attributes:nil
                                   error:NULL];
     [path release];
-    [fm release];
 #else
     success = SHCreateDirectory(NULL, (PCWSTR)absolute_path);
 #endif
@@ -325,287 +324,117 @@ static size_t curl_write_function(void *buffer,
 static void convert_string_to_unistring(std::string& stringValue, CUTF16String& utf16value);
 
 static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
-    
-    if(transferInfo) {
-     
-        struct curl_certinfo *ci;
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CERTINFO, &ci)) {
-            PA_CollectionRef certs = PA_CreateCollection();
-            for(unsigned int i = 0; i < ci->num_of_certs; ++i) {
-                struct curl_slist *slist;
-                for(slist = ci->certinfo[i]; slist; slist = slist->next) {
-                    std::string stringValue = slist->data;
-                    CUTF16String utf16value;
-                    convert_string_to_unistring(stringValue, utf16value);
-                    PA_Variable v = PA_CreateVariable(eVK_Unistring);
-                    PA_Unistring value = PA_CreateUnistring((PA_Unichar *)utf16value.c_str());
-                    PA_SetStringVariable(&v, &value);
-                    PA_SetCollectionElement(certs, PA_GetCollectionLength(certs), v);
-                    //value belongs to v, do not call PA_DisposeUnistring
-                    PA_ClearVariable(&v);
-                }
+
+    if (!transferInfo) return;
+
+    // --- certificate info ---
+    struct curl_certinfo *ci;
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CERTINFO, &ci)) {
+        PA_CollectionRef certs = PA_CreateCollection();
+        for (unsigned int i = 0; i < ci->num_of_certs; ++i) {
+            for (struct curl_slist *slist = ci->certinfo[i]; slist; slist = slist->next) {
+                std::string stringValue = slist->data;
+                CUTF16String utf16value;
+                convert_string_to_unistring(stringValue, utf16value);
+                PA_Variable v = PA_CreateVariable(eVK_Unistring);
+                PA_Unistring value = PA_CreateUnistring((PA_Unichar *)utf16value.c_str());
+                PA_SetStringVariable(&v, &value);
+                PA_SetCollectionElement(certs, PA_GetCollectionLength(certs), v);
+                PA_ClearVariable(&v);
             }
-            ob_set_c(transferInfo, "certInfo", certs);
         }
-        
-        long responseCode, connectCode, fileTime,
-        redirectCount, headerSize, requestSize, lastSocket,
-        sslVerifyResult, localPort, primaryPort, numConnects,
-        osErrNo, httpAuthAvail, proxyAuthAvail,
-        rtspClientCseq, rtspServerCseq, rtspCseqRecv, conditionUnmet;
-        double totalTime, nameLookupTime, connectTime,
-        appConnectTime, preTransferTime, startTransferTime, redirectTime;
-        
-        /*
-        long sizeUpload, speedUpload, sizeDownload, speedDownload,
-        contentLengthDownload, contentLengthUpload;
-         */
-        
-        char *effectiveUrl = NULL;
-        char *redirectUrl = NULL;
-        char *contentType = NULL;
-        char *ftpEntryPath = NULL;
-        char *localIp = NULL;
-        char *primaryIp = NULL;
-        char *rtspSessionId = NULL;
-        
-        curl_off_t speedUploadT, speedDownloadT, sizeUploadT,
-        sizeDownloadT, contentLengthDownloadT, contentLengthUploadT;
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &conditionUnmet)) {
-            ob_set_n(transferInfo, "conditionUnmet", conditionUnmet);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_UPLOAD_T, &contentLengthUploadT)) {
-            ob_set_n(transferInfo, "contentLengthUpload", contentLengthUploadT);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &contentLengthDownloadT)) {
-            // CHANGED: Ensure consistency for 0-byte files queried via SFTP
-            if(contentLengthDownloadT == -1)
-            {
-                char *url = NULL;
-                if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url)) && url)
-                {
-                    if(strncmp(url, "sftp://", 7) == 0)
-                    {
-                        contentLengthDownloadT = 0;
-                    }
-                }
-            }
-            ob_set_n(transferInfo, "contentLengthDownload", contentLengthDownloadT);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SPEED_UPLOAD_T, &speedUploadT)) {
-            ob_set_n(transferInfo, "speedUpload", speedUploadT);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD_T, &speedDownloadT)) {
-            ob_set_n(transferInfo, "speedDownload", speedDownloadT);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T, &sizeDownloadT)) {
-            ob_set_n(transferInfo, "sizeDownload", sizeDownloadT);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SIZE_UPLOAD_T, &sizeUploadT)) {
-            ob_set_n(transferInfo, "sizeUpload", sizeUploadT);
-        }
-
-        curl_off_t totalTimeT, nameLookupTimeT, connectTimeT,
-        preTransferTimeT, startTransferTimeT, redirectTimeT,
-        appConnectTimeT;
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &totalTimeT)) {
-            ob_set_n(transferInfo, "totalTime", totalTimeT);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME_T, &nameLookupTimeT)) {
-            ob_set_n(transferInfo, "nameLookupTime", nameLookupTimeT);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME_T, &connectTimeT)) {
-            ob_set_n(transferInfo, "connectTime", connectTimeT);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PRETRANSFER_TIME_T, &preTransferTimeT)) {
-            ob_set_n(transferInfo, "preTransferTime", preTransferTimeT);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_STARTTRANSFER_TIME_T, &startTransferTimeT)) {
-            ob_set_n(transferInfo, "startTransferTime", startTransferTimeT);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REDIRECT_TIME_T, &redirectTimeT)) {
-            ob_set_n(transferInfo, "redirectTime", redirectTimeT);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_APPCONNECT_TIME_T, &appConnectTimeT)) {
-            ob_set_n(transferInfo, "appConnectTime", appConnectTimeT);
-        }
-        
-        curl_off_t retryAfterT;
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RETRY_AFTER, &retryAfterT)) {
-            ob_set_n(transferInfo, "retryAfter", retryAfterT);
-        }
-        
-        long proxyError;
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROXY_ERROR, &proxyError)) {
-            ob_set_n(transferInfo, "proxyError", proxyError);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_CLIENT_CSEQ, &rtspClientCseq)) {
-            ob_set_n(transferInfo, "rtspClientCseq", rtspClientCseq);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_SERVER_CSEQ, &rtspServerCseq)) {
-            ob_set_n(transferInfo, "rtspServerCseq", rtspServerCseq);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_CSEQ_RECV, &rtspCseqRecv)) {
-            ob_set_n(transferInfo, "rtspCseqRecv", rtspCseqRecv);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_LASTSOCKET, &lastSocket)) {
-            ob_set_n(transferInfo, "lastSocket", lastSocket);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PRIMARY_PORT, &primaryPort)) {
-            ob_set_n(transferInfo, "primaryPort", primaryPort);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_LOCAL_PORT, &localPort)) {
-            ob_set_n(transferInfo, "localPort", localPort);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HTTP_CONNECTCODE, &connectCode)) {
-            ob_set_n(transferInfo, "connectCode", connectCode);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_FILETIME, &fileTime)) {
-            ob_set_n(transferInfo, "fileTime", fileTime);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &totalTime)) {
-            ob_set_n(transferInfo, "totalTime", totalTime);
-        }
-         
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REQUEST_SIZE , &requestSize)) {
-            ob_set_n(transferInfo, "requestSize", requestSize);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HEADER_SIZE, &headerSize)) {
-            ob_set_n(transferInfo, "headerSize", headerSize);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_AVAIL, &httpAuthAvail)) {
-            ob_set_n(transferInfo, "httpAuthAvail", httpAuthAvail);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROXYAUTH_AVAIL, &proxyAuthAvail)) {
-            ob_set_n(transferInfo, "proxyAuthAvail", proxyAuthAvail);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_OS_ERRNO, &osErrNo)) {
-            ob_set_n(transferInfo, "osErrNo", osErrNo);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_NUM_CONNECTS, &numConnects)) {
-            ob_set_n(transferInfo, "numConnects", numConnects);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode)) {
-            ob_set_n(transferInfo, "responseCode", responseCode);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME, &nameLookupTime)) {
-            ob_set_n(transferInfo, "nameLookupTime", nameLookupTime);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME, &connectTime)) {
-            ob_set_n(transferInfo, "connectTime", connectTime);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_APPCONNECT_TIME, &appConnectTime)) {
-            ob_set_n(transferInfo, "appConnectTime", appConnectTime);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PRETRANSFER_TIME, &preTransferTime)) {
-            ob_set_n(transferInfo, "preTransferTime", preTransferTime);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_STARTTRANSFER_TIME, &startTransferTime)) {
-            ob_set_n(transferInfo, "startTransferTime", startTransferTime);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REDIRECT_TIME, &redirectTime)) {
-            ob_set_n(transferInfo, "redirectTime", redirectTime);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SSL_VERIFYRESULT , &sslVerifyResult)) {
-            ob_set_n(transferInfo, "sslVerifyResult", sslVerifyResult);
-        }
-
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REDIRECT_COUNT, &redirectCount)) {
-            ob_set_n(transferInfo, "redirectCount", redirectCount);
-        }
-        
-        long protocol, proxySslVerifyResult, httpVersion;
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HTTP_VERSION, &httpVersion)) {
-            ob_set_n(transferInfo, "httpVersion", httpVersion);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROXY_SSL_VERIFYRESULT, &proxySslVerifyResult)) {
-            ob_set_n(transferInfo, "proxySslVerifyResult", proxySslVerifyResult);
-        }
-        
-        if(CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROTOCOL, &protocol)) {
-            ob_set_n(transferInfo, "protocol", protocol);
-        }
-
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effectiveUrl))) {
-            ob_set_s(transferInfo, "effectiveUrl", effectiveUrl ? effectiveUrl : "");
-        }
-        
-        char *effectiveMethod = NULL;
-        
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_METHOD, &effectiveMethod))) {
-            ob_set_s(transferInfo, "effectiveMethod", effectiveMethod ? effectiveMethod : "");
-        }
-
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_LOCAL_IP, &localIp))) {
-            ob_set_s(transferInfo, "localIp", localIp ? localIp : "");
-        }
-
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &contentType))) {
-            ob_set_s(transferInfo, "contentType", contentType ? contentType : "");
-        }
-
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &primaryIp))) {
-            ob_set_s(transferInfo, "primaryIp", primaryIp ? primaryIp : "");
-        }
-
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirectUrl))) {
-            ob_set_s(transferInfo, "redirectUrl", redirectUrl ? redirectUrl : "");
-        }
-
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_FTP_ENTRY_PATH, &ftpEntryPath))) {
-            ob_set_s(transferInfo, "ftpEntryPath", ftpEntryPath ? ftpEntryPath : "");
-        }
-
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_SESSION_ID, &rtspSessionId))) {
-            ob_set_s(transferInfo, "rtspSessionId", rtspSessionId ? rtspSessionId : "");
-        }
-        
-        char *scheme = NULL;
-        
-        if((CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SCHEME, &scheme))) {
-            ob_set_s(transferInfo, "scheme", scheme ? scheme : "");
-        }
+        ob_set_c(transferInfo, "certInfo", certs);
     }
+
+    // --- timing (high-resolution _T variants, microseconds) ---
+    curl_off_t totalTimeT, nameLookupTimeT, connectTimeT,
+               appConnectTimeT, preTransferTimeT, startTransferTimeT,
+               redirectTimeT;
+
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T,         &totalTimeT))        ob_set_n(transferInfo, "totalTime",         totalTimeT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME_T,    &nameLookupTimeT))   ob_set_n(transferInfo, "nameLookupTime",    nameLookupTimeT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME_T,       &connectTimeT))      ob_set_n(transferInfo, "connectTime",       connectTimeT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_APPCONNECT_TIME_T,    &appConnectTimeT))   ob_set_n(transferInfo, "appConnectTime",    appConnectTimeT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PRETRANSFER_TIME_T,   &preTransferTimeT))  ob_set_n(transferInfo, "preTransferTime",   preTransferTimeT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_STARTTRANSFER_TIME_T, &startTransferTimeT))ob_set_n(transferInfo, "startTransferTime", startTransferTimeT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REDIRECT_TIME_T,      &redirectTimeT))     ob_set_n(transferInfo, "redirectTime",      redirectTimeT);
+
+    // --- transfer sizes and speeds ---
+    curl_off_t speedUploadT, speedDownloadT, sizeUploadT,
+               sizeDownloadT, contentLengthDownloadT, contentLengthUploadT;
+
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SPEED_UPLOAD_T,              &speedUploadT))           ob_set_n(transferInfo, "speedUpload",           speedUploadT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD_T,            &speedDownloadT))         ob_set_n(transferInfo, "speedDownload",         speedDownloadT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SIZE_UPLOAD_T,               &sizeUploadT))            ob_set_n(transferInfo, "sizeUpload",            sizeUploadT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T,             &sizeDownloadT))          ob_set_n(transferInfo, "sizeDownload",          sizeDownloadT);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_UPLOAD_T,     &contentLengthUploadT))   ob_set_n(transferInfo, "contentLengthUpload",   contentLengthUploadT);
+
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,   &contentLengthDownloadT)) {
+        // libcurl returns -1 for 0-byte SFTP files
+        if (contentLengthDownloadT == -1) {
+            char *url = NULL;
+            if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url) && url)
+                if (strncmp(url, "sftp://", 7) == 0)
+                    contentLengthDownloadT = 0;
+        }
+        ob_set_n(transferInfo, "contentLengthDownload", contentLengthDownloadT);
+    }
+
+    // --- response and connection ---
+    long responseCode, connectCode, httpVersion,
+         redirectCount, headerSize, requestSize,
+         sslVerifyResult, proxySslVerifyResult,
+         localPort, primaryPort, numConnects,
+         osErrNo, httpAuthAvail, proxyAuthAvail,
+         protocol, proxyError, conditionUnmet;
+
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE,         &responseCode))       ob_set_n(transferInfo, "responseCode",       responseCode);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HTTP_CONNECTCODE,      &connectCode))        ob_set_n(transferInfo, "connectCode",        connectCode);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HTTP_VERSION,          &httpVersion))        ob_set_n(transferInfo, "httpVersion",        httpVersion);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REDIRECT_COUNT,        &redirectCount))      ob_set_n(transferInfo, "redirectCount",      redirectCount);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HEADER_SIZE,           &headerSize))         ob_set_n(transferInfo, "headerSize",         headerSize);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REQUEST_SIZE,          &requestSize))        ob_set_n(transferInfo, "requestSize",        requestSize);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SSL_VERIFYRESULT,      &sslVerifyResult))    ob_set_n(transferInfo, "sslVerifyResult",    sslVerifyResult);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROXY_SSL_VERIFYRESULT,&proxySslVerifyResult))ob_set_n(transferInfo,"proxySslVerifyResult",proxySslVerifyResult);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_LOCAL_PORT,            &localPort))          ob_set_n(transferInfo, "localPort",          localPort);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PRIMARY_PORT,          &primaryPort))        ob_set_n(transferInfo, "primaryPort",        primaryPort);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_NUM_CONNECTS,          &numConnects))        ob_set_n(transferInfo, "numConnects",        numConnects);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_OS_ERRNO,              &osErrNo))            ob_set_n(transferInfo, "osErrNo",            osErrNo);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_AVAIL,        &httpAuthAvail))      ob_set_n(transferInfo, "httpAuthAvail",      httpAuthAvail);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROXYAUTH_AVAIL,       &proxyAuthAvail))     ob_set_n(transferInfo, "proxyAuthAvail",     proxyAuthAvail);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROTOCOL,              &protocol))           ob_set_n(transferInfo, "protocol",           protocol);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PROXY_ERROR,           &proxyError))         ob_set_n(transferInfo, "proxyError",         proxyError);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET,       &conditionUnmet))     ob_set_n(transferInfo, "conditionUnmet",     conditionUnmet);
+
+    // --- file and socket ---
+    long fileTime, lastSocket;
+    curl_off_t retryAfterT;
+
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_FILETIME,   &fileTime))    ob_set_n(transferInfo, "fileTime",   fileTime);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_LASTSOCKET, &lastSocket))  ob_set_n(transferInfo, "lastSocket", lastSocket);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RETRY_AFTER,&retryAfterT)) ob_set_n(transferInfo, "retryAfter", retryAfterT);
+
+    // --- RTSP ---
+    long rtspClientCseq, rtspServerCseq, rtspCseqRecv;
+
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_CLIENT_CSEQ, &rtspClientCseq)) ob_set_n(transferInfo, "rtspClientCseq", rtspClientCseq);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_SERVER_CSEQ, &rtspServerCseq)) ob_set_n(transferInfo, "rtspServerCseq", rtspServerCseq);
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_CSEQ_RECV,   &rtspCseqRecv))   ob_set_n(transferInfo, "rtspCseqRecv",   rtspCseqRecv);
+
+    // --- string fields ---
+    char *effectiveUrl = NULL, *effectiveMethod = NULL, *redirectUrl = NULL,
+         *contentType  = NULL, *ftpEntryPath    = NULL, *localIp     = NULL,
+         *primaryIp    = NULL, *rtspSessionId   = NULL, *scheme      = NULL;
+
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL,    &effectiveUrl))    ob_set_s(transferInfo, "effectiveUrl",    effectiveUrl    ? effectiveUrl    : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_METHOD, &effectiveMethod)) ob_set_s(transferInfo, "effectiveMethod", effectiveMethod ? effectiveMethod : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL,     &redirectUrl))     ob_set_s(transferInfo, "redirectUrl",     redirectUrl     ? redirectUrl     : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE,     &contentType))     ob_set_s(transferInfo, "contentType",     contentType     ? contentType     : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_FTP_ENTRY_PATH,   &ftpEntryPath))    ob_set_s(transferInfo, "ftpEntryPath",    ftpEntryPath    ? ftpEntryPath    : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_LOCAL_IP,         &localIp))         ob_set_s(transferInfo, "localIp",         localIp         ? localIp         : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP,       &primaryIp))       ob_set_s(transferInfo, "primaryIp",       primaryIp       ? primaryIp       : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_RTSP_SESSION_ID,  &rtspSessionId))   ob_set_s(transferInfo, "rtspSessionId",   rtspSessionId   ? rtspSessionId   : "");
+    if (CURLE_OK == curl_easy_getinfo(curl, CURLINFO_SCHEME,           &scheme))          ob_set_s(transferInfo, "scheme",          scheme          ? scheme          : "");
 }
 
 static CURLcode curl_perform_atomic(CURL *curl, PA_ObjectRef returnValue) {
@@ -2305,7 +2134,7 @@ void _cURL(PA_PluginParameters params) {
     }else
     {
         CUTF16String methodName = (PA_Unichar *)Param4.getUTF16StringPtr();
-        status = curl_perform_non_atomic(mcurl, curl, methodName, userInfo, returnValue);
+        status = curl_perform_non_atomic(curl, methodName, userInfo, returnValue);
     }
     
     ob_set_n(returnValue, "status", status);
@@ -2914,7 +2743,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     CURLcode status = CURLE_OK;
     
     CUTF16String methodName = (PA_Unichar *)Param4.getUTF16StringPtr();
-    status = curl_perform_non_atomic(mcurl, curl, methodName, userInfo, returnValue);
+    status = curl_perform_non_atomic(curl, methodName, userInfo, returnValue);
     
     ob_set_n(returnValue, "status", status);
     
