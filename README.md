@@ -27,7 +27,7 @@ Generic network client based on libcurl.
 vcpkg configuration: 
 
 ```
-vcpkg install curl[brotli,c-ares,core,http2,http3,idn2,non-http,schannel,ssh,sspi,winldap,zstd] --triplet x64-windows-static
+vcpkg install curl[brotli,c-ares,core,http2,http3,idn2,non-http,ssh,sspi,winldap,zstd] --triplet x64-windows-static
 ```
 
 * missing protocol on Windows: rtmp, rtmpe, rtmps, rtmpt, rtmpte, rtmpts
