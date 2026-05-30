@@ -6,31 +6,11 @@
 # 4d-plugin-curl-v3
 Generic network client based on libcurl.
 
-* macOS library version:
-  * `libcurl-8.9.1`
-  * `openssl-3.3.1` 
-  * `libz-1.2.11`
-  * `libssh2-1.11.0`
-  * `brotli-1.0.9`
-  * `nghttp2-1.61.0`
-  * `zstd-1.5.6`
-
-* Windows library version:
-  * `libcurl-8.9.1`
-  * `openssl-3.3.1 (Schannel)`
-  * `libz-1.3.1`
-  * `libssh2-1.11.0`
-  * `brotli-1.1.0`
-  * `nghttp2-1.62.1`
-  * `zstd-1.5.5`
-
 vcpkg configuration: 
 
 ```
 vcpkg install curl[brotli,c-ares,core,http2,http3,idn2,non-http,ssh,sspi,winldap,zstd] --triplet x64-windows-static
 ```
-
-* missing protocol on Windows: rtmp, rtmpe, rtmps, rtmpt, rtmpte, rtmpts
 
 * callback frequency increased: from every `1` second to every `100` milliseconds max
 
