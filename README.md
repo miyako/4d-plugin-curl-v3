@@ -24,7 +24,11 @@ Generic network client based on libcurl.
   * `nghttp2-1.62.1`
   * `zstd-1.5.5`
 
-vcpkg configuration: `[brotli,c-ares,core,http2,idn2,non-http,openssl,schannel,ssh,ssl,sspi,winldap,zstd] --triplet x64-windows-static`
+vcpkg configuration: 
+
+```
+vcpkg install curl[brotli,c-ares,core,http2,http3,idn2,non-http,schannel,ssh,sspi,winldap,zstd] --triplet x64-windows-static
+```
 
 * missing protocol on Windows: rtmp, rtmpe, rtmps, rtmpt, rtmpte, rtmpts
 
