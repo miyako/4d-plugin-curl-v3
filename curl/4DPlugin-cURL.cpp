@@ -11,7 +11,6 @@
 #include "4DPlugin-cURL.h"
 
 std::mutex mutexPf;
-std::mutex mutexMcurl;
 
 pxProxyFactory *pf = NULL;
 CURLM *gmcurl = NULL;
@@ -19,25 +18,17 @@ CURLM *gmcurl = NULL;
 static void OnStartup() {
     
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    gmcurl = curl_multi_init();
     pf = px_proxy_factory_new();
 }
 
 static void OnExit() {
-    
-    if(gmcurl)
-    {
-        curl_multi_cleanup(gmcurl);
-        gmcurl = NULL;
-    }
-    
-    curl_global_cleanup();
     
     if(pf)
     {
         px_proxy_factory_free(pf);
         pf = NULL;
     }
+    curl_global_cleanup();
 }
 
 #pragma mark -
@@ -630,8 +621,15 @@ static CURLcode curl_perform_atomic(CURL *curl, PA_ObjectRef returnValue) {
     return result;
 }
 
-static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& methodName, C_TEXT& userInfo, PA_ObjectRef returnValue) {
-        
+static CURLcode curl_perform_non_atomic(CURL *curl,
+                                        CUTF16String& methodName,
+                                        C_TEXT& userInfo,
+                                        PA_ObjectRef returnValue) {
+       
+    // Each call gets its own multi handle — no sharing, no cross-thread interference
+    CURLM *mcurl = curl_multi_init();
+    if (!mcurl) return CURLE_FAILED_INIT;
+    
     PA_long32 method_id = 0;
     
     bool execute_callback_method = false;
@@ -676,13 +674,8 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
     
     int running_handles = 0;
     
-    if(1)
-    {
-        std::lock_guard<std::mutex> lock(mutexMcurl);
-        
-        curl_multi_add_handle(mcurl, curl);
-        curl_multi_perform(mcurl, &running_handles);
-    }
+    curl_multi_add_handle(mcurl, curl);
+    curl_multi_perform(mcurl, &running_handles);
     
     do
     {
@@ -705,11 +698,7 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
         tv.tv_sec = 1;
         tv.tv_usec = 0;
         
-        if(1)
-        {
-            std::lock_guard<std::mutex> lock(mutexMcurl);
-            curl_multi_timeout(mcurl, &curl_timeout);
-        }
+        curl_multi_timeout(mcurl, &curl_timeout);
         
         if(curl_timeout >= 0)
         {
@@ -720,11 +709,7 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
                 tv.tv_usec = (curl_timeout % 1000) * 1000;
         }
         
-        if(1)
-        {
-            std::lock_guard<std::mutex> lock(mutexMcurl);
-            mc = curl_multi_fdset(mcurl, &fdread, &fdwrite, &fdexcep, &maxfd);
-        }
+        mc = curl_multi_fdset(mcurl, &fdread, &fdwrite, &fdexcep, &maxfd);
 
         if(mc != CURLM_OK)
         {
@@ -759,11 +744,7 @@ static CURLcode curl_perform_non_atomic(CURLM *mcurl, CURL *curl, CUTF16String& 
                 break;
             case 0:
             default:
-                if(1)
-                {
-                    std::lock_guard<std::mutex> lock(mutexMcurl);
-                    mc = curl_multi_perform(mcurl, &running_handles);
-                }
+                mc = curl_multi_perform(mcurl, &running_handles);
             {
 
                 if((method_id)||(execute_callback_method))
@@ -833,14 +814,11 @@ curl_abort_transfer:
     struct CURLMsg *m;
     int msgq = 0;
     CURLMSG msg = CURLMSG_NONE;
-    if(1) {
-        std::lock_guard<std::mutex> lock(mutexMcurl);
-        m = curl_multi_info_read(mcurl, &msgq);
-        if(m) {
-            msg = m->msg;
-            if(msg == CURLMSG_DONE) {
-                result = m->data.result;
-            }
+    m = curl_multi_info_read(mcurl, &msgq);
+    if(m) {
+        msg = m->msg;
+        if(msg == CURLMSG_DONE) {
+            result = m->data.result;
         }
     }
     
@@ -866,12 +844,7 @@ curl_abort_transfer:
     curl_get_info(curl, transferInfo);
     ob_set_o(returnValue, "transferInfo", transferInfo);
         
-    if(1)
-    {
-        std::lock_guard<std::mutex> lock(mutexMcurl);
-        curl_multi_remove_handle(mcurl, curl);
-    }
-    
+    curl_multi_remove_handle(mcurl, curl);
     
     if (method_id)
     {
@@ -886,6 +859,7 @@ curl_abort_transfer:
         PA_ClearVariable(&cbparams[3]);//string (userInfo)
     }
     
+    curl_multi_cleanup(mcurl);
     return result;
 }
 
