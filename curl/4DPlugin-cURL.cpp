@@ -2756,9 +2756,9 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                              debug_folder_path))
     {
 #if VERSIONMAC
-        debug_ctx.path = (const char *)debug_folder_path.c_str();
+        debug_ctx.path = (char *)debug_folder_path.c_str();
 #else
-        debug_ctx.path = (const wchar_t *)debug_folder_path.c_str();
+        debug_ctx.path = (wchar_t *)debug_folder_path.c_str();
 #endif
         
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
@@ -2767,11 +2767,11 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     }
     
 #if VERSIONMAC
-    request_ctx.path = (const char *)request_path.c_str();
-    response_ctx.path = (const char *)response_path.c_str();
+    request_ctx.path = (char *)request_path.c_str();
+    response_ctx.path = (char *)response_path.c_str();
 #else
-    request_ctx.path = (const wchar_t *)request_path.c_str();
-    response_ctx.path = (const wchar_t *)response_path.c_str();
+    request_ctx.path = (wchar_t *)request_path.c_str();
+    response_ctx.path = (wchar_t *)response_path.c_str();
 #endif
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)Param2.getBytesLength());
