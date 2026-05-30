@@ -3007,7 +3007,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
                             memset((char*)&buf[0], 0, buf.size());
 
                             if (r.mtimetype == FTPPARSE_MTIME_LOCAL) {
-                                strftime((char*)&buf[0], buf.size(), "%Y-%m-%dT%H%:M%:S%z", localtime(&mtime));
+                                strftime((char*)&buf[0], buf.size(), "%Y-%m-%dT%H:%M:%S%z", localtime(&mtime));
                             }
                             else {
                                 strftime((char*)&buf[0], buf.size(), "%Y-%m-%dT%H:%M:%S%z", gmtime(&mtime));
