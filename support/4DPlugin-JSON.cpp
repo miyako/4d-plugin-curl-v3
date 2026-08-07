@@ -292,6 +292,43 @@ void ob_set_n(PA_ObjectRef obj, const wchar_t *_key, double value) {
     }
 }
 
+void ob_set_n(PA_ObjectRef obj, const char *_key, double value) {
+
+    if(obj && _key)
+    {
+        CUTF8String u8k = CUTF8String((const uint8_t *)_key);
+        CUTF16String u16k;
+
+#ifdef _WIN32
+        int len = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)u8k.c_str(), u8k.length(), NULL, 0);
+        if(len){
+            std::vector<uint8_t> buf((len + 1) * sizeof(PA_Unichar));
+            if(MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)u8k.c_str(), u8k.length(), (LPWSTR)&buf[0], len)){
+                u16k = CUTF16String((const PA_Unichar *)&buf[0], (size_t)len);
+            }
+        }
+#else
+        CFStringRef str = CFStringCreateWithBytes(kCFAllocatorDefault, u8k.c_str(), u8k.length(), kCFStringEncodingUTF8, true);
+        if(str){
+            CFIndex len = CFStringGetLength(str);
+            std::vector<uint8_t> buf((len+1) * sizeof(PA_Unichar));
+            CFStringGetCharacters(str, CFRangeMake(0, len), (UniChar *)&buf[0]);
+            u16k = CUTF16String((const PA_Unichar *)&buf[0], (size_t)len);
+            CFRelease(str);
+        }
+#endif
+
+        PA_Variable v = PA_CreateVariable(eVK_Real);
+        PA_Unistring key = PA_CreateUnistring((PA_Unichar *)u16k.c_str());
+
+        PA_SetRealVariable(&v, value);
+        PA_SetObjectProperty(obj, &key, v);
+
+        PA_DisposeUnistring(&key);
+        PA_ClearVariable(&v);
+    }
+}
+
 void ob_set_i(PA_ObjectRef obj, const wchar_t *_key, PA_long32 value) {
     
     if(obj)
@@ -321,6 +358,62 @@ void ob_set_b(PA_ObjectRef obj, const wchar_t *_key, bool value) {
         PA_SetBooleanVariable(&v, value);
         PA_SetObjectProperty(obj, &key, v);
         
+        PA_DisposeUnistring(&key);
+        PA_ClearVariable(&v);
+    }
+}
+
+void ob_set_0(PA_ObjectRef obj, const wchar_t *_key) {
+
+    if(obj)
+    {
+        // eVK_Null has no dedicated case in PA_CreateVariable's switch (confirmed
+        // by reading its implementation): it only assigns variable.fType, no
+        // union payload and no heap allocation for this kind, so there's no
+        // PA_SetXVariable call to make before PA_SetObjectProperty.
+        PA_Variable v = PA_CreateVariable(eVK_Null);
+        CUTF16String ukey;
+        json_wconv(_key, &ukey);
+        PA_Unistring key = PA_CreateUnistring((PA_Unichar *)ukey.c_str());
+
+        PA_SetObjectProperty(obj, &key, v);
+
+        PA_DisposeUnistring(&key);
+        PA_ClearVariable(&v);
+    }
+}
+
+void ob_set_0(PA_ObjectRef obj, const char *_key) {
+
+    if(obj && _key)
+    {
+        CUTF8String u8k = CUTF8String((const uint8_t *)_key);
+        CUTF16String u16k;
+
+#ifdef _WIN32
+        int len = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)u8k.c_str(), u8k.length(), NULL, 0);
+        if(len){
+            std::vector<uint8_t> buf((len + 1) * sizeof(PA_Unichar));
+            if(MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)u8k.c_str(), u8k.length(), (LPWSTR)&buf[0], len)){
+                u16k = CUTF16String((const PA_Unichar *)&buf[0], (size_t)len);
+            }
+        }
+#else
+        CFStringRef str = CFStringCreateWithBytes(kCFAllocatorDefault, u8k.c_str(), u8k.length(), kCFStringEncodingUTF8, true);
+        if(str){
+            CFIndex len = CFStringGetLength(str);
+            std::vector<uint8_t> buf((len+1) * sizeof(PA_Unichar));
+            CFStringGetCharacters(str, CFRangeMake(0, len), (UniChar *)&buf[0]);
+            u16k = CUTF16String((const PA_Unichar *)&buf[0], (size_t)len);
+            CFRelease(str);
+        }
+#endif
+
+        PA_Variable v = PA_CreateVariable(eVK_Null);
+        PA_Unistring key = PA_CreateUnistring((PA_Unichar *)u16k.c_str());
+
+        PA_SetObjectProperty(obj, &key, v);
+
         PA_DisposeUnistring(&key);
         PA_ClearVariable(&v);
     }

@@ -88,7 +88,20 @@ void ob_set_o(PA_ObjectRef obj, const wchar_t *_key, PA_ObjectRef value);
 void ob_set_o(PA_ObjectRef obj, const char *_key, PA_ObjectRef value);
 void ob_set_i(PA_ObjectRef obj, const wchar_t *_key, PA_long32 value);
 void ob_set_n(PA_ObjectRef obj, const wchar_t *_key, double value);
+// Narrow-key sibling: matches ob_set_s/ob_set_o, which already have both a
+// wide- and narrow-key overload. Without this, a caller passing a char* key
+// (e.g. a column name from a C library) fails to compile (C2664: cannot
+// convert const char* to const wchar_t*) -- confirmed live in this project's
+// own CI: 4DPlugin-Simple-SQLite-Client.cpp(206,37) and (214,29).
+void ob_set_n(PA_ObjectRef obj, const char *_key, double value);
 void ob_set_b(PA_ObjectRef obj, const wchar_t *_key, bool value);
+// ob_set_0: sets a property to a JSON/4D null value. Did not exist at all in
+// this header -- confirmed live in this project's own CI:
+// 4DPlugin-Simple-SQLite-Client.cpp(246,29): error C3861: 'ob_set_0':
+// identifier not found. Both overloads added for the same wide/narrow-key
+// symmetry as every other setter above.
+void ob_set_0(PA_ObjectRef obj, const wchar_t *_key);
+void ob_set_0(PA_ObjectRef obj, const char *_key);
 bool ob_is_defined(PA_ObjectRef obj, const wchar_t *_key);
 bool ob_get_a(PA_ObjectRef obj, const wchar_t *_key, CUTF8String *value);
 bool ob_get_b(PA_ObjectRef obj, const wchar_t *_key);
