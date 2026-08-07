@@ -23,10 +23,13 @@ static void OnStartup() {
 
 static void OnExit() {
     
-    if(pf)
     {
-        px_proxy_factory_free(pf);
-        pf = NULL;
+        std::lock_guard<std::mutex> lock(mutexPf);
+        if(pf)
+        {
+            px_proxy_factory_free(pf);
+            pf = NULL;
+        }
     }
     curl_global_cleanup();
 }
@@ -542,6 +545,8 @@ static CURLcode curl_perform_non_atomic(CURL *curl,
 
         if(mc != CURLM_OK)
         {
+            /* curl_multi_fdset failed - don't let the CURLE_OK default fall through to the caller */
+            result = CURLE_FAILED_INIT;
             break;
         }
         
@@ -1784,7 +1789,7 @@ static bool curl_set_options(CURL *curl,
         }
         
         if(ob_get_s(Param1, L"PINNEDPUBLICKEY", &stringValue)) {
-            if (stringValue.find_first_of((const uint8_t *)"sha256//") == CUTF8String::npos)
+            if (0 != stringValue.find((const uint8_t *)"sha256//"))
             {
 #if VERSIONMAC
                 /* hfs to posix */
@@ -1804,7 +1809,7 @@ static bool curl_set_options(CURL *curl,
         }
         
         if(ob_get_s(Param1, L"PROXY_PINNEDPUBLICKEY", &stringValue)) {
-            if (stringValue.find_first_of((const uint8_t *)"sha256//") == CUTF8String::npos)
+            if (0 != stringValue.find((const uint8_t *)"sha256//"))
             {
 #if VERSIONMAC
                 /* hfs to posix */
@@ -1957,12 +1962,16 @@ static bool curl_set_debug_option(CURL *curl,
                     CUTF8String _path;
                     t.copyPath(&_path);
                     debug_folder_path = (const uint8_t *)_path.c_str();
-                    if(debug_folder_path.at(debug_folder_path.size() - 1) != '/') debug_folder_path += '/';
+                    /* guard: an empty conversion result must not underflow size()-1 into .at() */
+                    if(debug_folder_path.empty()) debug_folder_path += '/';
+                    else if(debug_folder_path.at(debug_folder_path.size() - 1) != '/') debug_folder_path += '/';
 #else
                     CUTF16String _path;
                     t.copyUTF16String(&_path);
                     debug_folder_path = (const PA_Unichar *)_path.c_str();
-                    if(debug_folder_path.at(debug_folder_path.size() - 1) != L'\\') debug_folder_path += L'\\';
+                    /* guard: an empty conversion result must not underflow size()-1 into .at() */
+                    if(debug_folder_path.empty()) debug_folder_path += L'\\';
+                    else if(debug_folder_path.at(debug_folder_path.size() - 1) != L'\\') debug_folder_path += L'\\';
 #endif
                     CUTF8String _id;
                     if(ob_get_s(Param1, L"DEBUG_ID", &_id)){
@@ -1974,12 +1983,14 @@ static bool curl_set_debug_option(CURL *curl,
                             CUTF8String _folder;
                             t.copyPath(&_folder);
                             debug_folder_path += (const uint8_t *)_folder.c_str();
-                            if(debug_folder_path.at(debug_folder_path.size() - 1) != '/') debug_folder_path += '/';
+                            if(debug_folder_path.empty()) debug_folder_path += '/';
+                            else if(debug_folder_path.at(debug_folder_path.size() - 1) != '/') debug_folder_path += '/';
 #else
                             CUTF16String _folder;
                             t.copyUTF16String(&_folder);
                             debug_folder_path += (const PA_Unichar *)_folder.c_str();
-                            if(debug_folder_path.at(debug_folder_path.size() - 1) != L'\\') debug_folder_path += L'\\';
+                            if(debug_folder_path.empty()) debug_folder_path += L'\\';
+                            else if(debug_folder_path.at(debug_folder_path.size() - 1) != L'\\') debug_folder_path += L'\\';
 #endif
                         }
                     }
@@ -2006,6 +2017,13 @@ void _cURL(PA_PluginParameters params) {
     Param4.fromParamAtIndex(pParams, 4);
     
     CURL *curl = curl_easy_init();
+    if (!curl) {
+        /* curl_easy_init() failed (typically resource exhaustion) - avoid deref'ing a NULL handle */
+        ob_set_n(returnValue, "status", (double)CURLE_FAILED_INIT);
+        PA_SetBlobParameter(params, 3, (void*)Param3.getBytesPtr(), Param3.getBytesLength());
+        PA_ReturnObject(params, returnValue);
+        return;
+    }
     CURLM *mcurl = gmcurl;
     
     struct curl_slist *curl_slist_connect_to = NULL;/* CONNECT_TO */
@@ -2328,8 +2346,6 @@ static size_t apply_input_encoding(std::string& src, std::string& ie) {
             char *outData = (char *)calloc(outDataLen, 1);
             char *outDataPtr = outData;
             
-            size_t iconv_value;
-            
             iconv_value = iconv (conv, &inData, &inDataLen, &outData, &outDataLen);
             
             if (iconv_value)
@@ -2368,8 +2384,6 @@ static size_t apply_output_encoding(std::string& src, std::string& oe) {
             
             char *outData = (char *)calloc(outDataLen, 1);
             char *outDataPtr = outData;
-            
-            size_t iconv_value;
             
             iconv_value = iconv (conv, &inData, &inDataLen, &outData, &outDataLen);
             
@@ -2483,6 +2497,12 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     }
         
     CURL *curl = curl_easy_init();
+    if (!curl) {
+        /* curl_easy_init() failed (typically resource exhaustion) - avoid deref'ing a NULL handle */
+        ob_set_n(returnValue, "status", (double)CURLE_FAILED_INIT);
+        PA_ReturnObject(params, returnValue);
+        return;
+    }
     CURLM *mcurl = gmcurl;//curl_multi_init();
     
     C_TEXT userInfo; /* PRIVATE */
@@ -2957,6 +2977,24 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     /* cleanup */
     
     curl_easy_cleanup(curl);
+    
+    for (FILE **fh : {
+        &request_ctx.upload_file,
+        &request_ctx.download_file,
+        &response_ctx.upload_file,
+        &response_ctx.download_file,
+        &header_ctx.upload_file,
+        &header_ctx.download_file,
+        &debug_ctx.file_CURLINFO_TEXT,
+        &debug_ctx.file_CURLINFO_HEADER_IN,
+        &debug_ctx.file_CURLINFO_HEADER_OUT,
+        &debug_ctx.file_CURLINFO_DATA_IN,
+        &debug_ctx.file_CURLINFO_DATA_OUT,
+        &debug_ctx.file_CURLINFO_SSL_DATA_IN,
+        &debug_ctx.file_CURLINFO_SSL_DATA_OUT
+    }) {
+        if (*fh) { fclose(*fh); *fh = nullptr; }
+    }
 
     PA_ReturnObject(params, returnValue);
 }

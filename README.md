@@ -4,419 +4,752 @@
 ![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-curl-v3/total)
 
 # 4d-plugin-curl-v3
-Generic network client based on libcurl.
 
-vcpkg configuration: 
+The cURL plugin wraps [libcurl](https://curl.se/) to give 4D methods direct access to HTTP(S), FTP(S), and SFTP transfers, without shelling out or building your own socket code. It exposes two families of commands: a low-level, protocol-agnostic `cURL` command that maps a 4D object almost directly onto libcurl's own option set (`CURLOPT_*`), and a set of higher-level `cURL_FTP_*` commands for common FTP/SFTP operations (list, send, receive, rename, delete, make/remove directory, run a raw `SYST`/quote-style command). Results come back as 4D objects; transferred bytes come back as `Blob`s (or written straight to a file on disk, your choice).
 
+## Summary
+
+| Command | Returns | Purpose |
+|---|---|---|
+| [`cURL_VersionInfo`](#curl_versioninfo) | Object | Report the linked libcurl version, features, and supported protocols |
+| [`cURL_Escape`](#curl_escape) | Text | URL-encode a string |
+| [`cURL_Unescape`](#curl_unescape) | Text | URL-decode a string |
+| [`cURL_GetDate`](#curl_getdate) | Longint | Parse an HTTP-style date string into a Unix timestamp |
+| [`cURL`](#curl) | Object | Run any HTTP/HTTPS/FTP/SFTP/etc. transfer using libcurl's own option set |
+| [`cURL_FTP_Delete`](#curl_ftp_delete) | Object | Delete a remote file |
+| [`cURL_FTP_GetDirList`](#curl_ftp_getdirlist) | Object | List a remote directory, parsed into an object per entry |
+| [`cURL_FTP_GetFileInfo`](#curl_ftp_getfileinfo) | Object | Get a remote file's size and modification date |
+| [`cURL_FTP_MakeDir`](#curl_ftp_makedir) | Object | Create a remote directory |
+| [`cURL_FTP_PrintDir`](#curl_ftp_printdir) | Object | List a remote directory as raw text (names only) |
+| [`cURL_FTP_Receive`](#curl_ftp_receive) | Object | Download a remote file |
+| [`cURL_FTP_RemoveDir`](#curl_ftp_removedir) | Object | Remove a remote (empty) directory |
+| [`cURL_FTP_Rename`](#curl_ftp_rename) | Object | Rename/move a remote file |
+| [`cURL_FTP_Send`](#curl_ftp_send) | Object | Upload a file |
+| [`cURL_FTP_System`](#curl_ftp_system) | Object | Run the FTP `SYST` command (server system identification) |
+
+**Platforms:** macOS and Windows.
+
+---
+
+## Requirements & platform notes
+
+- **The `options` object is the plugin's real interface.** `cURL` and every `cURL_FTP_*` command take the same kind of `options` object as their first parameter, built almost entirely from libcurl's own `CURLOPT_*` constants (with the `CURLOPT_` prefix dropped — e.g. `CURLOPT_SSL_VERIFYPEER` becomes `$options.SSL_VERIFYPEER`). See [The options object](#the-options-object) below for the full key reference. Keys you don't set are simply left at libcurl's default.
+- **TLS certificate verification needs a CA bundle.** Without one, HTTPS/FTPS requests to servers 4D doesn't already trust will fail (libcurl error 60). Download `cacert.pem` from [curl.se/docs/caextract.html](https://curl.se/docs/caextract.html) and set `$options.CAINFO` to its path. From the plugin's own test method (`TEST_https.4dm`):
+  ```4d
+  $options:=New object:C1471
+  $options.URL:="https://download.4d.com/Products/Archives/Line_v11/11_9/Mac/DMGs/4D_v11_SQL_Release_9_US.dmg"
+  $options.CAINFO:=Folder:C1567(fk resources folder:K87:11).file("cacert-2021-01-19.pem").platformPath
+  ```
+- **Paths are platform-native, not POSIX**, per the plugin's own sample comments. Pass `.platformPath` (not `.path`) for every path-type option (`READDATA`, `WRITEDATA`, `CAINFO`, `SSLCERT`, `SSH_PRIVATE_KEYFILE`, `COOKIEFILE`, `DEBUG`, etc.). On macOS the plugin converts these internally before handing them to the OS file APIs.
+- **`ATOMIC` only affects `cURL`, not any `cURL_FTP_*` command.** `cURL` has two internal execution modes:
+  - **Default (`ATOMIC` unset or `false`):** the transfer runs in a polling loop that periodically yields to 4D, checks whether the calling process is being aborted (and cancels the transfer if so), and — if you passed a callback method name — invokes it roughly every 100ms with live progress plus once more when the transfer finishes.
+  - **`ATOMIC:=true`:** the transfer runs as a single blocking `curl_easy_perform` call. It does **not** yield to 4D, is **not** cancellable by aborting the process, and **ignores the callback method entirely** even if you passed one. Only use this for requests you're confident will finish quickly.
+  
+  Every `cURL_FTP_*` command always uses the polling (non-atomic) mode — the plugin reads `ATOMIC` internally when building FTP options but never surfaces it, so setting it has no effect on `cURL_FTP_*` calls.
+- **The progress callback has two different invocation styles depending on the name you pass**, and only one of them is the documented/intended usage:
+  - **Pass the name of an existing 4D project method** (the common case — see [Callback method](#callback-method) below): the plugin calls it directly as `YourMethod($1:Object /* transferInfo */; $2:Text /* the PRIVATE option, if you set one */) -> Boolean` (return `True` to abort the transfer).
+  - **Pass a name that does not resolve to an existing project method:** the plugin falls back to 4D's generic `EXECUTE METHOD` mechanism instead, which calls the target with a different parameter order (`$1:Boolean` abort flag in/out, `$2:Object` transferInfo, `$3:Text` userInfo). This path exists for dynamic/by-name dispatch and is not the common case — if your callback isn't firing as expected, double check the method name resolves to a real project method.
+  - Passing an empty string (`""`) disables the callback entirely; the transfer still runs (and is still cancellable by aborting the process), it just never calls back.
+- **`DEBUG` writes plaintext log files to disk** — full request/response headers, body data, and (if TLS is in use) the raw SSL record data, split into separate files per libcurl's own `CURLINFO_*` categories (`CURLINFO_TEXT.log`, `CURLINFO_HEADER_IN.log`, `CURLINFO_HEADER_OUT.log`, `CURLINFO_DATA_IN.log`, `CURLINFO_DATA_OUT.log`, `CURLINFO_SSL_DATA_IN.log`, `CURLINFO_SSL_DATA_OUT.log`). These can contain credentials, cookies, and auth headers in cleartext — treat the debug folder as sensitive and don't leave it turned on in production.
+- **A 0-byte file passed via `READDATA`/`WRITEDATA` is indistinguishable from "no file"** in the current implementation — if the file that exists on disk happens to be genuinely empty, the plugin falls back to sending the in-memory `Blob` parameter instead of the (empty) file. This only matters if you're uploading/expecting a literal 0-byte file; anything with real content is unaffected.
+- Every command in `manifest.json` is declared `threadSafe`, and each call gets its own libcurl "easy" handle (`curl_easy_init()` per call, not a shared one) — safe to call concurrently from multiple processes.
+
+---
+
+## cURL_VersionInfo
+
+### Syntax
 ```
-vcpkg install curl[brotli,c-ares,core,http2,http3,idn2,non-http,ssh,sspi,winldap,zstd] --triplet x64-windows-static
+cURL_VersionInfo -> Object
 ```
 
-* callback frequency increased: from every `1` second to every `100` milliseconds max
+No parameters.
 
-* removed Windows 32-bit support
+| Parameter | Type | Description |
+|---|---|---|
+| `Result` | Object | libcurl version and capability info |
 
-* JSON parameters are now native objects:
+### Description
+Returns a snapshot of `curl_version_info()`: the libcurl version string and numeric version, the host triplet it was built for, its feature bitmask, the linked SSL/TLS and zlib versions, and the list of protocols it was built to support. Depending on the libcurl build's reported "age," it may also include `libidn`, `libssh_version`, `brotli_version`, `nghttp2_version`, and `zstd_version` — these keys are simply absent on older libcurl builds rather than present-but-empty.
+
+| Property | Type | Description |
+|---|---|---|
+| `version` | Text | libcurl version string, e.g. `"7.79.1"` |
+| `version_num` | Longint | Numeric encoding of the version |
+| `host` | Text | Build host triplet |
+| `features` | Longint | Bitmask of `CURL_VERSION_*` feature flags |
+| `ssl_version` | Text | Linked SSL/TLS library and version |
+| `libz_version` | Text | Linked zlib version |
+| `protocols` | Collection | Text entries, one per supported protocol scheme (`"http"`, `"ftp"`, `"sftp"`, ...) |
+| `libidn` | Text | Present if the libcurl build reports it |
+| `libssh_version` | Text | Present if the libcurl build reports it |
+| `brotli_version` | Text | Present if the libcurl build reports it |
+| `nghttp2_version` | Text | Present if the libcurl build reports it |
+| `zstd_version` | Text | Present if the libcurl build reports it |
+
+### Example
+From the plugin's own test method (`TEST_version_info.4dm`):
+```4d
+$version:=cURL_VersionInfo
+
+SET TEXT TO PASTEBOARD:C523(JSON Stringify:C1217($version; *))
+```
+
+Check for SFTP support before relying on it:
+```4d
+$version:=cURL_VersionInfo
+$hasSFTP:=False:C215
+If (Value type:C1509($version.protocols)=Is collection:K8:32)
+    $hasSFTP:=$version.protocols.includes("sftp")
+End if 
+```
+
+---
+
+## cURL_Escape
+
+### Syntax
+```
+cURL_Escape ( text ) -> Text
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `text` | Text | String to URL-encode |
+| `Result` | Text | URL-encoded string |
+
+### Description
+Percent-encodes every character that isn't unreserved (letters, digits, `-`, `.`, `_`, `~`), using libcurl's own `curl_easy_escape`. If the input is empty or encoding fails for any reason, the result is an empty string — there's no separate error signal.
+
+### Example
+```4d
+$encoded:=cURL_Escape("hello world & friends")
+ // $encoded = "hello%20world%20%26%20friends"
+```
+
+---
+
+## cURL_Unescape
+
+### Syntax
+```
+cURL_Unescape ( text ) -> Text
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `text` | Text | Percent-encoded string to decode |
+| `Result` | Text | Decoded string |
+
+### Description
+The inverse of `cURL_Escape`, via `curl_easy_unescape`. As with `cURL_Escape`, failure or an empty input just yields an empty result.
+
+### Example
+```4d
+$decoded:=cURL_Unescape("hello%20world%20%26%20friends")
+ // $decoded = "hello world & friends"
+```
+
+---
+
+## cURL_GetDate
+
+### Syntax
+```
+cURL_GetDate ( dateString ; *timestampText ) -> Longint
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `dateString` | Text | A date string in any format `curl_getdate` understands (RFC 2822, RFC 850, asctime, ISO 8601, and several others) |
+| `timestampText` | Text | *(by reference, optional)* receives the parsed Unix timestamp as text |
+| `Result` | Longint | Parsed Unix timestamp (seconds since epoch), or `-1` if the string couldn't be parsed |
+
+### Description
+A thin wrapper over libcurl's `curl_getdate`, useful for parsing values out of HTTP headers like `Last-Modified` or `Date` without writing your own date-format matcher. The Longint result and the `timestampText` output parameter carry the same value (as text) when parsing succeeds; on failure both are `-1` / left unset respectively (`timestampText` is only written back when parsing succeeds).
+
+Note the `Longint` result truncates a 64-bit `time_t` to a 32-bit value — for any realistic calendar date this is not a concern, but be aware the truncation exists if you're ever feeding it a deliberately out-of-range value.
+
+### Example
+```4d
+$ts:=cURL_GetDate("Wed, 21 Oct 2015 07:28:00 GMT"; $tsText)
+ // $ts = 1445412480, $tsText = "1445412480"
+
+If ($ts=-1)
+     // unparseable date string
+End if 
+```
+
+---
+
+## cURL
+
+### Syntax
+```
+cURL ( options ; *request ; *response ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | Request configuration — see [The options object](#the-options-object) |
+| `request` | Blob | *(by reference)* data to send (used when no `READDATA` path option is set) |
+| `response` | Blob | *(by reference)* receives the downloaded data (used when no `WRITEDATA` path option is set) |
+| `callbackMethod` | Text | *(optional)* name of a progress-callback method — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo }` — see below |
+
+### Description
+The general-purpose command: set `URL` and whatever other keys you need in `options`, and this drives libcurl's normal easy-interface transfer for HTTP, HTTPS, FTP, FTPS, SFTP, or anything else libcurl was built to support. Upload/download data can come from/go to either the in-memory `request`/`response` Blobs, or a file on disk via the `READDATA`/`WRITEDATA` path options — set the corresponding path option to use a file, or leave it unset to use the Blob.
+
+The returned object always has:
+
+| Property | Type | Description |
+|---|---|---|
+| `status` | Longint | libcurl's `CURLcode` for the transfer (`0` = `CURLE_OK`/success; see [libcurl's error code list](https://curl.se/libcurl/c/libcurl-errors.html) for anything else) |
+| `transferInfo` | Object | Timing, size, and connection metadata — see [transferInfo fields](#transferinfo-fields) |
+| `headerInfo` | Text | The raw response headers, as received |
+
+### Example
+From the plugin's own test method (`TEST_http_apple.4dm`):
+```4d
+C_OBJECT:C1216($vObj_Options;$vObj_Result)
+C_BLOB:C604($vx_Request;$vx_Response)
+C_TEXT:C284($vT_callback)
+$vObj_Options:=New object:C1471
+$vObj_Options.URL:="https://www.apple.com/test"
+
+$vObj_Options.DEBUG:=Get 4D folder:C485(Logs folder:K5:19)
+If (Application type:C494#4D Server:K5:6)
+    SHOW ON DISK:C922(Get 4D folder:C485(Logs folder:K5:19);*)
+End if 
+
+$vT_callback:=""
+$vObj_Result:=cURL ($vObj_Options;$vx_Request;$vx_Response;$vT_callback)
+```
+
+Downloading straight to disk instead of into a Blob, with certificate-chain info (from `issue_12.4dm`):
+```4d
+var $options; $status : Object
+var $request; $response : Blob
+
+$options:=New object:C1471
+$options.URL:="https://www.apple.com/"
+$options.CERTINFO:=1
+$options.CAINFO:=Folder:C1567(fk resources folder:K87:11).file("cacert-2021-01-19.pem").platformPath
+
+$status:=cURL($options; $request; $response)
+ // $status.transferInfo.certInfo is a collection of certificate-chain text lines
+```
+
+Uploading over SFTP with a private key, tracking progress via a named callback method (from `TEST_ftp_14.4dm`, adapted):
+```4d
+$options:=New object:C1471
+$options.URL:="sftp://localhost:2222/Test.pdf"
+$options.SSL_VERIFYPEER:=0
+$options.SSL_VERIFYHOST:=0
+$options.UPLOAD:=1
+$options.USERNAME:="tester"
+$options.PASSWORD:="password"
+
+C_BLOB:C604($request; $response)
+
+$status:=cURL($options; $request; $response; "TEST_PROGRESS")
+```
+
+---
+
+## The options object
+
+`cURL` and every `cURL_FTP_*` command share this same `options` object shape. Most keys map straight onto a same-named libcurl `CURLOPT_*` constant (drop the `CURLOPT_` prefix to get the 4D key) — for the exact semantics of any option below, libcurl's own [`curl_easy_setopt` documentation](https://curl.se/libcurl/c/curl_easy_setopt.html) is the authoritative reference (search for `CURLOPT_<KEY>`). The tables below exist to tell you the *type* 4D should send and flag anything with plugin-specific behavior beyond a plain passthrough.
+
+### Behavior / plugin-specific options
+
+| Key | Type | Description |
+|---|---|---|
+| `URL` | Text | The request URL. Required for any transfer to happen. |
+| `ATOMIC` | Boolean | `cURL` only (ignored by `cURL_FTP_*`) — see [Requirements](#requirements--platform-notes) for the behavioral difference this makes. |
+| `PRIVATE` | Text | Arbitrary text passed through to your callback method as its `userInfo`/`$2` parameter; not sent to the server. |
+| `READDATA` | Text (path) | File to read the upload body from, instead of the `request` Blob parameter. |
+| `WRITEDATA` | Text (path) | File to write the downloaded body to, instead of filling the `response` Blob parameter. Missing parent folders are created automatically. |
+| `AUTOPROXY` | Text | Any value triggers automatic proxy detection for the given `URL` via the OS proxy configuration (`libproxy`); sets `PROXY`/`PROXYTYPE` for you. The value itself isn't used, only its presence. |
+| `DEBUG` | Text (path, folder) | Enables verbose logging to the given folder — see [Requirements](#requirements--platform-notes). |
+| `DEBUG_ID` | Text | Optional subfolder name under `DEBUG`, useful for separating logs from concurrent/repeated calls. |
+| `CERTINFO` | Boolean/Longint | Also collect the TLS certificate chain into `transferInfo.certInfo` (see [transferInfo fields](#transferinfo-fields)). |
+
+### String options (passed through as-is)
+
+`PROXY`, `USERPWD`, `PROXYUSERPWD`, `RANGE`, `REFERER`, `FTPPORT`, `USERAGENT`, `COOKIE`, `KEYPASSWD`, `CUSTOMREQUEST`, `INTERFACE`, `KRBLEVEL`, `RANDOM_FILE`, `EGDSOCKET`, `SSL_CIPHER_LIST`, `SSLCERTTYPE`, `SSLKEYTYPE`, `ACCEPT_ENCODING`, `FTP_ACCOUNT`, `COOKIELIST`, `FTP_ALTERNATIVE_TO_USER`, `SSH_HOST_PUBLIC_KEY_MD5`, `USERNAME`, `PASSWORD`, `PROXYUSERNAME`, `PROXYPASSWORD`, `NOPROXY`, `SSH_KNOWNHOSTS`, `RTSP_SESSION_ID`, `RTSP_STREAM_URI`, `RTSP_TRANSPORT`, `TLSAUTH_USERNAME`, `TLSAUTH_PASSWORD`, `TLSAUTH_TYPE`, `DNS_SERVERS`, `MAIL_AUTH`, `XOAUTH2_BEARER`, `DNS_INTERFACE`, `DNS_LOCAL_IP4`, `DNS_LOCAL_IP6`, `LOGIN_OPTIONS`, `PROXY_SERVICE_NAME`, `SERVICE_NAME`, `DEFAULT_PROTOCOL`, `PROXY_TLSAUTH_USERNAME`, `PROXY_TLSAUTH_PASSWORD`, `PROXY_TLSAUTH_TYPE`, `PROXY_SSLCERTTYPE`, `PROXY_SSLKEYTYPE`, `PROXY_KEYPASSWD`, `PROXY_SSL_CIPHER_LIST`, `PRE_PROXY`, `REQUEST_TARGET`, `TLS13_CIPHERS`, `PROXY_TLS13_CIPHERS`, `DOH_URL`. Each is Text, mapped straight to the identically-named `CURLOPT_*`.
+
+`PINNEDPUBLICKEY` / `PROXY_PINNEDPUBLICKEY` — Text. Either a `sha256//<base64-hash>` pin string (passed straight through) or a platform-native file path (converted internally on macOS).
+
+### Path options (platform-native path, converted internally on macOS)
+
+`SSLCERT`, `COOKIEFILE`, `CAINFO`, `COOKIEJAR`, `SSLKEY`, `CAPATH`, `NETRC_FILE`, `SSH_PUBLIC_KEYFILE`, `SSH_PRIVATE_KEYFILE`, `CRLFILE`, `ISSUERCERT`, `PROXY_CAINFO`, `PROXY_CAPATH`, `PROXY_SSLCERT`, `PROXY_SSLKEY`, `PROXY_CRLFILE`. All Text, holding a platform path (use `.platformPath`, not `.path`).
+
+### Numeric options (passed through as-is)
+
+Send these as Longint (or Real for the handful noted as "large" below, which libcurl treats as 64-bit):
+
+`PORT`, `TIMEOUT`, `LOW_SPEED_LIMIT`, `LOW_SPEED_TIME`, `CRLF`, `HEADER`, `NOBODY`, `FAILONERROR`, `UPLOAD`, `POST`, `DIRLISTONLY`, `APPEND`, `NETRC`, `FOLLOWLOCATION`, `PUT`, `AUTOREFERER`, `PROXYPORT`, `HTTPPROXYTUNNEL`, `SSL_VERIFYPEER`, `MAXREDIRS`, `FILETIME`, `MAXCONNECTS`, `FRESH_CONNECT`, `FORBID_REUSE`, `CONNECTTIMEOUT`, `HTTPGET`, `SSL_VERIFYHOST`, `FTP_USE_EPSV`, `DNS_CACHE_TIMEOUT`, `COOKIESESSION`, `BUFFERSIZE`, `UNRESTRICTED_AUTH`, `FTP_USE_EPRT`, `HTTPAUTH`, `FTP_CREATE_MISSING_DIRS`, `PROXYAUTH`, `FTP_RESPONSE_TIMEOUT`, `IPRESOLVE`, `IGNORE_CONTENT_LENGTH`, `FTP_SKIP_PASV_IP`, `FTP_FILEMETHOD`, `LOCALPORT`, `LOCALPORTRANGE`, `CONNECT_ONLY`, `SSL_SESSIONID_CACHE`, `SSH_AUTH_TYPES`, `FTP_SSL_CCC`, `TIMEOUT_MS`, `CONNECTTIMEOUT_MS`, `HTTP_TRANSFER_DECODING`, `HTTP_CONTENT_DECODING`, `NEW_FILE_PERMS`, `NEW_DIRECTORY_PERMS`, `POSTREDIR`, `PROXY_TRANSFER_MODE`, `ADDRESS_SCOPE`, `TFTP_BLKSIZE`, `PROTOCOLS`, `REDIR_PROTOCOLS`, `FTP_USE_PRET`, `RTSP_REQUEST`, `RTSP_CLIENT_CSEQ`, `RTSP_SERVER_CSEQ`, `WILDCARDMATCH`, `TRANSFER_ENCODING`, `ACCEPTTIMEOUT_MS`, `TCP_KEEPALIVE`, `TCP_KEEPIDLE`, `TCP_KEEPINTVL`, `SASL_IR`, `SSL_ENABLE_NPN`, `SSL_ENABLE_ALPN`, `EXPECT_100_TIMEOUT_MS`, `SSL_VERIFYSTATUS`, `SSL_FALSESTART`, `PATH_AS_IS`, `PIPEWAIT`, `STREAM_WEIGHT`, `TFTP_NO_OPTIONS`, `TCP_FASTOPEN`, `KEEP_SENDING_ON_ERROR`, `PROXY_SSL_VERIFYPEER`, `PROXY_SSL_VERIFYHOST`, `PROXY_SSL_OPTIONS`, `SUPPRESS_CONNECT_HEADERS`, `SOCKS5_AUTH`, `SSH_COMPRESSION`, `HAPPY_EYEBALLS_TIMEOUT_MS`, `HAPROXYPROTOCOL`, `DNS_SHUFFLE_ADDRESSES`, `DISALLOW_USERNAME_IN_URL`, `UPLOAD_BUFFERSIZE`, `UPKEEP_INTERVAL_MS`.
+
+`RESUME_FROM` / `RESUME_FROM_LARGE`, `TIMEVALUE` / `TIMEVALUE_LARGE`, `MAXFILESIZE` / `MAXFILESIZE_LARGE`, `MAX_SEND_SPEED` / `MAX_SEND_SPEED_LARGE`, `MAX_RECV_SPEED` / `MAX_RECV_SPEED_LARGE` — both spellings are accepted and behave identically (they map to the same `_LARGE`/64-bit `CURLOPT_*` either way).
+
+### Enum options (Text name **or** raw numeric value)
+
+These accept either the symbolic libcurl constant name as Text (recommended — check libcurl's docs for the valid names per option) or the raw numeric constant as Longint:
+
+| Key | Example Text values |
+|---|---|
+| `USE_SSL` | `"USESSL_NONE"`, `"USESSL_TRY"`, `"USESSL_CONTROL"`, `"USESSL_ALL"` |
+| `SSLVERSION` / `PROXY_SSLVERSION` | `"SSLVERSION_DEFAULT"`, `"SSLVERSION_TLSv1_2"`, `"SSLVERSION_TLSv1_3"`, `"SSLVERSION_MAX_TLSv1_3"`, ... |
+| `HTTP_VERSION` | `"HTTP_VERSION_1_1"`, `"HTTP_VERSION_2"`, `"HTTP_VERSION_2TLS"`, `"HTTP_VERSION_2_PRIOR_KNOWLEDGE"`, ... |
+| `TIMECONDITION` | `"TIMECOND_IFMODSINCE"`, `"TIMECOND_IFUNMODSINCE"`, `"TIMECOND_LASTMOD"` |
+| `PROXYTYPE` | `"PROXY_HTTPS"`, `"PROXY_SOCKS4"`, `"PROXY_SOCKS4A"`, `"PROXY_SOCKS5"` |
+| `FTPSSLAUTH` | `"FTPAUTH_SSL"`, `"FTPAUTH_TLS"` |
+| `HEADEROPT` | `"HEADER_UNIFIED"`, `"HEADER_SEPARATE"` |
+
+If you pass a Text value the plugin doesn't recognize, the option is silently left unset (no error) — double-check spelling against the table above.
+
+### Array options (Collection of Text)
+
+`CONNECT_TO`, `PROXYHEADER`, `HTTPHEADER`, `HTTP200ALIASES`, `RESOLVE`, `MAIL_RCPT`, `PREQUOTE`, `POSTQUOTE`, `QUOTE`, `TELNETOPTIONS` — each takes a Collection where every element is a Text line, mapped to libcurl's `curl_slist`-based options. Empty-string elements are skipped.
 
 ```4d
-Text:=cURL_VersionInfo()
-Object:=cURL_VersionInfo()
- 
-Long:=cURL(Text;Blob;Blob;Text;Text;Text)
-Object:=cURL(Object;Blob;Blob;Text)
-
-curl_callback_method(Text;Text) => Bool
-curl_callback_method(Object;Text) => Bool
+$options.HTTPHEADER:=New collection:C1472("Authorization: Bearer "+$token; "Accept: application/json")
 ```
 
-* integrated high-level FTP commands in `4.0.0`
+> **`MAIL_FROM` is currently a no-op.** It's accepted by 4D's own JSON layer but never actually reaches libcurl in this build — if you need `CURLOPT_MAIL_FROM`, it isn't wired up yet.
 
-#### FTP high-level commands
+### transferInfo fields
 
-new syntax for `cURL_FTP_Receive` and `cURL_FTP_Send`
+Every result from `cURL`/`cURL_FTP_*` includes a `transferInfo` object with this shape (fields simply absent if the underlying `curl_easy_getinfo` call fails for that field):
 
-Parameter|Type|Description
-------------|------------|----
-options|OBJECT|
-data|BLOB|
-callbackMethod|TEXT|optional
-status|OBJECT|
+**Timing (microseconds converted from libcurl's `_T` timers):** `totalTime`, `nameLookupTime`, `connectTime`, `appConnectTime`, `preTransferTime`, `startTransferTime`, `redirectTime`.
 
-use `CURLOPT_READDATA` `CURLOPT_WRITEDATA` to specify a path in/out (same as cURL)
+**Size/speed:** `speedUpload`, `speedDownload`, `sizeUpload`, `sizeDownload`, `contentLengthUpload`, `contentLengthDownload` (normalized to `0` rather than libcurl's `-1` for a 0-byte SFTP file).
 
-otherwise pass a BLOB in `$2`
+**Response/connection:** `responseCode`, `connectCode`, `httpVersion`, `redirectCount`, `headerSize`, `requestSize`, `sslVerifyResult`, `proxySslVerifyResult`, `localPort`, `primaryPort`, `numConnects`, `osErrNo`, `httpAuthAvail`, `proxyAuthAvail`, `protocol`, `proxyError`, `conditionUnmet`.
 
-new syntax for all other commands
+**File/socket:** `fileTime`, `lastSocket`, `retryAfter`.
 
-Parameter|Type|Description
-------------|------------|----
-options|OBJECT|
-callbackMethod|TEXT|optional
-status|OBJECT|
+**RTSP:** `rtspClientCseq`, `rtspServerCseq`, `rtspCseqRecv`.
 
-use `FTP_CREATE_MISSING_DIRS` option with `cURL_FTP_Send` and `cURL_FTP_MakeDir`
+**Strings:** `effectiveUrl`, `effectiveMethod`, `redirectUrl`, `contentType`, `ftpEntryPath`, `localIp`, `primaryIp`, `rtspSessionId`, `scheme`.
 
-use `WILDCARDMATCH` option with `cURL_FTP_Receive` 
+**Certificates:** `certInfo` — a Collection of Text lines (only present if you set `CERTINFO:=1`).
+
+### Callback method
+
+If you pass a non-empty `callbackMethod`/`callbackMethod` name that resolves to a real 4D project method, that method is called during the transfer (roughly every 100ms, plus once more at completion) with:
+
+```4d
+ // TEST_PROGRESS.4dm — the plugin's own test callback
+C_OBJECT:C1216($1)   //transferInfo, same shape as above
+C_TEXT:C284($2)      //the PRIVATE option you set, if any
+C_BOOLEAN:C305($0)   //return True to abort the transfer
+```
+
+Returning `True` aborts the transfer (`status` comes back as libcurl's `CURLE_ABORTED_BY_CALLBACK`).
 
 ---
 
-Properties of ``curlInfo``
+## cURL_FTP_Delete
 
+### Syntax
 ```
-conditionUnmet
-contentLengthUpload
-rtspClientCseq
-rtspServerCseq
-rtspCseqRecv
-lastSocket
-primaryPort
-localPort
-contentLengthDownload
-connectCode
-fileTime
-totalTime
-requestSize
-headerSize
-speedUpload
-speedDownload
-sizeDownload
-sizeUpload
-httpAuthAvail
-proxyAuthAvail
-osErrNo
-numConnects
-responseCode
-nameLookupTime
-connectTime
-appConnectTime
-preTransferTime
-startTransferTime
-redirectTime
-sslVerifyResult
-redirectCount
-effectiveUrl
-localIp
-contentType
-primaryIp
-redirectUrl
-ftpEntryPath
-rtspSessionId
+cURL_FTP_Delete ( options ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | Must include `URL` pointing at the file to delete; see [The options object](#the-options-object) |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo }` |
+
+### Description
+Deletes a single remote file. Internally this issues an FTP `DELE` (or, over SFTP, `rm`) as a quote command against the file's path — it does not require the server to support any special "delete" verb beyond standard FTP/SFTP.
+
+### Example
+From the plugin's own test method (`issue_5a.4dm`):
+```4d
+$options:=New object:C1471
+$options.USERNAME:=""
+$options.PASSWORD:=""
+$options.SSL_VERIFYPEER:=0
+$options.SSL_VERIFYHOST:=0
+$options.USE_SSL:="USESSL_ALL"
+$options.URL:="ftps://.../test/upload.zip"
+
+$status:=cURL_FTP_Delete ($options)
 ```
 
 ---
 
-Special ``options``
+## cURL_FTP_GetDirList
 
-Value|Type|Description
-------------|------------|----
-[PRIVATE](https://curl.haxx.se/libcurl/c/CURLOPT_PRIVATE.html) |TEXT|context info passed to ``callbackMethod``
-[READDATA](https://curl.haxx.se/libcurl/c/CURLOPT_READDATA.html) |TEXT|use file path instead of ``request``
-[WRITEDATA](https://curl.haxx.se/libcurl/c/CURLOPT_WRITEDATA.html) |TEXT|use file path instead of ``response``
-AUTOPROXY |LONGINT|``1`` to use ``libproxy``
-ATOMIC |BOOLEAN|``True`` to use simple (as opposed to multiple) API
-[DEBUG](https://curl.haxx.se/libcurl/c/CURLOPT_VERBOSE.html) |TEXT|folder path to create log files
-FTP_USE_MLSD|BOOLEAN|``True`` to use `MLSD` instead of `LIST`
+### Syntax
+```
+cURL_FTP_GetDirList ( options ; *callbackMethod ) -> Object
+```
 
----
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at a directory (trailing `/`); optionally set `FTP_USE_MLSD` — see below |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo ; dirList ; ftpparse }` |
 
-Standard  ``options``
+### Description
+Lists a remote directory and parses the listing for you. The raw listing text comes back in `dirList`; the parsed, per-entry breakdown comes back in `ftpparse`, a Collection whose shape depends on `FTP_USE_MLSD`:
 
-Value|Type|Description
-------------|------------|----
-[URL](https://curl.haxx.se/libcurl/c/CURLOPT_URL.html) |TEXT|
-[PORT](https://curl.haxx.se/libcurl/c/CURLOPT_PORT.html) |LONGINT|
-[PROXY](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY.html) |TEXT|
-[USERPWD](https://curl.haxx.se/libcurl/c/CURLOPT_USERPWD.html) |TEXT|
-[PROXYUSERPWD](https://curl.haxx.se/libcurl/c/CURLOPT_PROXYUSERPWD.html) |TEXT|
-[RANGE](https://curl.haxx.se/libcurl/c/CURLOPT_RANGE.html) |TEXT|
-[TIMEOUT](https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT.html) |LONGINT|
-[REFERER](https://curl.haxx.se/libcurl/c/CURLOPT_REFERER.html) |TEXT|
-[FTPPORT](https://curl.haxx.se/libcurl/c/CURLOPT_FTPPORT.html) |TEXT|
-[USERAGENT](https://curl.haxx.se/libcurl/c/CURLOPT_USERAGENT.html) |TEXT|
-[LOW_SPEED_LIMIT](https://curl.haxx.se/libcurl/c/CURLOPT_LOW_SPEED_LIMIT.html) |LONGINT|
-[LOW_SPEED_TIME](https://curl.haxx.se/libcurl/c/CURLOPT_LOW_SPEED_TIME.html) |LONGINT|
-[RESUME_FROM](https://curl.haxx.se/libcurl/c/CURLOPT_RESUME_FROM.html) |LONGINT|
-[COOKIE](https://curl.haxx.se/libcurl/c/CURLOPT_COOKIE.html) |TEXT|
-[SSLCERT](https://curl.haxx.se/libcurl/c/CURLOPT_SSLCERT.html) |TEXT|path
-[KEYPASSWD](https://curl.haxx.se/libcurl/c/CURLOPT_KEYPASSWD.html) |TEXT|
-[CRLF](https://curl.haxx.se/libcurl/c/CURLOPT_CRLF.html) |LONGINT|
-[COOKIEFILE](https://curl.haxx.se/libcurl/c/CURLOPT_COOKIEFILE.html) |TEXT|path
-[TIMEVALUE](https://curl.haxx.se/libcurl/c/CURLOPT_TIMEVALUE.html) |LONGINT|
-[CUSTOMREQUEST](https://curl.haxx.se/libcurl/c/CURLOPT_CUSTOMREQUEST.html) |TEXT|
-[HEADER](https://curl.haxx.se/libcurl/c/CURLOPT_HEADER.html) |LONGINT|
-[NOBODY](https://curl.haxx.se/libcurl/c/CURLOPT_NOBODY.html) |LONGINT|
-[FAILONERROR](https://curl.haxx.se/libcurl/c/CURLOPT_FAILONERROR.html) |LONGINT|
-[UPLOAD](https://curl.haxx.se/libcurl/c/CURLOPT_UPLOAD.html) |LONGINT|
-[POST](https://curl.haxx.se/libcurl/c/CURLOPT_POST.html) |LONGINT|
-[DIRLISTONLY](https://curl.haxx.se/libcurl/c/CURLOPT_DIRLISTONLY.html) |LONGINT|
-[APPEND](https://curl.haxx.se/libcurl/c/CURLOPT_APPEND.html) |LONGINT|
-[NETRC](https://curl.haxx.se/libcurl/c/CURLOPT_NETRC.html) |LONGINT|
-[FOLLOWLOCATION](https://curl.haxx.se/libcurl/c/CURLOPT_FOLLOWLOCATION.html) |LONGINT|
-[PUT](https://curl.haxx.se/libcurl/c/CURLOPT_PUT.html) |LONGINT|
-[AUTOREFERER](https://curl.haxx.se/libcurl/c/CURLOPT_AUTOREFERER.html) |LONGINT|
-[PROXYPORT](https://curl.haxx.se/libcurl/c/CURLOPT_PROXYPORT.html) |LONGINT|
-[HTTPPROXYTUNNEL](https://curl.haxx.se/libcurl/c/CURLOPT_HTTPPROXYTUNNEL.html) |LONGINT|
-[INTERFACE](https://curl.haxx.se/libcurl/c/CURLOPT_INTERFACE.html) |TEXT|
-[KRBLEVEL](https://curl.haxx.se/libcurl/c/CURLOPT_KRBLEVEL.html) |TEXT|
-[SSL_VERIFYPEER](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html) |LONGINT|
-[CAINFO](https://curl.haxx.se/libcurl/c/CURLOPT_CAINFO.html) |TEXT|path
-[MAXREDIRS](https://curl.haxx.se/libcurl/c/CURLOPT_MAXREDIRS.html) |LONGINT|
-[FILETIME](https://curl.haxx.se/libcurl/c/CURLOPT_FILETIME.html) |LONGINT|
-[MAXCONNECTS](https://curl.haxx.se/libcurl/c/CURLOPT_MAXCONNECTS.html) |LONGINT|
-[FRESH_CONNECT](https://curl.haxx.se/libcurl/c/CURLOPT_FRESH_CONNECT.html) |LONGINT|
-[FORBID_REUSE](https://curl.haxx.se/libcurl/c/CURLOPT_FORBID_REUSE.html) |LONGINT|
-[RANDOM_FILE](https://curl.haxx.se/libcurl/c/CURLOPT_RANDOM_FILE.html) |TEXT|
-[EGDSOCKET](https://curl.haxx.se/libcurl/c/CURLOPT_EGDSOCKET.html) |TEXT|
-[CONNECTTIMEOUT](https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html) |LONGINT|
-[HTTPGET](https://curl.haxx.se/libcurl/c/CURLOPT_HTTPGET.html) |LONGINT|
-[SSL_VERIFYHOST](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html) |LONGINT|
-[COOKIEJAR](https://curl.haxx.se/libcurl/c/CURLOPT_COOKIEJAR.html) |TEXT|path
-[SSL_CIPHER_LIST](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_CIPHER_LIST.html) |TEXT|
-[FTP_USE_EPSV](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_USE_EPSV.html) |LONGINT|
-[SSLCERTTYPE](https://curl.haxx.se/libcurl/c/CURLOPT_SSLCERTTYPE.html) |TEXT|
-[SSLKEY](https://curl.haxx.se/libcurl/c/CURLOPT_SSLKEY.html) |TEXT|path
-[SSLKEYTYPE](https://curl.haxx.se/libcurl/c/CURLOPT_SSLKEYTYPE.html) |TEXT|
-[DNS_CACHE_TIMEOUT](https://curl.haxx.se/libcurl/c/CURLOPT_DNS_CACHE_TIMEOUT.html) |LONGINT|
-[COOKIESESSION](https://curl.haxx.se/libcurl/c/CURLOPT_COOKIESESSION.html) |LONGINT|
-[CAPATH](https://curl.haxx.se/libcurl/c/CURLOPT_CAPATH.html) |TEXT|path
-[BUFFERSIZE](https://curl.haxx.se/libcurl/c/CURLOPT_BUFFERSIZE.html) |LONGINT|
-[ACCEPT_ENCODING](https://curl.haxx.se/libcurl/c/CURLOPT_ACCEPT_ENCODING.html) |TEXT|
-[UNRESTRICTED_AUTH](https://curl.haxx.se/libcurl/c/CURLOPT_UNRESTRICTED_AUTH.html) |LONGINT|
-[FTP_USE_EPRT](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_USE_EPRT.html) |LONGINT|
-[HTTPAUTH](https://curl.haxx.se/libcurl/c/CURLOPT_HTTPAUTH.html) |LONGINT|
-[FTP_CREATE_MISSING_DIRS](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_CREATE_MISSING_DIRS.html) |LONGINT|
-[PROXYAUTH](https://curl.haxx.se/libcurl/c/CURLOPT_PROXYAUTH.html) |LONGINT|
-[FTP_RESPONSE_TIMEOUT](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_RESPONSE_TIMEOUT.html) |LONGINT|
-[IPRESOLVE](https://curl.haxx.se/libcurl/c/CURLOPT_IPRESOLVE.html) |LONGINT|
-[MAXFILESIZE](https://curl.haxx.se/libcurl/c/CURLOPT_MAXFILESIZE.html) |LONGINT|
-[RESUME_FROM_LARGE](https://curl.haxx.se/libcurl/c/CURLOPT_RESUME_FROM_LARGE.html) |TEXT|text, to support 64-bit integer
-[MAXFILESIZE_LARGE](https://curl.haxx.se/libcurl/c/CURLOPT_MAXFILESIZE_LARGE.html) |TEXT|text, to support 64-bit integer
-[NETRC_FILE](https://curl.haxx.se/libcurl/c/CURLOPT_NETRC_FILE.html) |TEXT|path
-[FTP_ACCOUNT](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_ACCOUNT.html) |TEXT|
-[COOKIELIST](https://curl.haxx.se/libcurl/c/CURLOPT_COOKIELIST.html) |TEXT|
-[IGNORE_CONTENT_LENGTH](https://curl.haxx.se/libcurl/c/CURLOPT_IGNORE_CONTENT_LENGTH.html) |LONGINT|
-[FTP_SKIP_PASV_IP](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_SKIP_PASV_IP.html) |LONGINT|
-[FTP_FILEMETHOD](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_FILEMETHOD.html) |LONGINT|
-[LOCALPORT](https://curl.haxx.se/libcurl/c/CURLOPT_LOCALPORT.html) |LONGINT|
-[LOCALPORTRANGE](https://curl.haxx.se/libcurl/c/CURLOPT_LOCALPORTRANGE.html) |LONGINT|
-[CONNECT_ONLY](https://curl.haxx.se/libcurl/c/CURLOPT_CONNECT_ONLY.html) |LONGINT|
-[MAX_SEND_SPEED_LARGE](https://curl.haxx.se/libcurl/c/CURLOPT_MAX_SEND_SPEED_LARGE.html) |TEXT|text, to support 64-bit integer
-[MAX_RECV_SPEED_LARGE](https://curl.haxx.se/libcurl/c/CURLOPT_MAX_RECV_SPEED_LARGE.html) |TEXT|text, to support 64-bit integer
-[FTP_ALTERNATIVE_TO_USER](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_ALTERNATIVE_TO_USER.html) |TEXT|
-[SSL_SESSIONID_CACHE](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_SESSIONID_CACHE.html) |LONGINT|
-[SSH_AUTH_TYPES](https://curl.haxx.se/libcurl/c/CURLOPT_SSH_AUTH_TYPES.html) |LONGINT|
-[SSH_PUBLIC_KEYFILE](https://curl.haxx.se/libcurl/c/CURLOPT_SSH_PUBLIC_KEYFILE.html) |TEXT|path
-[SSH_PRIVATE_KEYFILE](https://curl.haxx.se/libcurl/c/CURLOPT_SSH_PRIVATE_KEYFILE.html) |TEXT|path
-[FTP_SSL_CCC](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_SSL_CCC.html) |LONGINT|
-[TIMEOUT_MS](https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT_MS.html) |LONGINT|
-[CONNECTTIMEOUT_MS](https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT_MS.html) |LONGINT|
-[HTTP_TRANSFER_DECODING](https://curl.haxx.se/libcurl/c/CURLOPT_HTTP_TRANSFER_DECODING.html) |LONGINT|
-[HTTP_CONTENT_DECODING](https://curl.haxx.se/libcurl/c/CURLOPT_HTTP_CONTENT_DECODING.html) |LONGINT|
-[NEW_FILE_PERMS](https://curl.haxx.se/libcurl/c/CURLOPT_NEW_FILE_PERMS.html) |LONGINT|
-[NEW_DIRECTORY_PERMS](https://curl.haxx.se/libcurl/c/CURLOPT_NEW_DIRECTORY_PERMS.html) |LONGINT|
-[POSTREDIR](https://curl.haxx.se/libcurl/c/CURLOPT_POSTREDIR.html) |LONGINT|
-[SSH_HOST_PUBLIC_KEY_MD5](https://curl.haxx.se/libcurl/c/CURLOPT_SSH_HOST_PUBLIC_KEY_MD5.html) |TEXT|
-[PROXY_TRANSFER_MODE](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_TRANSFER_MODE.html) |LONGINT|
-[CRLFILE](https://curl.haxx.se/libcurl/c/CURLOPT_CRLFILE.html) |TEXT|path
-[ISSUERCERT](https://curl.haxx.se/libcurl/c/CURLOPT_ISSUERCERT.html) |TEXT|path
-[ADDRESS_SCOPE](https://curl.haxx.se/libcurl/c/CURLOPT_ADDRESS_SCOPE.html) |LONGINT|
-[CERTINFO](https://curl.haxx.se/libcurl/c/CURLOPT_CERTINFO.html) |LONGINT|
-[USERNAME](https://curl.haxx.se/libcurl/c/CURLOPT_USERNAME.html) |TEXT|
-[PASSWORD](https://curl.haxx.se/libcurl/c/CURLOPT_PASSWORD.html) |TEXT|
-[PROXYUSERNAME](https://curl.haxx.se/libcurl/c/CURLOPT_PROXYUSERNAME.html) |TEXT|
-[PROXYPASSWORD](https://curl.haxx.se/libcurl/c/CURLOPT_PROXYPASSWORD.html) |TEXT|
-[NOPROXY](https://curl.haxx.se/libcurl/c/CURLOPT_NOPROXY.html) |TEXT|
-[TFTP_BLKSIZE](https://curl.haxx.se/libcurl/c/CURLOPT_TFTP_BLKSIZE.html) |LONGINT|
-[PROTOCOLS](https://curl.haxx.se/libcurl/c/CURLOPT_PROTOCOLS.html) |LONGINT|
-[REDIR_PROTOCOLS](https://curl.haxx.se/libcurl/c/CURLOPT_REDIR_PROTOCOLS.html) |LONGINT|
-[SSH_KNOWNHOSTS](https://curl.haxx.se/libcurl/c/CURLOPT_SSH_KNOWNHOSTS.html) |TEXT|
-[FTP_USE_PRET](https://curl.haxx.se/libcurl/c/CURLOPT_FTP_USE_PRET.html) |LONGINT|
-[RTSP_REQUEST](https://curl.haxx.se/libcurl/c/CURLOPT_RTSP_REQUEST.html) |LONGINT|
-[RTSP_SESSION_ID](https://curl.haxx.se/libcurl/c/CURLOPT_RTSP_SESSION_ID.html) |TEXT|
-[RTSP_STREAM_URI](https://curl.haxx.se/libcurl/c/CURLOPT_RTSP_STREAM_URI.html) |TEXT|
-[RTSP_TRANSPORT](https://curl.haxx.se/libcurl/c/CURLOPT_RTSP_TRANSPORT.html) |TEXT|
-[RTSP_CLIENT_CSEQ](https://curl.haxx.se/libcurl/c/CURLOPT_RTSP_CLIENT_CSEQ.html) |LONGINT|
-[RTSP_SERVER_CSEQ](https://curl.haxx.se/libcurl/c/CURLOPT_RTSP_SERVER_CSEQ.html) |LONGINT|
-[WILDCARDMATCH](https://curl.haxx.se/libcurl/c/CURLOPT_WILDCARDMATCH.html) |LONGINT|
-[TLSAUTH_USERNAME](https://curl.haxx.se/libcurl/c/CURLOPT_TLSAUTH_USERNAME.html) |TEXT|
-[TLSAUTH_PASSWORD](https://curl.haxx.se/libcurl/c/CURLOPT_TLSAUTH_PASSWORD.html) |TEXT|
-[TLSAUTH_TYPE](https://curl.haxx.se/libcurl/c/CURLOPT_TLSAUTH_TYPE.html) |TEXT|
-[TRANSFER_ENCODING](https://curl.haxx.se/libcurl/c/CURLOPT_TRANSFER_ENCODING.html) |LONGINT|
-[DNS_SERVERS](https://curl.haxx.se/libcurl/c/CURLOPT_DNS_SERVERS.html) |TEXT|
-[ACCEPTTIMEOUT_MS](https://curl.haxx.se/libcurl/c/CURLOPT_ACCEPTTIMEOUT_MS.html) |LONGINT|
-[TCP_KEEPALIVE](https://curl.haxx.se/libcurl/c/CURLOPT_TCP_KEEPALIVE.html) |LONGINT|
-[TCP_KEEPIDLE](https://curl.haxx.se/libcurl/c/CURLOPT_TCP_KEEPIDLE.html) |LONGINT|
-[TCP_KEEPINTVL](https://curl.haxx.se/libcurl/c/CURLOPT_TCP_KEEPINTVL.html) |LONGINT|
-[MAIL_AUTH](https://curl.haxx.se/libcurl/c/CURLOPT_MAIL_AUTH.html) |TEXT|
-[SASL_IR](https://curl.haxx.se/libcurl/c/CURLOPT_SASL_IR.html) |LONGINT|
-[XOAUTH2_BEARER](https://curl.haxx.se/libcurl/c/CURLOPT_XOAUTH2_BEARER.html) |TEXT|
-[DNS_INTERFACE](https://curl.haxx.se/libcurl/c/CURLOPT_DNS_INTERFACE.html) |TEXT|
-[DNS_LOCAL_IP4](https://curl.haxx.se/libcurl/c/CURLOPT_DNS_LOCAL_IP4.html) |TEXT|
-[DNS_LOCAL_IP6](https://curl.haxx.se/libcurl/c/CURLOPT_DNS_LOCAL_IP6.html) |TEXT|
-[LOGIN_OPTIONS](https://curl.haxx.se/libcurl/c/CURLOPT_LOGIN_OPTIONS.html) |TEXT|
-[SSL_ENABLE_NPN](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_ENABLE_NPN.html) |LONGINT|
-[SSL_ENABLE_ALPN](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_ENABLE_ALPN.html) |LONGINT|
-[EXPECT_100_TIMEOUT_MS](https://curl.haxx.se/libcurl/c/CURLOPT_EXPECT_100_TIMEOUT_MS.html) |LONGINT|
-[HEADEROPT](https://curl.haxx.se/libcurl/c/CURLOPT_HEADEROPT.html) |LONGINT|
-[PINNEDPUBLICKEY](https://curl.haxx.se/libcurl/c/CURLOPT_PINNEDPUBLICKEY.html) |TEXT|path or value
-[SSL_VERIFYSTATUS](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYSTATUS.html) |LONGINT|
-[SSL_FALSESTART](https://curl.haxx.se/libcurl/c/CURLOPT_SSL_FALSESTART.html) |LONGINT|
-[PATH_AS_IS](https://curl.haxx.se/libcurl/c/CURLOPT_PATH_AS_IS.html) |LONGINT|
-[PROXY_SERVICE_NAME](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SERVICE_NAME.html) |TEXT|
-[SERVICE_NAME](https://curl.haxx.se/libcurl/c/CURLOPT_SERVICE_NAME.html) |TEXT|
-[PIPEWAIT](https://curl.haxx.se/libcurl/c/CURLOPT_PIPEWAIT.html) |LONGINT|
-[DEFAULT_PROTOCOL](https://curl.haxx.se/libcurl/c/CURLOPT_DEFAULT_PROTOCOL.html) |TEXT|
-[STREAM_WEIGHT](https://curl.haxx.se/libcurl/c/CURLOPT_STREAM_WEIGHT.html) |LONGINT|
-[TFTP_NO_OPTIONS](https://curl.haxx.se/libcurl/c/CURLOPT_TFTP_NO_OPTIONS.html) |LONGINT|
-[TCP_FASTOPEN](https://curl.haxx.se/libcurl/c/CURLOPT_TCP_FASTOPEN.html) |LONGINT|
-[KEEP_SENDING_ON_ERROR](https://curl.haxx.se/libcurl/c/CURLOPT_KEEP_SENDING_ON_ERROR.html) |LONGINT|
-[PROXY_CAINFO](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_CAINFO.html) |TEXT|path
-[PROXY_CAPATH](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_CAPATH.html) |TEXT|path
-[PROXY_SSL_VERIFYPEER](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSL_VERIFYPEER.html) |LONGINT|
-[PROXY_SSL_VERIFYHOST](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSL_VERIFYHOST.html) |LONGINT|
-[PROXY_TLSAUTH_USERNAME](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_TLSAUTH_USERNAME.html) |TEXT|
-[PROXY_TLSAUTH_PASSWORD](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_TLSAUTH_PASSWORD.html) |TEXT|
-[PROXY_TLSAUTH_TYPE](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_TLSAUTH_TYPE.html) |TEXT|
-[PROXY_SSLCERT](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSLCERT.html) |TEXT|path
-[PROXY_SSLCERTTYPE](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSLCERTTYPE.html) |TEXT|
-[PROXY_SSLKEY](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSLKEY.html) |TEXT|path
-[PROXY_SSLKEYTYPE](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSLKEYTYPE.html) |TEXT|
-[PROXY_KEYPASSWD](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_KEYPASSWD.html) |TEXT|
-[PROXY_SSL_CIPHER_LIST](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSL_CIPHER_LIST.html) |TEXT|
-[PROXY_CRLFILE](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_CRLFILE.html) |TEXT|path
-[PROXY_SSL_OPTIONS](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSL_OPTIONS.html) |LONGINT|
-[PRE_PROXY](https://curl.haxx.se/libcurl/c/CURLOPT_PRE_PROXY.html) |TEXT|
-[PROXY_PINNEDPUBLICKEY](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_PINNEDPUBLICKEY.html) |TEXT|
-[SUPPRESS_CONNECT_HEADERS](https://curl.haxx.se/libcurl/c/CURLOPT_SUPPRESS_CONNECT_HEADERS.html) |LONGINT|
-[REQUEST_TARGET](https://curl.haxx.se/libcurl/c/CURLOPT_REQUEST_TARGET.html) |TEXT|
-[SOCKS5_AUTH](https://curl.haxx.se/libcurl/c/CURLOPT_SOCKS5_AUTH.html) |LONGINT|
-[SSH_COMPRESSION](https://curl.haxx.se/libcurl/c/CURLOPT_SSH_COMPRESSION.html) |LONGINT|
-[TIMEVALUE_LARGE](https://curl.haxx.se/libcurl/c/CURLOPT_TIMEVALUE_LARGE.html) |TEXT|64-bit integer
-[HAPPY_EYEBALLS_TIMEOUT_MS](https://curl.haxx.se/libcurl/c/CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS.html) |LONGINT|
-[HAPROXYPROTOCOL](https://curl.haxx.se/libcurl/c/CURLOPT_HAPROXYPROTOCOL.html) |LONGINT|
-[DNS_SHUFFLE_ADDRESSES](https://curl.haxx.se/libcurl/c/CURLOPT_DNS_SHUFFLE_ADDRESSES.html) |LONGINT|
-[TLS13_CIPHERS](https://curl.haxx.se/libcurl/c/CURLOPT_TLS13_CIPHERS.html) |TEXT|
-[PROXY_TLS13_CIPHERS](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_TLS13_CIPHERS.html) |TEXT|
-[DISALLOW_USERNAME_IN_URL](https://curl.haxx.se/libcurl/c/CURLOPT_DISALLOW_USERNAME_IN_URL.html) |LONGINT|
-[DOH_URL](https://curl.haxx.se/libcurl/c/CURLOPT_DOH_URL.html) |TEXT|
-[UPLOAD_BUFFERSIZE](https://curl.haxx.se/libcurl/c/CURLOPT_UPLOAD_BUFFERSIZE.html) |LONGINT|
-[UPKEEP_INTERVAL_MS](https://curl.haxx.se/libcurl/c/CURLOPT_UPKEEP_INTERVAL_MS.html) |LONGINT|
+- **`FTP_USE_MLSD` unset/`false` (default, uses `LIST`):** each collection element is an object parsed by the bundled `ftpparse` library, with fields `name`, `id`, `flagtrycwd`, `flagtryretr`, `size`, `sizetype`, `idtype`, and (when available) `mtimetype` and `mtime` (ISO 8601 text). A line the parser can't understand becomes a `Null` element in the collection rather than being dropped, so the collection length still matches the number of listing lines.
+
+  > **Known quirk:** `sizetype` currently ends up holding the *raw numeric* `FTPPARSE_SIZE_*` code (`0`=unknown, `1`=binary, `2`=ASCII) rather than the string name (`"UNKNOWN"`/`"BINARY"`/`"ASCII"`) the plugin's own code computes just before it — a later line overwrites the string with the number under the same key. If you need the human-readable form, map the number yourself for now.
+- **`FTP_USE_MLSD:=true` (uses `MLSD`; `ftpparse` doesn't understand MLSD, so a separate parser is used):** each collection element is an object with one Text property per semicolon-separated MLSD "fact" the server sent (e.g. `Type`, `Size`, `Modify` — exact keys are server-dependent, taken verbatim from the response), plus a `path` property with the entry's name. Lines with no discoverable path are skipped entirely (not represented in the collection at all — unlike the non-MLSD case, there's no `Null` placeholder here).
+
+### Example
+From the plugin's own test method (`TEST_ftp_dirlist.4dm`):
+```4d
+C_OBJECT:C1216($options; $status)
+
+$options:=New object:C1471
+$options.USERNAME:=""
+$options.PASSWORD:=""
+$options.URL:=""
+
+$status:=cURL_FTP_GetDirList($options)  //folder must be empty
+```
+
+Using MLSD instead of LIST (from `issue_18.4dm`):
+```4d
+var $options; $status : Object
+var $request; $response : Blob
+var $callback : Text
+
+$options:=New object:C1471
+$options.URL:=""
+$options.USERNAME:=""
+$options.PASSWORD:=""
+$options.FTP_USE_MLSD:=True:C214  //send MLSD instead of LIST
+
+$status:=cURL_FTP_GetDirList($options)
+```
+
+Walking the parsed result:
+```4d
+For each ($entry; $status.ftpparse)
+    If (Value type:C1509($entry)#Is null:K8:2)
+        ALERT:C41($entry.name+" — "+String:C10($entry.size)+" bytes")
+    End if 
+End for each 
+```
 
 ---
 
-Standard  ``options`` with constant support
+## cURL_FTP_GetFileInfo
 
-Value|Type|Description
-------------|------------|----
-[USE_SSL](https://curl.haxx.se/libcurl/c/CURLOPT_USE_SSL.html) |TEXT|USESSL_NONE, USESSL_TRY, USESSL_CONTROL, USESSL_ALL
-[SSLVERSION](https://curl.haxx.se/libcurl/c/CURLOPT_SSLVERSION.html) |TEXT|SSLVERSION_TLSv1, SSLVERSION_SSLv2, SSLVERSION_SSLv3, SSLVERSION_TLSv1_0, SSLVERSION_TLSv1_1, SSLVERSION_TLSv1_2, SSLVERSION_TLSv1_3
-[HTTP_VERSION](https://curl.haxx.se/libcurl/c/CURLOPT_HTTP_VERSION.html) |TEXT|HTTP_VERSION_1_0, HTTP_VERSION_1_1, HTTP_VERSION_2_0, HTTP_VERSION_2TLS, HTTP_VERSION_2_PRIOR_KNOWLEDGE
-[PROXY_SSLVERSION](https://curl.haxx.se/libcurl/c/CURLOPT_PROXY_SSLVERSION.html) |TEXT|SSLVERSION_TLSv1, SSLVERSION_SSLv2, SSLVERSION_SSLv3, SSLVERSION_TLSv1_0, SSLVERSION_TLSv1_1, SSLVERSION_TLSv1_2, SSLVERSION_TLSv1_3
-[TIMECONDITION](https://curl.haxx.se/libcurl/c/CURLOPT_TIMECONDITION.html) |TEXT|TIMECOND_IFMODSINCE, TIMECOND_IFUNMODSINCE, TIMECOND_LASTMOD
-[PROXYTYPE](https://curl.haxx.se/libcurl/c/CURLOPT_PROXYTYPE.html) |TEXT|PROXY_HTTPS, PROXY_SOCKS4, PROXY_SOCKS4A, PROXY_SOCKS5
-[FTPSSLAUTH](https://curl.haxx.se/libcurl/c/CURLOPT_FTPSSLAUTH.html) |TEXT|FTPAUTH_SSL, FTPAUTH_TLS
-[HEADEROPT](https://curl.haxx.se/libcurl/c/CURLOPT_HEADEROPT.html) |TEXT|HEADER_UNIFIED, HEADER_SEPARATE
+### Syntax
+```
+cURL_FTP_GetFileInfo ( options ; *callbackMethod ) -> Object
+```
 
----
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at the file to inspect |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo ; fileInfo }` |
 
-Standard  ``options`` with collection support
+### Description
+A HEAD-style request (`NOBODY`) that retrieves a remote file's size and modification time without downloading it. `fileInfo.size` is normalized to `0` (rather than libcurl's `-1`) for a 0-byte file over SFTP specifically; `fileInfo.date`, when the server reports a file time, is an ISO 8601 UTC string (`"YYYY-MM-DDTHH:MM:SSZ"`).
 
-Value|Type|Description
-------------|------------|----
-[CONNECT_TO](https://curl.haxx.se/libcurl/c/CURLOPT_CONNECT_TO.html) |COLLECTION|text array
-[PROXYHEADER](https://curl.haxx.se/libcurl/c/CURLOPT_PROXYHEADER.html) |COLLECTION|text array
-[HTTPHEADER](https://curl.haxx.se/libcurl/c/CURLOPT_HTTPHEADER.html) |COLLECTION|text array
-[HTTP200ALIASES](https://curl.haxx.se/libcurl/c/CURLOPT_HTTP200ALIASES.html) |COLLECTION|text array
-[RESOLVE](https://curl.haxx.se/libcurl/c/CURLOPT_RESOLVE.html) |COLLECTION|text array
-[MAIL_RCPT](https://curl.haxx.se/libcurl/c/CURLOPT_MAIL_RCPT.html) |COLLECTION|text array
-[MAIL_FROM](https://curl.haxx.se/libcurl/c/CURLOPT_MAIL_FROM.html) |TEXT|
-[PREQUOTE](https://curl.haxx.se/libcurl/c/CURLOPT_PREQUOTE.html) |COLLECTION|text array
-[POSTQUOTE](https://curl.haxx.se/libcurl/c/CURLOPT_POSTQUOTE.html) |COLLECTION|text array
-[QUOTE](https://curl.haxx.se/libcurl/c/CURLOPT_QUOTE.html) |COLLECTION|text array
-[TELNETOPTIONS](https://curl.haxx.se/libcurl/c/CURLOPT_TELNETOPTIONS.html) |COLLECTION|text array
+| Property | Type | Description |
+|---|---|---|
+| `size` | Longint | File size in bytes |
+| `date` | Text | Modification date/time, UTC, ISO 8601 — only present if the server returned one |
 
----
+### Example
+```4d
+$options:=New object:C1471
+$options.URL:="ftp://ftp.example.com/incoming/report.csv"
+$options.USERNAME:="user"
+$options.PASSWORD:="pass"
 
-Not supported
-
-``POSTFIELDSIZE_LARGE`` (automatic)  
-``INFILESIZE_LARGE`` (automatic)  
-``POSTFIELDS``  
-``VERBOSE``  
-``NOPROGRESS``  
-``READFUNCTION``  
-``WRITEFUNCTION``  
-``ERRORBUFFER``  
-``READDATA``  
-``WRITEDATA``  
-``OBSOLETE72``  
-``PROGRESSDATA``  
-``PROGRESSFUNCTION``  
-``TRANSFERTEXT``  
-``OBSOLETE40``  
-``STDERR``  
-``HEADERDATA``  
-``HTTPPOST``  
-``IOCTLDATA``  
-``IOCTLFUNCTION``  
-``TCP_NODELAY``  
-``SSL_CTX_DATA``  
-``SSL_CTX_FUNCTION``  
-``SHARE``  
-``NOSIGNAL``  
-``DEBUGDATA``  
-``DEBUGFUNCTION``  
-``DNS_USE_GLOBAL_CACHE``  
-``SSLENGINE_DEFAULT``  
-``SSLENGINE``  
-``HEADERFUNCTION``  
-``SEEKDATA``  
-``SEEKFUNCTION``  
-``COPYPOSTFIELDS``  
-``OPENSOCKETDATA``  
-``OPENSOCKETFUNCTION``  
-``SOCKOPTDATA``  
-``SOCKOPTFUNCTION``  
-``CONV_FROM_UTF8_FUNCTION``  
-``CONV_TO_NETWORK_FUNCTION``  
-``CONV_FROM_NETWORK_FUNCTION``  
-``GSSAPI_DELEGATION``  
-``SOCKS5_GSSAPI_NEC``  
-``SOCKS5_GSSAPI_SERVICE``  
-``CLOSESOCKETDATA``  
-``CLOSESOCKETFUNCTION``  
-``FNMATCH_DATA``  
-``CHUNK_DATA``  
-``FNMATCH_FUNCTION``  
-``CHUNK_END_FUNCTION``  
-``CHUNK_BGN_FUNCTION``  
-``INTERLEAVEFUNCTION``  
-``INTERLEAVEDATA``  
-``SSH_KEYDATA``  
-``SSH_KEYFUNCTION``  
-``STREAM_DEPENDS_E``  
-``STREAM_DEPENDS``  
-``UNIX_SOCKET_PATH``  
-``XFERINFOFUNCTION``  
-``SSL_OPTIONS``  
-``ABSTRACT_UNIX_SOCKET``  
-``MIMEPOST``  
-``RESOLVER_START_FUNCTION``  
-``RESOLVER_START_DATA``  
+$status:=cURL_FTP_GetFileInfo($options)
+If ($status.status=0)
+    ALERT:C41("Size: "+String:C10($status.fileInfo.size))
+End if 
+```
 
 ---
 
-### Tips
+## cURL_FTP_MakeDir
 
-* SMTP
+### Syntax
+```
+cURL_FTP_MakeDir ( options ; *callbackMethod ) -> Object
+```
 
-You might want to enable ``FORBID_REUSE`` if your plan is to use different credentials in a batch process. By default, cURL re-uses the TCP connection, which may not be what you want.
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at the directory to create |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo }` |
 
-You can pass a collection or string to ``MAIL_TO``. But you can only pass string to ``MAIL_FROM``.
+### Description
+Creates the directory named by `URL` via an `MKD` (FTP) or `mkdir` (SFTP) quote command. The plugin automatically ensures the URL ends with a trailing `/` before sending it, so `.../new_folder` and `.../new_folder/` behave the same. Creating a directory that already exists returns a non-zero `status` (the server's own error), not a silent success.
 
-You must pass a simple email adress to ``MAIL_FROM``. You can NOT pass the email address with a display name, as you would do for the SMTP header. (It is your responsibility to include a well-formatted ``From`` header in the SMTP request.
+### Example
+```4d
+$options:=New object:C1471
+$options.URL:="ftp://ftp.example.com/incoming/2026-08-07"
+$options.USERNAME:="user"
+$options.PASSWORD:="pass"
 
-* Any
+$status:=cURL_FTP_MakeDir($options)
+```
 
-By default, cURL has a very tolerant timeout setting. In production, you might want to explicitly set all the timeout options.
+---
 
+## cURL_FTP_PrintDir
+
+### Syntax
+```
+cURL_FTP_PrintDir ( options ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at a directory |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo ; dirList }` |
+
+### Description
+A lighter-weight alternative to `cURL_FTP_GetDirList`: sends `NLST` (via `DIRLISTONLY`) instead of `LIST`/`MLSD`, so the server returns only names, one per line, with no size/date/permission metadata. `dirList` is that raw text — there's no parsed `ftpparse`-style collection for this command.
+
+### Example
+```4d
+$options:=New object:C1471
+$options.URL:="ftp://ftp.example.com/incoming/"
+$options.USERNAME:="user"
+$options.PASSWORD:="pass"
+
+$status:=cURL_FTP_PrintDir($options)
+$names:=Split string:C1554($status.dirList; Char:C91(Carriage return:K15:38))
+```
+
+---
+
+## cURL_FTP_Receive
+
+### Syntax
+```
+cURL_FTP_Receive ( options ; *response ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at the file to download |
+| `response` | Blob | *(by reference)* receives the downloaded bytes, unless `WRITEDATA` is set in `options` |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo }` |
+
+### Description
+Downloads a single file. As with `cURL`, you can either collect the bytes into the `response` Blob parameter (the default) or write them straight to disk by setting `WRITEDATA` in `options` — in that case `response` comes back empty (the plugin still needs the parameter, it just won't be used).
+
+### Example
+```4d
+C_BLOB:C604($response)
+
+$options:=New object:C1471
+$options.URL:="sftp://server/Test.pdf"
+$options.USERNAME:="tester"
+$options.PASSWORD:="password"
+
+$status:=cURL_FTP_Receive($options; $response)
+```
+
+Writing directly to disk instead:
+```4d
+$options:=New object:C1471
+$options.URL:="sftp://server/Test.pdf"
+$options.USERNAME:="tester"
+$options.PASSWORD:="password"
+$options.WRITEDATA:=Folder:C1567(fk desktop folder:K87:19).file("Test.pdf").platformPath
+
+C_BLOB:C604($response)  //still required, comes back empty
+$status:=cURL_FTP_Receive($options; $response)
+```
+
+---
+
+## cURL_FTP_RemoveDir
+
+### Syntax
+```
+cURL_FTP_RemoveDir ( options ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at the (empty) directory to remove |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo }` |
+
+### Description
+Removes a remote directory via `RMD` (FTP) or `rmdir` (SFTP). Most servers require the directory to be empty first — a non-empty directory typically comes back as a non-zero `status` rather than a recursive delete.
+
+### Example
+From the plugin's own test method (`issue_5b.4dm`):
+```4d
+C_OBJECT:C1216($options;$status)
+
+$options:=New object:C1471
+$options.USERNAME:="miyako"
+$options.FTP_CREATE_MISSING_DIRS:=1
+$options.SSH_AUTH_TYPES:=1  //CURLSSH_AUTH_PUBLICKEY
+$options.KEYPASSWD:="pass"
+$options.SSH_PRIVATE_KEYFILE:=Folder:C1567(fk desktop folder:K87:19).file("id_rsa").platformPath
+$options.URL:="sftp://100.64.1.57/Users/miyako/Desktop/test/"
+
+$status:=cURL_FTP_RemoveDir ($options)  //folder must be empty
+```
+
+---
+
+## cURL_FTP_Rename
+
+### Syntax
+```
+cURL_FTP_Rename ( options ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` = the file's current path; `RENAME_TO` = the new name/path |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo }` |
+
+### Description
+Renames or moves a remote file. Over plain FTP this is two quote commands (`RNFR`/`RNTO`); over SFTP it's a single `rename` quote command. Set `RENAME_TO` to either just a new filename (rename in place) or a full new path (move), matching whatever the target server accepts for its rename command.
+
+### Example
+```4d
+$options:=New object:C1471
+$options.URL:="ftp://ftp.example.com/incoming/report.csv"
+$options.USERNAME:="user"
+$options.PASSWORD:="pass"
+$options.RENAME_TO:="report-2026-08-07.csv"
+
+$status:=cURL_FTP_Rename($options)
+```
+
+---
+
+## cURL_FTP_Send
+
+### Syntax
+```
+cURL_FTP_Send ( options ; *request ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at the destination file; set `UPLOAD` is implied automatically, no need to set it yourself |
+| `request` | Blob | *(by reference)* data to upload, unless `READDATA` is set in `options` |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo }` |
+
+### Description
+Uploads a single file. As with `cURL_FTP_Receive`, either supply the bytes in the `request` Blob (the default) or point `READDATA` at a file on disk to stream it straight from there — most efficient for large files, since it avoids holding the whole thing in memory.
+
+### Example
+From the plugin's own test method (`TEST_ftp_upload.4dm`):
+```4d
+$file:=Folder:C1567(fk desktop folder:K87:19).file("vcpkg-master.zip")
+
+$options:=New object:C1471
+$options.URL:="sftp://.../"+$file.name+$file.extension
+$options.UPLOAD:=1
+$options.USERNAME:=""
+$options.PASSWORD:=""
+$options.CAINFO:=Folder:C1567(fk resources folder:K87:11).file("cacert-2021-01-19.pem").platformPath
+$options.BUFFERSIZE:=2000000
+$options.READDATA:=$file.platformPath
+
+C_BLOB:C604($request;$response)
+
+$vt_callback:=""
+$ob_status:=cURL_FTP_Send ($options;$request;$vt_callback)
+```
+
+---
+
+## cURL_FTP_System
+
+### Syntax
+```
+cURL_FTP_System ( options ; *callbackMethod ) -> Object
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | Object | `URL` should point at the server (path portion is ignored for this command) |
+| `callbackMethod` | Text | *(optional)* — see [Callback method](#callback-method) |
+| `Result` | Object | `{ status ; transferInfo ; headerInfo ; system }` |
+
+### Description
+Sends the FTP `SYST` command and returns the server's raw system-identification response in `system` (e.g. `"215 UNIX Type: L8"`). Mainly useful for diagnostics — most servers respond to this even when locked down for everything else.
+
+### Example
+```4d
+$options:=New object:C1471
+$options.URL:="ftp://ftp.example.com/"
+$options.USERNAME:="user"
+$options.PASSWORD:="pass"
+
+$status:=cURL_FTP_System($options)
+ALERT:C41($status.system)
+```
+
+---
+
+## Error handling & troubleshooting
+
+- **`status` of `0` means success; anything else is a libcurl `CURLcode`.** Check `status.transferInfo.responseCode` for the HTTP status code (200, 404, etc.) separately — a `status` of `0` only means the *transfer mechanics* succeeded, not that the server returned a 2xx response. Set `FAILONERROR:=1` if you want libcurl itself to treat a 4xx/5xx HTTP response as a transfer failure.
+- **SSL error 60 ("certificate problem")** almost always means `CAINFO` isn't set, or points at a bundle 4D can't reach at that path — see [Requirements](#requirements--platform-notes).
+- **A callback that never fires** usually means either the name doesn't resolve to a real project method (check spelling/scope) or `ATOMIC:=true` is set (which silently disables the callback for `cURL`, and has no effect at all — silently — on `cURL_FTP_*`).
+- **`cURL_FTP_MakeDir`/`RemoveDir`/`Rename`/`Delete` "succeed" with the wrong `status`**: these all report the server's actual quote-command response code, so check `status` (and `headerInfo`) rather than assuming a call that returned always means the operation actually happened as expected — e.g. removing a non-empty directory typically comes back as a real error from the server, not from the plugin.
+- **Paths silently do nothing**: if a path-type option (`READDATA`, `CAINFO`, `SSH_PRIVATE_KEYFILE`, etc.) is a POSIX path on macOS instead of `.platformPath`, expect an obscure open/read failure rather than a clear error — always use `.platformPath`.
+- **A 0-byte upload file behaves like no file was given** — see [Requirements](#requirements--platform-notes).
+- **`ftpparse`'s `sizetype` is numeric, not the string name** — see the callout under [cURL_FTP_GetDirList](#curl_ftp_getdirlist).
+- **Debug logs accumulate on disk** — each `DEBUG`-enabled call appends to the same log files rather than overwriting them (unless the specific log file couldn't be opened, in which case that one entry is simply lost); use `DEBUG_ID` to separate runs, and clean the folder out periodically.
+
+---
+
+## Quick reference
+
+```4d
+ // Simple GET into a Blob
+C_BLOB:C604($request;$response)
+$options:=New object:C1471
+$options.URL:="https://example.com/data.json"
+$options.CAINFO:=Folder:C1567(fk resources folder:K87:11).file("cacert.pem").platformPath
+$status:=cURL($options;$request;$response)
+
+ // FTP upload from disk
+$options:=New object:C1471
+$options.URL:="sftp://host/path/file.zip"
+$options.USERNAME:="user"
+$options.PASSWORD:="pass"
+$options.READDATA:=$file.platformPath
+C_BLOB:C604($request)
+$status:=cURL_FTP_Send($options;$request;"")
+
+ // FTP directory listing
+$options:=New object:C1471
+$options.URL:="ftp://host/incoming/"
+$options.USERNAME:="user"
+$options.PASSWORD:="pass"
+$status:=cURL_FTP_GetDirList($options)
+For each ($entry;$status.ftpparse)
+     // ...
+End for each 
+```
