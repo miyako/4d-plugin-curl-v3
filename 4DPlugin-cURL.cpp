@@ -346,7 +346,7 @@ static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
                 PA_ClearVariable(&v);
             }
         }
-        ob_set_c(transferInfo, "certInfo", certs);
+        ob_set_c(transferInfo, L"certInfo", certs);
     }
 
     // --- timing (high-resolution _T variants, microseconds) ---
@@ -800,7 +800,7 @@ void cURL_VersionInfo(PA_PluginParameters params) {
             }
         }
         
-        ob_set_c(info, "protocols", protocols);
+        ob_set_c(info, L"protocols", protocols);
         
         if(d->age >= 1)
         {
@@ -1077,7 +1077,7 @@ static bool curl_set_options(CURL *curl,
         CUTF8String url;
         
         if(ob_is_defined(Param1, L"URL")) {
-            if(ob_get_s(Param1, L"URL", &url)) {
+            if(ob_get_a(Param1, L"URL", &url)) {
                 if(url.length())
                 {
                     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -1089,7 +1089,7 @@ static bool curl_set_options(CURL *curl,
         
         /* special string */
         
-        if(ob_get_s(Param1, L"READDATA", &stringValue)) {
+        if(ob_get_a(Param1, L"READDATA", &stringValue)) {
 #if VERSIONMAC
                         C_TEXT t;
                         t.setUTF8String(stringValue.c_str(), (uint32_t)stringValue.length());
@@ -1105,7 +1105,7 @@ static bool curl_set_options(CURL *curl,
 #endif
         }
         
-        if(ob_get_s(Param1, L"WRITEDATA", &stringValue)) {
+        if(ob_get_a(Param1, L"WRITEDATA", &stringValue)) {
 #if VERSIONMAC
                         C_TEXT t;
                         t.setUTF8String(stringValue.c_str(), (uint32_t)stringValue.length());
@@ -1121,7 +1121,7 @@ static bool curl_set_options(CURL *curl,
 #endif
         }
         
-        if(ob_get_s(Param1, L"AUTOPROXY", &stringValue)) {
+        if(ob_get_a(Param1, L"AUTOPROXY", &stringValue)) {
             
             std::lock_guard<std::mutex> lock(mutexPf);
             
@@ -1154,7 +1154,7 @@ static bool curl_set_options(CURL *curl,
 
         }
         
-        if(ob_get_s(Param1, L"PRIVATE", &stringValue)) {
+        if(ob_get_a(Param1, L"PRIVATE", &stringValue)) {
             userInfo.setUTF8String(stringValue.c_str(), (uint32_t)stringValue.length());
         }
         
@@ -1164,293 +1164,293 @@ static bool curl_set_options(CURL *curl,
         
         /* string */
         
-        if(ob_get_s(Param1, L"PROXY", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"USERPWD", &stringValue)) {
+        if(ob_get_a(Param1, L"USERPWD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_USERPWD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXYUSERPWD", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXYUSERPWD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"RANGE", &stringValue)) {
+        if(ob_get_a(Param1, L"RANGE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_RANGE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"REFERER", &stringValue)) {
+        if(ob_get_a(Param1, L"REFERER", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_REFERER, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"FTPPORT", &stringValue)) {
+        if(ob_get_a(Param1, L"FTPPORT", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_FTPPORT, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"USERAGENT", &stringValue)) {
+        if(ob_get_a(Param1, L"USERAGENT", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_USERAGENT, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"COOKIE", &stringValue)) {
+        if(ob_get_a(Param1, L"COOKIE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_COOKIE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"KEYPASSWD", &stringValue)) {
+        if(ob_get_a(Param1, L"KEYPASSWD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_KEYPASSWD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"CUSTOMREQUEST", &stringValue)) {
+        if(ob_get_a(Param1, L"CUSTOMREQUEST", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"INTERFACE", &stringValue)) {
+        if(ob_get_a(Param1, L"INTERFACE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_INTERFACE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"KRBLEVEL", &stringValue)) {
+        if(ob_get_a(Param1, L"KRBLEVEL", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_KRBLEVEL, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"RANDOM_FILE", &stringValue)) {
+        if(ob_get_a(Param1, L"RANDOM_FILE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_RANDOM_FILE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"EGDSOCKET", &stringValue)) {
+        if(ob_get_a(Param1, L"EGDSOCKET", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_EGDSOCKET, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"SSL_CIPHER_LIST", &stringValue)) {
+        if(ob_get_a(Param1, L"SSL_CIPHER_LIST", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"SSLCERTTYPE", &stringValue)) {
+        if(ob_get_a(Param1, L"SSLCERTTYPE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"SSLKEYTYPE", &stringValue)) {
+        if(ob_get_a(Param1, L"SSLKEYTYPE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_SSLKEYTYPE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"ACCEPT_ENCODING", &stringValue)) {
+        if(ob_get_a(Param1, L"ACCEPT_ENCODING", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"FTP_ACCOUNT", &stringValue)) {
+        if(ob_get_a(Param1, L"FTP_ACCOUNT", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_FTP_ACCOUNT, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"COOKIELIST", &stringValue)) {
+        if(ob_get_a(Param1, L"COOKIELIST", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_COOKIELIST, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"FTP_ALTERNATIVE_TO_USER", &stringValue)) {
+        if(ob_get_a(Param1, L"FTP_ALTERNATIVE_TO_USER", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_FTP_ALTERNATIVE_TO_USER, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"SSH_HOST_PUBLIC_KEY_MD5", &stringValue)) {
+        if(ob_get_a(Param1, L"SSH_HOST_PUBLIC_KEY_MD5", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_SSH_HOST_PUBLIC_KEY_MD5, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"USERNAME", &stringValue)) {
+        if(ob_get_a(Param1, L"USERNAME", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_USERNAME, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PASSWORD", &stringValue)) {
+        if(ob_get_a(Param1, L"PASSWORD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PASSWORD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXYUSERNAME", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXYUSERNAME", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXYUSERNAME, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXYPASSWORD", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXYPASSWORD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXYPASSWORD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"NOPROXY", &stringValue)) {
+        if(ob_get_a(Param1, L"NOPROXY", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_NOPROXY, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"SSH_KNOWNHOSTS", &stringValue)) {
+        if(ob_get_a(Param1, L"SSH_KNOWNHOSTS", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_SSH_KNOWNHOSTS, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"RTSP_SESSION_ID", &stringValue)) {
+        if(ob_get_a(Param1, L"RTSP_SESSION_ID", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_RTSP_SESSION_ID, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"RTSP_STREAM_URI", &stringValue)) {
+        if(ob_get_a(Param1, L"RTSP_STREAM_URI", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_RTSP_STREAM_URI, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"RTSP_TRANSPORT", &stringValue)) {
+        if(ob_get_a(Param1, L"RTSP_TRANSPORT", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_RTSP_TRANSPORT, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"TLSAUTH_USERNAME", &stringValue)) {
+        if(ob_get_a(Param1, L"TLSAUTH_USERNAME", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_TLSAUTH_USERNAME, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"TLSAUTH_PASSWORD", &stringValue)) {
+        if(ob_get_a(Param1, L"TLSAUTH_PASSWORD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_TLSAUTH_PASSWORD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"TLSAUTH_TYPE", &stringValue)) {
+        if(ob_get_a(Param1, L"TLSAUTH_TYPE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_TLSAUTH_TYPE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"DNS_SERVERS", &stringValue)) {
+        if(ob_get_a(Param1, L"DNS_SERVERS", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_DNS_SERVERS, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"MAIL_AUTH", &stringValue)) {
+        if(ob_get_a(Param1, L"MAIL_AUTH", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_MAIL_AUTH, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"XOAUTH2_BEARER", &stringValue)) {
+        if(ob_get_a(Param1, L"XOAUTH2_BEARER", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"DNS_INTERFACE", &stringValue)) {
+        if(ob_get_a(Param1, L"DNS_INTERFACE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_DNS_INTERFACE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"DNS_LOCAL_IP4", &stringValue)) {
+        if(ob_get_a(Param1, L"DNS_LOCAL_IP4", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_DNS_LOCAL_IP4, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"DNS_LOCAL_IP6", &stringValue)) {
+        if(ob_get_a(Param1, L"DNS_LOCAL_IP6", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_DNS_LOCAL_IP6, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"LOGIN_OPTIONS", &stringValue)) {
+        if(ob_get_a(Param1, L"LOGIN_OPTIONS", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_LOGIN_OPTIONS, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_SERVICE_NAME", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_SERVICE_NAME", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_SERVICE_NAME, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"SERVICE_NAME", &stringValue)) {
+        if(ob_get_a(Param1, L"SERVICE_NAME", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_SERVICE_NAME, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"DEFAULT_PROTOCOL", &stringValue)) {
+        if(ob_get_a(Param1, L"DEFAULT_PROTOCOL", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_TLSAUTH_USERNAME", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_TLSAUTH_USERNAME", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_TLSAUTH_USERNAME, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_TLSAUTH_PASSWORD", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_TLSAUTH_PASSWORD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_TLSAUTH_PASSWORD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_TLSAUTH_TYPE", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_TLSAUTH_TYPE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_TLSAUTH_TYPE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_SSLCERTTYPE", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_SSLCERTTYPE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_SSLCERTTYPE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_SSLKEYTYPE", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_SSLKEYTYPE", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_SSLKEYTYPE, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_KEYPASSWD", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_KEYPASSWD", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_KEYPASSWD, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_SSL_CIPHER_LIST", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_SSL_CIPHER_LIST", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_SSL_CIPHER_LIST, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PRE_PROXY", &stringValue)) {
+        if(ob_get_a(Param1, L"PRE_PROXY", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PRE_PROXY, stringValue.c_str());
         }
                 
-        if(ob_get_s(Param1, L"REQUEST_TARGET", &stringValue)) {
+        if(ob_get_a(Param1, L"REQUEST_TARGET", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_REQUEST_TARGET, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"TLS13_CIPHERS", &stringValue)) {
+        if(ob_get_a(Param1, L"TLS13_CIPHERS", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_TLS13_CIPHERS, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"PROXY_TLS13_CIPHERS", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_TLS13_CIPHERS", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_PROXY_TLS13_CIPHERS, stringValue.c_str());
         }
         
-        if(ob_get_s(Param1, L"DOH_URL", &stringValue)) {
+        if(ob_get_a(Param1, L"DOH_URL", &stringValue)) {
             curl_easy_setopt(curl, CURLOPT_DOH_URL, stringValue.c_str());
         }
         
         /* path */
         
-        if(ob_get_s(Param1, L"SSLCERT", &stringValue)) {
+        if(ob_get_a(Param1, L"SSLCERT", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_SSLCERT, stringValue);
         }
         
-        if(ob_get_s(Param1, L"COOKIEFILE", &stringValue)) {
+        if(ob_get_a(Param1, L"COOKIEFILE", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_COOKIEFILE, stringValue);
         }
         
-        if(ob_get_s(Param1, L"CAINFO", &stringValue)) {
+        if(ob_get_a(Param1, L"CAINFO", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_CAINFO, stringValue);
         }
         
-        if(ob_get_s(Param1, L"COOKIEJAR", &stringValue)) {
+        if(ob_get_a(Param1, L"COOKIEJAR", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_COOKIEJAR, stringValue);
         }
         
-        if(ob_get_s(Param1, L"SSLKEY", &stringValue)) {
+        if(ob_get_a(Param1, L"SSLKEY", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_SSLKEY, stringValue);
         }
         
-        if(ob_get_s(Param1, L"CAPATH", &stringValue)) {
+        if(ob_get_a(Param1, L"CAPATH", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_CAPATH, stringValue);
         }
         
-        if(ob_get_s(Param1, L"NETRC_FILE", &stringValue)) {
+        if(ob_get_a(Param1, L"NETRC_FILE", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_NETRC_FILE, stringValue);
         }
         
-        if(ob_get_s(Param1, L"SSH_PUBLIC_KEYFILE", &stringValue)) {
+        if(ob_get_a(Param1, L"SSH_PUBLIC_KEYFILE", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_SSH_PUBLIC_KEYFILE, stringValue);
         }
         
-        if(ob_get_s(Param1, L"SSH_PRIVATE_KEYFILE", &stringValue)) {
+        if(ob_get_a(Param1, L"SSH_PRIVATE_KEYFILE", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_SSH_PRIVATE_KEYFILE, stringValue);
         }
         
-        if(ob_get_s(Param1, L"CRLFILE", &stringValue)) {
+        if(ob_get_a(Param1, L"CRLFILE", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_CRLFILE, stringValue);
         }
         
-        if(ob_get_s(Param1, L"ISSUERCERT", &stringValue)) {
+        if(ob_get_a(Param1, L"ISSUERCERT", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_ISSUERCERT, stringValue);
         }
         
-        if(ob_get_s(Param1, L"PROXY_CAINFO", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_CAINFO", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_PROXY_CAINFO, stringValue);
         }
         
-        if(ob_get_s(Param1, L"PROXY_CAPATH", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_CAPATH", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_PROXY_CAPATH, stringValue);
         }
         
-        if(ob_get_s(Param1, L"PROXY_SSLCERT", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_SSLCERT", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_PROXY_SSLCERT, stringValue);
         }
 
-        if(ob_get_s(Param1, L"PROXY_SSLKEY", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_SSLKEY", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_PROXY_SSLKEY, stringValue);
         }
         
-        if(ob_get_s(Param1, L"PROXY_CRLFILE", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_CRLFILE", &stringValue)) {
             curl_easy_setopt_path(curl, CURLOPT_PROXY_CRLFILE, stringValue);
         }
         
@@ -1788,7 +1788,7 @@ static bool curl_set_options(CURL *curl,
             curl_easy_setopt(curl, CURLOPT_UPKEEP_INTERVAL_MS, (long)ob_get_n(Param1, L"UPKEEP_INTERVAL_MS"));
         }
         
-        if(ob_get_s(Param1, L"PINNEDPUBLICKEY", &stringValue)) {
+        if(ob_get_a(Param1, L"PINNEDPUBLICKEY", &stringValue)) {
             if (0 != stringValue.find((const uint8_t *)"sha256//"))
             {
 #if VERSIONMAC
@@ -1808,7 +1808,7 @@ static bool curl_set_options(CURL *curl,
             
         }
         
-        if(ob_get_s(Param1, L"PROXY_PINNEDPUBLICKEY", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_PINNEDPUBLICKEY", &stringValue)) {
             if (0 != stringValue.find((const uint8_t *)"sha256//"))
             {
 #if VERSIONMAC
@@ -1828,49 +1828,49 @@ static bool curl_set_options(CURL *curl,
             
         }
         
-        if(ob_get_s(Param1, L"USE_SSL", &stringValue)) {
+        if(ob_get_a(Param1, L"USE_SSL", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_USE_SSL, stringValue);
         }else if(ob_is_defined(Param1, L"USE_SSL")) {
             curl_easy_setopt(curl, CURLOPT_USE_SSL, ob_get_n(Param1, L"USE_SSL"));
         }
 
-        if(ob_get_s(Param1, L"SSLVERSION", &stringValue)) {
+        if(ob_get_a(Param1, L"SSLVERSION", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_SSLVERSION, stringValue);
         }else if(ob_is_defined(Param1, L"SSLVERSION")) {
             curl_easy_setopt(curl, CURLOPT_SSLVERSION, ob_get_n(Param1, L"SSLVERSION"));
         }
         
-        if(ob_get_s(Param1, L"HTTP_VERSION", &stringValue)) {
+        if(ob_get_a(Param1, L"HTTP_VERSION", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_HTTP_VERSION, stringValue);
         }else if(ob_is_defined(Param1, L"HTTP_VERSION")) {
             curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, ob_get_n(Param1, L"HTTP_VERSION"));
         }
         
-        if(ob_get_s(Param1, L"PROXY_SSLVERSION", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXY_SSLVERSION", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_PROXY_SSLVERSION, stringValue);
         }else if(ob_is_defined(Param1, L"PROXY_SSLVERSION")) {
             curl_easy_setopt(curl, CURLOPT_PROXY_SSLVERSION, ob_get_n(Param1, L"PROXY_SSLVERSION"));
         }
         
-        if(ob_get_s(Param1, L"TIMECONDITION", &stringValue)) {
+        if(ob_get_a(Param1, L"TIMECONDITION", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_TIMECONDITION, stringValue);
         }else if(ob_is_defined(Param1, L"TIMECONDITION")) {
             curl_easy_setopt(curl, CURLOPT_TIMECONDITION, ob_get_n(Param1, L"TIMECONDITION"));
         }
         
-        if(ob_get_s(Param1, L"PROXYTYPE", &stringValue)) {
+        if(ob_get_a(Param1, L"PROXYTYPE", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_PROXYTYPE, stringValue);
         }else if(ob_is_defined(Param1, L"PROXYTYPE")) {
             curl_easy_setopt(curl, CURLOPT_PROXYTYPE, ob_get_n(Param1, L"PROXYTYPE"));
         }
         
-        if(ob_get_s(Param1, L"FTPSSLAUTH", &stringValue)) {
+        if(ob_get_a(Param1, L"FTPSSLAUTH", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_FTPSSLAUTH, stringValue);
         }else if(ob_is_defined(Param1, L"FTPSSLAUTH")) {
             curl_easy_setopt(curl, CURLOPT_FTPSSLAUTH, ob_get_n(Param1, L"FTPSSLAUTH"));
         }
         
-        if(ob_get_s(Param1, L"HEADEROPT", &stringValue)) {
+        if(ob_get_a(Param1, L"HEADEROPT", &stringValue)) {
             curl_easy_setopt_enum(curl, CURLOPT_HEADEROPT, stringValue);
         }else if(ob_is_defined(Param1, L"HEADEROPT")) {
             curl_easy_setopt(curl, CURLOPT_HEADEROPT, ob_get_n(Param1, L"HEADEROPT"));
@@ -1952,7 +1952,7 @@ static bool curl_set_debug_option(CURL *curl,
         if(ob_is_defined(Param1, L"DEBUG")) {
             
             CUTF8String path;
-            if(ob_get_s(Param1, L"DEBUG", &path)){
+            if(ob_get_a(Param1, L"DEBUG", &path)){
             
                 if(path.length())
                 {
@@ -1974,7 +1974,7 @@ static bool curl_set_debug_option(CURL *curl,
                     else if(debug_folder_path.at(debug_folder_path.size() - 1) != L'\\') debug_folder_path += L'\\';
 #endif
                     CUTF8String _id;
-                    if(ob_get_s(Param1, L"DEBUG_ID", &_id)){
+                    if(ob_get_a(Param1, L"DEBUG_ID", &_id)){
                         if(_id.length())
                         {
                             C_TEXT t;
@@ -2242,7 +2242,7 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
     CUTF8String stringValue;
     
     if(ob_is_defined(Param1, L"ENCODING_IN")) {
-        if(ob_get_s(Param1, L"ENCODING_IN", &stringValue)) {
+        if(ob_get_a(Param1, L"ENCODING_IN", &stringValue)) {
             if(stringValue.length()){
                 ie = std::string((const char *)stringValue.c_str(), stringValue.length());
             }
@@ -2250,7 +2250,7 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
     }
     
     if(ob_is_defined(Param1, L"ENCODING_OUT")) {
-        if(ob_get_s(Param1, L"ENCODING_OUT", &stringValue)) {
+        if(ob_get_a(Param1, L"ENCODING_OUT", &stringValue)) {
             if(stringValue.length()){
                 oe = std::string((const char *)stringValue.c_str(), stringValue.length());
             }
@@ -2260,7 +2260,7 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
     CUTF8String url, url_without_protocol, url_for_ftp;
     
     if(ob_is_defined(Param1, L"URL")) {
-        if(ob_get_s(Param1, L"URL", &url)) {
+        if(ob_get_a(Param1, L"URL", &url)) {
             if(url.length())
             {
                 url_for_ftp = url;
@@ -2533,7 +2533,7 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
         {
             CUTF8String stringValue;
             if(ob_is_defined(Param1, L"RENAME_TO")) {
-                if(ob_get_s(Param1, L"RENAME_TO", &stringValue)) {
+                if(ob_get_a(Param1, L"RENAME_TO", &stringValue)) {
                     rename_to = std::string((const char *)stringValue.c_str(), stringValue.length());
                     apply_input_encoding(rename_to, ie);
                 }
