@@ -13,3 +13,7 @@ curl/test/Plugins/cURL.bundle/Contents/Windows64/cURL.pdb
 curl/test/Project/Sources/Methods/ignore*.4dm
 curl/cURL.xcodeproj/project.xcworkspace/*
 curl/cURL.xcodeproj/xcuserdata/*
+a/libcrypto.a
+a/libssl.a
+lib/64/libcrypto.lib
+lib/64/libssl.lib
