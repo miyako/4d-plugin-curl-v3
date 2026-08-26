@@ -67,7 +67,26 @@ jobs:
 
           PLIST_VERSION=$(python3 -c "import plistlib, os; d = plistlib.load(open(os.environ['INFO_PLIST'], 'rb')); print(d.get('CFBundleShortVersionString', ''))")
 
-          UNIQUE=$(printf '%s\n%s\n' "$VALUES" "$PLIST_VERSION" | sort -u)
+          # Info.plist may reference the pbxproj value via an Xcode build
+          # variable, e.g. "$(MARKETING_VERSION)", which Xcode substitutes
+          # automatically when it copies the plist into the built bundle.
+          # That form is in sync by construction - don't compare it as a
+          # literal version string, and never overwrite it later.
+          case "$PLIST_VERSION" in
+            '$('*')')
+              echo "Info.plist CFBundleShortVersionString is a build-variable reference (${PLIST_VERSION}) - Xcode keeps it in sync automatically."
+              PLIST_IS_VARIABLE=true
+              ;;
+            *)
+              PLIST_IS_VARIABLE=false
+              ;;
+          esac
+
+          if [ "$PLIST_IS_VARIABLE" = true ]; then
+            UNIQUE=$(printf '%s\n' "$VALUES" | sort -u)
+          else
+            UNIQUE=$(printf '%s\n%s\n' "$VALUES" "$PLIST_VERSION" | sort -u)
+          fi
           COUNT=$(printf '%s\n' "$UNIQUE" | grep -c .)
           if [ "$COUNT" -ne 1 ]; then
             echo "Version fields have already drifted out of sync - fix manually before bumping:" >&2
@@ -80,12 +99,14 @@ jobs:
           echo "Current version (consistent everywhere): $CURRENT"
           echo "key=$KEY" >> "$GITHUB_OUTPUT"
           echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "plist_is_variable=$PLIST_IS_VARIABLE" >> "$GITHUB_OUTPUT"
 
       - name: bump version everywhere & tag
         id: bump
         env:
           KEY: ${{ steps.current.outputs.key }}
           CURRENT: ${{ steps.current.outputs.current }}
+          PLIST_IS_VARIABLE: ${{ steps.current.outputs.plist_is_variable }}
         run: |
           set -euo pipefail
           PBXPROJ="${XCODE_PROJECT}/project.pbxproj"
@@ -103,11 +124,19 @@ jobs:
           # occurrence gets forced to NEW even if one had drifted.
           sed -i -E "s/(${KEY} = )[0-9]+\.[0-9]+\.[0-9]+;/\1${NEW};/g" "$PBXPROJ"
 
-          NEW="$NEW" python3 -c "import plistlib, os; path = os.environ['INFO_PLIST']; d = plistlib.load(open(path, 'rb')); new = os.environ['NEW']; d['CFBundleShortVersionString'] = new; d.update({'CFBundleVersion': new} if 'CFBundleVersion' in d else {}); plistlib.dump(d, open(path, 'wb'))"
+          if [ "$PLIST_IS_VARIABLE" = "true" ]; then
+            echo "Info.plist CFBundleShortVersionString is an Xcode build-variable reference - leaving it as-is, Xcode substitutes it at build time."
+          else
+            NEW="$NEW" python3 -c "import plistlib, os; path = os.environ['INFO_PLIST']; d = plistlib.load(open(path, 'rb')); new = os.environ['NEW']; d['CFBundleShortVersionString'] = new; d.update({'CFBundleVersion': new} if 'CFBundleVersion' in d else {}); plistlib.dump(d, open(path, 'wb'))"
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$PBXPROJ" "$INFO_PLIST"
+          if [ "$PLIST_IS_VARIABLE" = "true" ]; then
+            git add "$PBXPROJ"
+          else
+            git add "$PBXPROJ" "$INFO_PLIST"
+          fi
           git commit -m "chore: bump version to ${NEW}"
           git tag "v${NEW}"
           git push origin HEAD:"${GITHUB_REF_NAME}"
