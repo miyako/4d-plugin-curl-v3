@@ -35,11 +35,18 @@ env:
   VCX_SOLUTION: cURL.sln
   MACOS_DEPLOYMENT_TARGET: '10.13'
   # OpenSSL source to build. Use the official tag naming scheme
-  # ("openssl-<version>"). This MUST stay on the 4.0.x line (not 3.5
-  # LTS) - the vendored libcurl.a references SSL_ech_* (Encrypted
-  # Client Hello) symbols that only exist starting in OpenSSL 4.0, so
-  # anything older fails to link with "Undefined symbols ... SSL_ech_*".
-  OPENSSL_GIT_TAG: openssl-4.0.2
+  # ("openssl-<version>"). Pinned to the 3.5 LTS line (supported into
+  # 2030, patched in lockstep with the 4.0 line - 3.5.8 and 4.0.2 were
+  # both released 2026-08-25 fixing the same CVEs) rather than 4.0,
+  # because the vendored libcurl.lib/libcurl.a reference the legacy
+  # ENGINE_* API, which OpenSSL 4.0 removed. The plugin has no need
+  # for ECH (4.0's headline feature - encrypted SNI, relevant to
+  # privacy-sensitive server deployments, not a generic HTTP client),
+  # so 3.5 LTS is the right target: actively patched, not the ECH/
+  # no-ENGINE trade-off 4.0 would force. Bump the patch version here
+  # as new 3.5.x releases land; only move to 4.x if curl itself is
+  # rebuilt from source without relying on ENGINE.
+  OPENSSL_GIT_TAG: openssl-3.5.8
   # --------------------------------------------------------------
 
 concurrency:
