@@ -3,6 +3,13 @@
 # .bundle, codesigns + notarizes the mac binary, and publishes a GitHub
 # Release with the zip and dmg attached.
 #
+# OpenSSL (libssl/libcrypto) is built from source on each runner rather
+# than vendored as prebuilt static libs. It's compiled as a static lib
+# and dropped into the exact repo-relative paths the project files
+# already search (lib\64 on Windows, ./a on macOS), so cURL.vcxproj and
+# project.pbxproj need no changes. Everything else (nghttp2, c-ares,
+# libssh2, brotli, zstd, etc.) is still vendored as before.
+#
 # Trigger: push a tag matching v*.*.* (either by hand, or via bump-version.yml).
 # You can also run it manually against an existing tag with workflow_dispatch.
 
@@ -27,6 +34,10 @@ env:
   XCODE_PROJECT: cURL.xcodeproj
   VCX_SOLUTION: cURL.sln
   MACOS_DEPLOYMENT_TARGET: '10.13'
+  # OpenSSL source to build. Use the official tag naming scheme
+  # ("openssl-<version>"). Track the 3.5 LTS line unless you've
+  # specifically vetted 4.0 against this curl/plugin build.
+  OPENSSL_GIT_TAG: openssl-3.5.7
   # --------------------------------------------------------------
 
 concurrency:
@@ -58,6 +69,59 @@ jobs:
 
       - name: setup MSBuild
         uses: microsoft/setup-msbuild@v2
+
+      # ---- Build OpenSSL (static, /MT, x64) from source ----
+      # Strawberry Perl ships on windows-latest already; we only need
+      # NASM (for the asm-optimized crypto routines) and a VC dev
+      # environment matching the toolset/arch the plugin itself builds
+      # with (v143 / x64), so the CRT linkage lines up.
+      - name: install NASM
+        run: choco install nasm -y --no-progress
+
+      - name: add NASM to PATH
+        shell: pwsh
+        run: echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: setup MSVC dev environment (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: checkout OpenSSL source
+        uses: actions/checkout@v4
+        with:
+          repository: openssl/openssl
+          ref: ${{ env.OPENSSL_GIT_TAG }}
+          path: openssl-src
+
+      - name: cache OpenSSL build (windows x64)
+        id: cache-openssl-win
+        uses: actions/cache@v4
+        with:
+          path: openssl-src\out-win64
+          key: openssl-${{ env.OPENSSL_GIT_TAG }}-win64-mt-v1
+
+      # -MT matches this project's Release|x64 RuntimeLibrary=MultiThreaded,
+      # so the plugin and OpenSSL agree on which CRT they're statically
+      # linking. no-shared gives us .lib static archives instead of a
+      # DLL + import lib. no-tests skips building/running OpenSSL's own
+      # test suite, which we don't need.
+      - name: build OpenSSL (static, /MT, x64)
+        if: steps.cache-openssl-win.outputs.cache-hit != 'true'
+        shell: cmd
+        working-directory: openssl-src
+        run: |
+          perl Configure VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
+          nmake
+          nmake install_sw
+
+      - name: copy OpenSSL libs into vendor path
+        shell: cmd
+        run: |
+          if not exist lib\64 mkdir lib\64
+          copy /Y openssl-src\out-win64\lib\libssl.lib lib\64\libssl.lib
+          copy /Y openssl-src\out-win64\lib\libcrypto.lib lib\64\libcrypto.lib
+      # ---- end OpenSSL build ----
 
       # GitHub-hosted windows-latest ships VS2022 (v143 toolset) but not the
       # legacy v140 toolset the project is pinned to, so we override it on
@@ -99,6 +163,71 @@ jobs:
         with:
           name: windows-binaries
           path: winbuild
+
+      # ---- Build OpenSSL (static, universal arm64+x86_64) from source ----
+      # OpenSSL's Configure targets a single arch at a time, so we build
+      # arm64 and x86_64 into separate checkouts and lipo them together,
+      # same shape as the "build macOS plugin (universal)" step below.
+      - name: checkout OpenSSL source (arm64)
+        uses: actions/checkout@v4
+        with:
+          repository: openssl/openssl
+          ref: ${{ env.OPENSSL_GIT_TAG }}
+          path: openssl-arm64
+
+      - name: checkout OpenSSL source (x86_64)
+        uses: actions/checkout@v4
+        with:
+          repository: openssl/openssl
+          ref: ${{ env.OPENSSL_GIT_TAG }}
+          path: openssl-x86_64
+
+      - name: cache OpenSSL build (macOS universal)
+        id: cache-openssl-mac
+        uses: actions/cache@v4
+        with:
+          path: |
+            openssl-arm64/out
+            openssl-x86_64/out
+          key: openssl-${{ env.OPENSSL_GIT_TAG }}-macos-universal-${{ env.MACOS_DEPLOYMENT_TARGET }}-v1
+
+      - name: build OpenSSL (arm64)
+        if: steps.cache-openssl-mac.outputs.cache-hit != 'true'
+        working-directory: openssl-arm64
+        run: |
+          set -euo pipefail
+          ./Configure darwin64-arm64-cc no-shared no-tests \
+            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" \
+            --prefix="$PWD/out"
+          make -j"$(sysctl -n hw.ncpu)"
+          make install_sw
+
+      - name: build OpenSSL (x86_64)
+        if: steps.cache-openssl-mac.outputs.cache-hit != 'true'
+        working-directory: openssl-x86_64
+        run: |
+          set -euo pipefail
+          ./Configure darwin64-x86_64-cc no-shared no-tests \
+            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" \
+            --prefix="$PWD/out"
+          make -j"$(sysctl -n hw.ncpu)"
+          make install_sw
+
+      - name: merge into universal libs & copy into vendor path
+        run: |
+          set -euo pipefail
+          mkdir -p a
+          lipo -create \
+            openssl-arm64/out/lib/libssl.a \
+            openssl-x86_64/out/lib/libssl.a \
+            -output a/libssl.a
+          lipo -create \
+            openssl-arm64/out/lib/libcrypto.a \
+            openssl-x86_64/out/lib/libcrypto.a \
+            -output a/libcrypto.a
+          lipo -info a/libssl.a
+          lipo -info a/libcrypto.a
+      # ---- end OpenSSL build ----
 
       - name: import Developer ID certificate
         env:
