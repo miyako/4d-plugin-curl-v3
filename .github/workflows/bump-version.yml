@@ -65,12 +65,7 @@ jobs:
             exit 1
           fi
 
-          PLIST_VERSION=$(python3 -c "
-import plistlib, sys
-with open('${INFO_PLIST}', 'rb') as f:
-    d = plistlib.load(f)
-print(d.get('CFBundleShortVersionString', ''))
-")
+          PLIST_VERSION=$(python3 -c "import plistlib, os; d = plistlib.load(open(os.environ['INFO_PLIST'], 'rb')); print(d.get('CFBundleShortVersionString', ''))")
 
           UNIQUE=$(printf '%s\n%s\n' "$VALUES" "$PLIST_VERSION" | sort -u)
           COUNT=$(printf '%s\n' "$UNIQUE" | grep -c .)
@@ -108,18 +103,7 @@ print(d.get('CFBundleShortVersionString', ''))
           # occurrence gets forced to NEW even if one had drifted.
           sed -i -E "s/(${KEY} = )[0-9]+\.[0-9]+\.[0-9]+;/\1${NEW};/g" "$PBXPROJ"
 
-          NEW="$NEW" python3 -c "
-import plistlib, os
-path = os.environ['INFO_PLIST']
-with open(path, 'rb') as f:
-    d = plistlib.load(f)
-new = os.environ['NEW']
-d['CFBundleShortVersionString'] = new
-if 'CFBundleVersion' in d:
-    d['CFBundleVersion'] = new
-with open(path, 'wb') as f:
-    plistlib.dump(d, f)
-"
+          NEW="$NEW" python3 -c "import plistlib, os; path = os.environ['INFO_PLIST']; d = plistlib.load(open(path, 'rb')); new = os.environ['NEW']; d['CFBundleShortVersionString'] = new; d.update({'CFBundleVersion': new} if 'CFBundleVersion' in d else {}); plistlib.dump(d, open(path, 'wb'))"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
