@@ -34,19 +34,23 @@ env:
   XCODE_PROJECT: cURL.xcodeproj
   VCX_SOLUTION: cURL.sln
   MACOS_DEPLOYMENT_TARGET: '10.13'
-  # OpenSSL source to build. Use the official tag naming scheme
-  # ("openssl-<version>"). Pinned to the 3.5 LTS line (supported into
-  # 2030, patched in lockstep with the 4.0 line - 3.5.8 and 4.0.2 were
-  # both released 2026-08-25 fixing the same CVEs) rather than 4.0,
-  # because the vendored libcurl.lib/libcurl.a reference the legacy
-  # ENGINE_* API, which OpenSSL 4.0 removed. The plugin has no need
-  # for ECH (4.0's headline feature - encrypted SNI, relevant to
-  # privacy-sensitive server deployments, not a generic HTTP client),
-  # so 3.5 LTS is the right target: actively patched, not the ECH/
-  # no-ENGINE trade-off 4.0 would force. Bump the patch version here
-  # as new 3.5.x releases land; only move to 4.x if curl itself is
-  # rebuilt from source without relying on ENGINE.
-  OPENSSL_GIT_TAG: openssl-3.5.8
+  # OpenSSL source to build, per platform. Use the official tag naming
+  # scheme ("openssl-<version>").
+  #
+  # The vendored libcurl.lib (Windows) and libcurl.a (macOS) are NOT
+  # the same build - they were vendored independently and turned out
+  # to need different OpenSSL API surfaces:
+  #   - Windows libcurl.lib references the legacy ENGINE_* API, which
+  #     OpenSSL 4.0 removed -> needs a pre-4.0 OpenSSL.
+  #   - macOS libcurl.a references SSL_ech_* (Encrypted Client Hello),
+  #     which only exists starting in OpenSSL 4.0 -> needs 4.0+.
+  # The plugin doesn't use ECH itself; it's just baked into the mac
+  # binary already. Pin each platform to whichever line its vendored
+  # curl actually needs, both still on an actively-patched release:
+  # 3.5.8 and 4.0.2 were released the same day (2026-08-25) fixing the
+  # same CVEs, so this isn't a "half on old OpenSSL" compromise.
+  OPENSSL_GIT_TAG_WINDOWS: openssl-3.5.8
+  OPENSSL_GIT_TAG_MACOS: openssl-4.0.2
   # --------------------------------------------------------------
 
 concurrency:
@@ -100,7 +104,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: openssl/openssl
-          ref: ${{ env.OPENSSL_GIT_TAG }}
+          ref: ${{ env.OPENSSL_GIT_TAG_WINDOWS }}
           path: openssl-src
 
       - name: cache OpenSSL build (windows x64)
@@ -108,7 +112,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: openssl-src\out-win64
-          key: openssl-${{ env.OPENSSL_GIT_TAG }}-win64-mt-v1
+          key: openssl-${{ env.OPENSSL_GIT_TAG_WINDOWS }}-win64-mt-v1
 
       # -MT matches this project's Release|x64 RuntimeLibrary=MultiThreaded,
       # so the plugin and OpenSSL agree on which CRT they're statically
@@ -181,14 +185,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: openssl/openssl
-          ref: ${{ env.OPENSSL_GIT_TAG }}
+          ref: ${{ env.OPENSSL_GIT_TAG_MACOS }}
           path: openssl-arm64
 
       - name: checkout OpenSSL source (x86_64)
         uses: actions/checkout@v4
         with:
           repository: openssl/openssl
-          ref: ${{ env.OPENSSL_GIT_TAG }}
+          ref: ${{ env.OPENSSL_GIT_TAG_MACOS }}
           path: openssl-x86_64
 
       - name: cache OpenSSL build (macOS universal)
@@ -198,7 +202,7 @@ jobs:
           path: |
             openssl-arm64/out
             openssl-x86_64/out
-          key: openssl-${{ env.OPENSSL_GIT_TAG }}-macos-universal-${{ env.MACOS_DEPLOYMENT_TARGET }}-v1
+          key: openssl-${{ env.OPENSSL_GIT_TAG_MACOS }}-macos-universal-${{ env.MACOS_DEPLOYMENT_TARGET }}-v1
 
       - name: build OpenSSL (arm64)
         if: steps.cache-openssl-mac.outputs.cache-hit != 'true'
