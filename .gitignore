@@ -17,3 +17,7 @@ a/libcrypto.a
 a/libssl.a
 lib/64/libcrypto.lib
 lib/64/libssl.lib
+.vs/*
+Objs/*
+test/Plugins/cURL.bundle/Contents/Windows64/cURL.lib
+test/Plugins/cURL.bundle/Contents/Windows64/cURL.exp
