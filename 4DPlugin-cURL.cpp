@@ -1018,9 +1018,9 @@ static void curl_easy_setopt_enum(CURL *curl, CURLoption option, CUTF8String& s)
     curl_easy_setopt(curl, option, v);
 }
 
-static void curl_easy_setopt_array(CURL *curl, CURLoption option, PA_CollectionRef col, struct curl_slist *list) {
+static void curl_easy_setopt_array(CURL *curl, CURLoption option, PA_CollectionRef col, struct curl_slist **list) {
     
-    if(col) {
+    if((col) && (list)) {
         
         for(PA_long32 i =0; i < PA_GetCollectionLength(col); ++i) {
             PA_Variable v = PA_GetCollectionElement(col, i);
@@ -1030,12 +1030,12 @@ static void curl_easy_setopt_array(CURL *curl, CURLoption option, PA_CollectionR
                 std::string stringValue;
                 convert_unistring_to_string(u16value, stringValue);
                 if(stringValue.length()) {
-                    list = curl_slist_append(list, stringValue.c_str());
+                    *list = curl_slist_append(*list, stringValue.c_str());
                 }
             }
         }
-        if(list)
-            curl_easy_setopt(curl, option, list);
+        if(*list)
+            curl_easy_setopt(curl, option, *list);
     }
 }
 
@@ -1058,17 +1058,17 @@ static bool curl_set_options(CURL *curl,
                              CPathString& request_path,
                              CPathString& response_path,
                              C_TEXT& userInfo,
-                             struct curl_slist *curl_slist_connect_to,
-                             struct curl_slist *curl_slist_proxy_header,
-                             struct curl_slist *curl_slist_http_header,
-                             struct curl_slist *curl_slist_http_200_aliases,
-                             struct curl_slist *curl_slist_resolve,
-                             struct curl_slist *curl_slist_mail_rcpt,
-                             struct curl_slist *curl_slist_mail_from,
-                             struct curl_slist *curl_slist_prequote,
-                             struct curl_slist *curl_slist_postquote,
-                             struct curl_slist *curl_slist_quote,
-                             struct curl_slist *curl_slist_telnet_options)
+                             struct curl_slist **curl_slist_connect_to,
+                             struct curl_slist **curl_slist_proxy_header,
+                             struct curl_slist **curl_slist_http_header,
+                             struct curl_slist **curl_slist_http_200_aliases,
+                             struct curl_slist **curl_slist_resolve,
+                             struct curl_slist **curl_slist_mail_rcpt,
+                             struct curl_slist **curl_slist_mail_from,
+                             struct curl_slist **curl_slist_prequote,
+                             struct curl_slist **curl_slist_postquote,
+                             struct curl_slist **curl_slist_quote,
+                             struct curl_slist **curl_slist_telnet_options)
 {
     bool isAtomic = FALSE;
     
@@ -2048,17 +2048,17 @@ void _cURL(PA_PluginParameters params) {
                                      request_path,
                                      response_path,
                                      userInfo,
-                                     curl_slist_connect_to,
-                                     curl_slist_proxy_header,
-                                     curl_slist_http_header,
-                                     curl_slist_http_200_aliases,
-                                     curl_slist_resolve,
-                                     curl_slist_mail_rcpt,
-                                     curl_slist_mail_from,
-                                     curl_slist_prequote,
-                                     curl_slist_postquote,
-                                     curl_slist_quote,
-                                     curl_slist_telnet_options);
+                                     &curl_slist_connect_to,
+                                     &curl_slist_proxy_header,
+                                     &curl_slist_http_header,
+                                     &curl_slist_http_200_aliases,
+                                     &curl_slist_resolve,
+                                     &curl_slist_mail_rcpt,
+                                     &curl_slist_mail_from,
+                                     &curl_slist_prequote,
+                                     &curl_slist_postquote,
+                                     &curl_slist_quote,
+                                     &curl_slist_telnet_options);
   
     http_ctx request_ctx;
     request_ctx.pos = 0L;
@@ -2226,6 +2226,17 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
                                                 CPathString& request_path,
                                                 CPathString& response_path,
                                                 C_TEXT& userInfo,
+                                                struct curl_slist **curl_slist_connect_to,
+                                                struct curl_slist **curl_slist_proxy_header,
+                                                struct curl_slist **curl_slist_http_header,
+                                                struct curl_slist **curl_slist_http_200_aliases,
+                                                struct curl_slist **curl_slist_resolve,
+                                                struct curl_slist **curl_slist_mail_rcpt,
+                                                struct curl_slist **curl_slist_mail_from,
+                                                struct curl_slist **curl_slist_prequote,
+                                                struct curl_slist **curl_slist_postquote,
+                                                struct curl_slist **curl_slist_quote,
+                                                struct curl_slist **curl_slist_telnet_options,
                                                 std::string& ie,
                                                 std::string& oe,
                                                 std::string& path,
@@ -2235,9 +2246,17 @@ static protocol_type_t curl_set_options_for_ftp(CURL *curl,
     protocol_type_t protocol = PROTOCOL_TYPE_FTP/*PROTOCOL_TYPE_UNKNOWN*/;
     
     curl_set_options(curl, Param1, request_path, response_path, userInfo,
-                     NULL, NULL, NULL, NULL,
-                     NULL, NULL, NULL, NULL,
-                     NULL, NULL, NULL);
+                     curl_slist_connect_to,
+                     curl_slist_proxy_header,
+                     curl_slist_http_header,
+                     curl_slist_http_200_aliases,
+                     curl_slist_resolve,
+                     curl_slist_mail_rcpt,
+                     curl_slist_mail_from,
+                     curl_slist_prequote,
+                     curl_slist_postquote,
+                     curl_slist_quote,
+                     curl_slist_telnet_options);
     
     CUTF8String stringValue;
     
@@ -2505,6 +2524,18 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     }
     CURLM *mcurl = gmcurl;//curl_multi_init();
     
+    struct curl_slist *curl_slist_connect_to = NULL;/* CONNECT_TO */
+    struct curl_slist *curl_slist_proxy_header = NULL;/* PROXYHEADER */
+    struct curl_slist *curl_slist_http_header = NULL;/* HTTPHEADER */
+    struct curl_slist *curl_slist_http_200_aliases = NULL;/* HTTP200ALIASES */
+    struct curl_slist *curl_slist_resolve = NULL;/* RESOLVE */
+    struct curl_slist *curl_slist_mail_rcpt = NULL;/* MAIL_RCPT */
+    struct curl_slist *curl_slist_mail_from = NULL;/* MAIL_FROM */
+    struct curl_slist *curl_slist_prequote = NULL;/* PREQUOTE */
+    struct curl_slist *curl_slist_postquote = NULL;/* POSTQUOTE */
+    struct curl_slist *curl_slist_quote = NULL;/* QUOTE */
+    struct curl_slist *curl_slist_telnet_options = NULL;/* TELNETOPTIONS */
+    
     C_TEXT userInfo; /* PRIVATE */
     
     CPathString request_path;
@@ -2518,7 +2549,19 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     protocol_type_t protocol = curl_set_options_for_ftp(curl,
                                                         Param1,
                                                         request_path, response_path,
-                                                        userInfo, ie, oe, path, commandType);
+                                                        userInfo,
+                                                        &curl_slist_connect_to,
+                                                        &curl_slist_proxy_header,
+                                                        &curl_slist_http_header,
+                                                        &curl_slist_http_200_aliases,
+                                                        &curl_slist_resolve,
+                                                        &curl_slist_mail_rcpt,
+                                                        &curl_slist_mail_from,
+                                                        &curl_slist_prequote,
+                                                        &curl_slist_postquote,
+                                                        &curl_slist_quote,
+                                                        &curl_slist_telnet_options,
+                                                        ie, oe, path, commandType);
     std::string rename_to;
     
     switch (commandType) {
@@ -2975,6 +3018,22 @@ void cURL_FTP(PA_PluginParameters params, curl_ftp_command_t commandType) {
     }
     
     /* cleanup */
+    
+    for (struct curl_slist *sl : {
+        curl_slist_connect_to,
+        curl_slist_proxy_header,
+        curl_slist_http_header,
+        curl_slist_http_200_aliases,
+        curl_slist_resolve,
+        curl_slist_mail_rcpt,
+        curl_slist_mail_from,
+        curl_slist_prequote,
+        curl_slist_postquote,
+        curl_slist_quote,
+        curl_slist_telnet_options,
+    }) {
+        if(sl) curl_slist_free_all(sl);
+    }
     
     curl_easy_cleanup(curl);
     
