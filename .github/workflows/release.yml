@@ -35,9 +35,11 @@ env:
   VCX_SOLUTION: cURL.sln
   MACOS_DEPLOYMENT_TARGET: '10.13'
   # OpenSSL source to build. Use the official tag naming scheme
-  # ("openssl-<version>"). Track the 3.5 LTS line unless you've
-  # specifically vetted 4.0 against this curl/plugin build.
-  OPENSSL_GIT_TAG: openssl-3.5.7
+  # ("openssl-<version>"). This MUST stay on the 4.0.x line (not 3.5
+  # LTS) - the vendored libcurl.a references SSL_ech_* (Encrypted
+  # Client Hello) symbols that only exist starting in OpenSSL 4.0, so
+  # anything older fails to link with "Undefined symbols ... SSL_ech_*".
+  OPENSSL_GIT_TAG: openssl-4.0.2
   # --------------------------------------------------------------
 
 concurrency:
