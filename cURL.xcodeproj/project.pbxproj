@@ -63,6 +63,7 @@
 		D1BF53F7270EB85400F6E1EE /* ftpparse.h in Headers */ = {isa = PBXBuildFile; fileRef = D1BF53F6270EB85400F6E1EE /* ftpparse.h */; };
 		D1BF53FA270EB85800F6E1EE /* ftpparse.c in Sources */ = {isa = PBXBuildFile; fileRef = D1BF53F9270EB85800F6E1EE /* ftpparse.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D1D0595B2BB6385B001D59DC /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A52F26133EB50015464C /* libcurl.a */; };
+		B7EBB91AD503789A8EDE6088 /* constants.xlf in CopyFiles */ = {isa = PBXBuildFile; fileRef = D14D10DD1A03A8A5008B3411 /* constants.xlf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -73,6 +74,7 @@
 			dstSubfolderSpec = 7;
 			files = (
 				D134D4AC1A030BA0008D14EF /* manifest.json in CopyFiles */,
+				B7EBB91AD503789A8EDE6088 /* constants.xlf in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
