@@ -1,0 +1,90 @@
+name: Build patched Brotli
+
+on:
+  push:
+    paths:
+      - '.github/workflows/build-brotli.yml'
+      - 'build/brotli-check/**'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  BROTLI_COMMIT: db24a98aed38a16de78cc05ca15cdd8dc2a0d92d # v1.2.1
+
+jobs:
+  brotli:
+    name: Brotli (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: checkout Brotli 1.2.1 (CVE-2026-111497 fix)
+        uses: actions/checkout@v4
+        with:
+          repository: google/brotli
+          ref: ${{ env.BROTLI_COMMIT }}
+          path: brotli-src
+
+      - name: build universal static libraries
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          cmake -S brotli-src -B brotli-build \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+            -DCMAKE_INSTALL_PREFIX="$PWD/brotli-out"
+          cmake --build brotli-build --config Release --parallel 3
+          ctest --test-dir brotli-build -C Release --output-on-failure --no-tests=error
+          cmake --install brotli-build --config Release
+          mkdir -p vendor/a vendor/include
+          cp brotli-out/lib/libbrotli*.a vendor/a/
+          cp -R brotli-out/include/brotli vendor/include/
+          for lib in vendor/a/libbrotli*.a; do
+            lipo -verify_arch arm64 x86_64 "$lib"
+          done
+          cmake -S build/brotli-check -B brotli-check \
+            -DBROTLI_ROOT="$PWD/brotli-out" \
+            '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
+          cmake --build brotli-check --config Release
+          ctest --test-dir brotli-check -C Release --output-on-failure --no-tests=error
+
+      - name: build static libraries (x64, /MT)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S brotli-src -B brotli-build -A x64 `
+            -DBUILD_SHARED_LIBS=OFF -DCMAKE_POLICY_DEFAULT_CMP0091=NEW `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
+            "-DCMAKE_INSTALL_PREFIX=$PWD/brotli-out"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build brotli-build --config Release --parallel 3
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ctest --test-dir brotli-build -C Release --output-on-failure --no-tests=error
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --install brotli-build --config Release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force vendor/lib/64 | Out-Null
+          Copy-Item brotli-out/lib/brotli*.lib vendor/lib/64/
+          cmake -S build/brotli-check -B brotli-check -A x64 `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded "-DBROTLI_ROOT=$PWD/brotli-out"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build brotli-check --config Release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ctest --test-dir brotli-check -C Release --output-on-failure --no-tests=error
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brotli-${{ runner.os }}
+          path: vendor/
+          if-no-files-found: error
