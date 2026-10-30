@@ -29,6 +29,22 @@ The cURL plugin wraps [libcurl](https://curl.se/) to give 4D methods direct acce
 
 **Platforms:** macOS and Windows.
 
+### Brotli security update
+
+Release **v4.9.6** updates the statically linked Brotli decoder to **1.2.1**
+on macOS (arm64 and x86_64) and Windows x64, fixing
+[CVE-2026-111497](https://www.cve.org/CVERecord?id=CVE-2026-111497).
+Upgrade when using Brotli response decoding; replacing an operating-system
+library does not update this plugin's static decoder.
+
+The `Build patched Brotli` workflow builds upstream commit
+`db24a98aed38a16de78cc05ca15cdd8dc2a0d92d` (v1.2.1), runs upstream tests and
+version/round-trip/invalid-input checks, and produces replacement archives at
+the project's existing vendor paths. Release builds run this workflow before
+linking either plugin binary. To refresh the checked-in libraries, run it on
+the desired ref and copy the `brotli-macOS` and `brotli-Windows` artifacts into
+the repository root (the macOS artifact also includes public headers).
+
 ---
 
 ## Requirements & platform notes

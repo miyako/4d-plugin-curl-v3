@@ -16,7 +16,7 @@
 # link against byte-identical dependency versions rather than "close
 # enough" ones that could reintroduce subtle ABI drift:
 #   curl 8.21.0, libssh2 1.11.1, nghttp2 1.70.0, openssl 3.6.3,
-#   zlib 1.3.2, brotli 1.2.0
+#   zlib 1.3.2, brotli 1.2.1 (CVE-2026-111497 fix)
 #
 # Usage: ./build-libcurl-macos.sh [output-dir]
 # Requires: git, cmake, ninja (or make), a working C/C++ toolchain (Xcode CLT)
@@ -58,7 +58,7 @@ cat > "$WORK_DIR/manifest/vcpkg.json" <<EOF
     { "name": "nghttp2", "version": "1.70.0" },
     { "name": "openssl", "version": "3.6.3" },
     { "name": "zlib", "version": "1.3.2", "port-version": 2 },
-    { "name": "brotli", "version": "1.2.0" }
+    { "name": "brotli", "version": "1.2.1" }
   ]
 }
 EOF

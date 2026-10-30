@@ -7,8 +7,8 @@
 # than vendored as prebuilt static libs. It's compiled as a static lib
 # and dropped into the exact repo-relative paths the project files
 # already search (lib\64 on Windows, ./a on macOS), so cURL.vcxproj and
-# project.pbxproj need no changes. Everything else (nghttp2, c-ares,
-# libssh2, brotli, zstd, etc.) is still vendored as before.
+# project.pbxproj need no changes. Brotli is also rebuilt from pinned
+# patched source; other dependencies remain vendored.
 #
 # Trigger: push a tag matching v*.*.* (either by hand, or via bump-version.yml).
 # You can also run it manually against an existing tag with workflow_dispatch.
@@ -55,6 +55,9 @@ concurrency:
 
 jobs:
 
+  brotli:
+    uses: ./.github/workflows/build-brotli.yml
+
   version:
     runs-on: ubuntu-latest
     outputs:
@@ -69,7 +72,7 @@ jobs:
 
   build-windows:
     name: Build Windows (x64)
-    needs: version
+    needs: [version, brotli]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +81,12 @@ jobs:
 
       - name: setup MSBuild
         uses: microsoft/setup-msbuild@v2
+
+      - name: download patched Brotli libraries
+        uses: actions/download-artifact@v4
+        with:
+          name: brotli-Windows
+          path: .
 
       # ---- Build OpenSSL (static, /MT, x64) from source ----
       # Strawberry Perl ships on windows-latest already; we only need
@@ -160,7 +169,7 @@ jobs:
 
   build-macos:
     name: Build macOS, package, sign, notarize & release
-    needs: [version, build-windows]
+    needs: [version, brotli, build-windows]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -172,6 +181,12 @@ jobs:
         with:
           name: windows-binaries
           path: winbuild
+
+      - name: download patched Brotli libraries and headers
+        uses: actions/download-artifact@v4
+        with:
+          name: brotli-macOS
+          path: .
 
       # ---- Build OpenSSL (static, universal arm64+x86_64) from source ----
       # OpenSSL's Configure targets a single arch at a time, so we build
