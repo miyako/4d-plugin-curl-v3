@@ -48,7 +48,7 @@ jobs:
           cp brotli-out/lib/libbrotli*.a vendor/a/
           cp -R brotli-out/include/brotli vendor/include/
           for lib in vendor/a/libbrotli*.a; do
-            lipo -verify_arch arm64 x86_64 "$lib"
+            lipo "$lib" -verify_arch arm64 x86_64
           done
           cmake -S build/brotli-check -B brotli-check \
             -DBROTLI_ROOT="$PWD/brotli-out" \
