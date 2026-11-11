@@ -25,6 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: checkout SBOM tooling from the workflow revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: sbom-tools
+          sparse-checkout: build/sbom
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: checkout Brotli 1.2.1 (CVE-2026-111497 fix)
         uses: actions/checkout@v4
         with:
@@ -82,6 +94,9 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ctest --test-dir brotli-check -C Release --output-on-failure --no-tests=error
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: record Brotli source and built archive evidence
+        run: python sbom-tools/build/sbom/generate.py brotli --source brotli-src --vendor vendor
 
       - uses: actions/upload-artifact@v4
         with:
