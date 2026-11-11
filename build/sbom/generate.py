@@ -17,16 +17,19 @@ import uuid
 import xml.etree.ElementTree as ET
 import zipfile
 
+import archives
+
 
 REPOSITORY = "https://github.com/miyako/4d-plugin-curl-v3"
 SUPPLIER = "Keisuke Miyako"
 LIMITATIONS = (
     "Partial inventory, not a complete dependency graph. Binary observations are "
     "identifying strings, not runtime verification or proof of active features. "
-    "Declared linker inputs are build-derived candidates: archive selection and "
-    "dead stripping are not resolved. Missing markers do not prove absence. "
+    "Build evidence distinguishes declared candidates, selected archive members and "
+    "map-visible live symbols; neither selection nor symbols quantify retained bytes "
+    "under dead stripping/COMDAT/LTO. Missing markers do not prove absence. "
     "OS libraries, toolchain/CRT, 4D SDK, embedded source and resources are not "
-    "exhaustively inventoried. Dependency licenses, suppliers and PURLs are unknown."
+    "exhaustively inventoried. Unverified origins/licenses/identifiers remain unknown."
 )
 MAC = "cURL.bundle/Contents/MacOS/cURL"
 WIN = "cURL.bundle/Contents/Windows64/cURL.4DX"
@@ -56,6 +59,21 @@ def git(root, *args):
     ).strip()
 
 
+def normalized_provenance(value):
+    value = dict(value)
+    for canonical, alternate in (
+        ("name", "library"), ("sourceRepository", "source_repository"),
+        ("sourceCommit", "source_commit"),
+    ):
+        if alternate in value:
+            if canonical in value and value[canonical] != value[alternate]:
+                raise ValueError(f"Conflicting source provenance field: {canonical}")
+            value[canonical] = value.pop(alternate)
+        if not value.get(canonical):
+            raise ValueError(f"Missing source provenance field: {canonical}")
+    return value
+
+
 def brotli_provenance(args):
     header = args.source / "c/common/version.h"
     text = header.read_text(encoding="utf-8")
@@ -69,20 +87,29 @@ def brotli_provenance(args):
                        *args.vendor.glob("lib/64/brotli*.lib")])
     if len(archives) != 3:
         raise ValueError("Expected three built Brotli archives")
+    license_path = args.source / "LICENSE"
+    license_text = license_path.read_text(encoding="utf-8")
+    if ("Permission is hereby granted, free of charge" not in license_text
+            or 'THE SOFTWARE IS PROVIDED "AS IS"' not in license_text):
+        raise ValueError("Brotli source license is not the expected MIT license")
     write_json(args.vendor / "brotli-provenance.json", {
         "name": "Brotli", "version": ".".join(parts),
         "evidenceType": "build-derived-source-and-archive-hashes-not-binary-detection",
         "sourceRepository": "https://github.com/google/brotli",
         "sourceCommit": git(args.source, "rev-parse", "HEAD"),
         "versionFile": "c/common/version.h", "versionFileSha256": sha256(header.read_bytes()),
+        "license": "MIT", "licenseFile": "LICENSE",
+        "licenseFileSha256": sha256(license_path.read_bytes()),
+        "purl": "pkg:github/google/brotli@" + ".".join(parts),
         "archives": [{"path": p.relative_to(args.vendor).as_posix(), "sha256": sha256(p.read_bytes())}
                      for p in archives],
     })
 
 
 def collect(args):
-    """Record declarations, not an asserted list of incorporated packages."""
+    """Bind declarations, verified identities and linker diagnostics to a binary."""
     root = args.root.resolve()
+    search_directories = []
     if args.target == "windows-x86_64":
         project = "cURL.vcxproj"
         tree = ET.parse(root / project)
@@ -95,6 +122,9 @@ def collect(args):
             raise ValueError("Expected one Release|x64 linker configuration")
         text = groups[0].find("m:Link/m:AdditionalDependencies", ns).text
         paths = ["lib/64/" + p for p in text.split(";") if p.endswith(".lib")]
+        search = groups[0].find("m:Link/m:AdditionalLibraryDirectories", ns)
+        if search is not None and search.text:
+            search_directories = search.text.split(";")
     else:
         project = "cURL.xcodeproj/project.pbxproj"
         objects = plistlib.loads(subprocess.check_output(
@@ -126,14 +156,82 @@ def collect(args):
         "configuration": [{"path": p, "sha256": sha256((root / p).read_bytes())}
                           for p in configs],
         "declaredInputs": inputs,
+        "librarySearchDirectoryDeclarations": search_directories,
+        "searchResolution": "Project declarations are not evaluated search order; "
+                            "actual diagnostics determine resolved inputs. Inherited/toolchain "
+                            "directories and absolute developer paths are not rewritten.",
+        "tooling": [{"path": p.name, "sha256": sha256(p.read_bytes())}
+                    for p in sorted(Path(__file__).parent.glob("*.py"))],
     }
-    if args.brotli_provenance:
-        provenance = json.loads(args.brotli_provenance.read_text(encoding="utf-8"))
+    rebuilt = []
+    for provenance_path in [args.brotli_provenance, getattr(args, "openssl_provenance", None)]:
+        if not provenance_path:
+            continue
+        provenance = normalized_provenance(json.loads(provenance_path.read_text(encoding="utf-8")))
         declared = {item["path"]: item for item in inputs}
         for archive in provenance["archives"]:
             if declared.get(archive["path"], {}).get("sha256") != archive["sha256"]:
-                raise ValueError("Brotli build provenance does not match declared archive")
-        record["rebuiltArchiveEvidence"] = [provenance]
+                raise ValueError(f"{provenance.get('name', 'Library')} build provenance does not match declared archive")
+        rebuilt.append(provenance)
+    if rebuilt:
+        record["rebuiltArchiveEvidence"] = rebuilt
+    manifest_path = getattr(args, "manifest", None)
+    if manifest_path:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        rebuilt_paths = {a["path"] for p in rebuilt for a in p["archives"]}
+        entries = {e["path"]: e for e in manifest["archives"]}
+        inventory_entries = []
+        patterns = ["a/**/*.a"] if args.target == "macos-universal" else ["lib/64/**/*.lib"]
+        for pattern in patterns:
+            for path in sorted(root.glob(pattern)):
+                relative = path.relative_to(root).as_posix()
+                entry = entries.get(relative)
+                digest = sha256(path.read_bytes())
+                if relative in rebuilt_paths:
+                    inventory_entries.append({"path": relative, "sha256": digest,
+                                              "identityStatus": "source-build-provenance"})
+                elif entry and entry["sha256"] == digest:
+                    archives.verify_manifest({"archives": [entry]}, root)
+                    inventory_entries.append({**entry, "identityStatus": "hash-bound-manifest"})
+                else:
+                    raise ValueError(f"Archive manifest hash mismatch or unreviewed archive: {relative}")
+        record["archiveInventory"] = inventory_entries
+        record["manifestSha256"] = sha256(manifest_path.read_bytes())
+    diagnostic_paths = getattr(args, "link_map", [])
+    if diagnostic_paths:
+        import linker
+        maps = {}
+        for value in diagnostic_paths:
+            target, separator, path = value.partition("=")
+            if not separator or target in maps:
+                raise ValueError("Use one --link-map TARGET=PATH per target")
+            maps[target] = Path(path)
+        required = ({"macos-arm64", "macos-x86_64"} if args.target == "macos-universal"
+                    else {"windows-x86_64"})
+        if set(maps) != required:
+            raise ValueError(f"Expected link maps for {sorted(required)}")
+        known = {item["path"]: item for item in record.get("archiveInventory", inputs)}
+        record["linkEvidence"] = {}
+        for target, path in maps.items():
+            trace = linker.collect(root, target, {
+                "map": path, "verbose": getattr(args, "link_log", None),
+            }, inputs)
+            selections = trace.pop("selectedArchives")
+            for selection in selections:
+                resolved = selection.get("resolvedPath")
+                if not resolved:
+                    continue
+                try:
+                    relative = Path(resolved).resolve().relative_to(root).as_posix()
+                except ValueError:
+                    continue
+                if relative in known:
+                    if selection.get("sha256") != known[relative].get("sha256"):
+                        raise ValueError(f"Selected archive hash mismatch: {relative}")
+                    selection["candidatePath"] = relative
+            trace["archives"] = selections
+            record["linkEvidence"][target] = trace
+        record["evidenceType"] = "build-derived-resolved-linker-inputs"
     write_json(args.output, record)
 
 
@@ -223,6 +321,67 @@ def observations(data):
     return found
 
 
+def build_dependencies(record, target, observed):
+    """Promote only hash-matched identities tied to an actually selected archive."""
+    diagnostics = record.get("linkEvidence", {})
+    selections = diagnostics.get(target, {}).get("archives", [])
+    entries = {item["path"]: item for item in record.get("archiveInventory", [])}
+    sources = {}
+    for provenance in record.get("rebuiltArchiveEvidence", []):
+        for archive in provenance["archives"]:
+            sources[archive["path"]] = (archive, provenance)
+    dependencies = {item["name"]: dict(item) for item in observed}
+    for selection in selections:
+        path = selection.get("candidatePath")
+        if not path or not selection.get("sha256"):
+            continue
+        identities = []
+        if path in sources:
+            archive, provenance = sources[path]
+            if selection["sha256"] != archive["sha256"]:
+                raise ValueError(f"{target}: selected archive disagrees with source provenance: {path}")
+            identities = [{
+                "name": provenance["name"], "version": provenance["version"],
+                "evidenceType": "source-build-and-selected-archive",
+                "origin": provenance["sourceRepository"],
+                **{key: provenance[key] for key in ("license", "purl") if key in provenance},
+                "sourceEvidence": provenance,
+            }]
+        elif path in entries:
+            entry = entries[path]
+            if entry["sha256"] != selection["sha256"]:
+                raise ValueError(f"{target}: selected archive disagrees with manifest: {path}")
+            identities = entry.get("targets", {}).get(target, {}).get("identities", [])
+        for identity in identities:
+            name, version = identity["name"], identity["version"]
+            previous = dependencies.get(name)
+            if previous and previous["version"] != version:
+                raise ValueError(f"{target}: binary/build version disagreement for {name}")
+            if not previous or "selectedArchives" not in previous:
+                dependencies[name] = {
+                    "name": name, "version": version,
+                    **({"binaryObservation": previous} if previous else {}),
+                    "evidenceType": "hash-bound-selected-archive-identity",
+                    "selectedArchives": [],
+                    "archiveIdentities": [],
+                    "incorporation": "linker-selected-members; retained bytes not established",
+                }
+            dependency = dependencies[name]
+            for key in ("license", "purl", "origin"):
+                value = identity.get(key)
+                if value:
+                    if dependency.get(key) and dependency[key] != value:
+                        raise ValueError(f"{target}: conflicting {key} evidence for {name}")
+                    dependency[key] = value
+            dependency["selectedArchives"].append(selection)
+            dependency["archiveIdentities"].append({"path": path, "identity": identity})
+    for dependency in dependencies.values():
+        if "selectedArchives" in dependency:
+            dependency["selectedArchives"].sort(key=lambda item: item["candidatePath"])
+            dependency["archiveIdentities"].sort(key=lambda item: item["path"])
+    return [dependencies[name] for name in sorted(dependencies)]
+
+
 def inventory(path, version, evidence):
     with container_reader(path) as read:
         info = plistlib.loads(read(PLIST))
@@ -246,6 +405,7 @@ def inventory(path, version, evidence):
             if record["binarySha256"] != item["binarySha256"]:
                 raise ValueError(f"{target}: build evidence does not match packaged binary")
             item["buildEvidence"] = record
+            item["dependencies"] = build_dependencies(record, target, item["dependencies"])
         targets.append(item)
     return {
         "inventoryVersion": 1, "name": "cURL", "version": version,
@@ -271,6 +431,8 @@ def component_rows(inv):
                 "target": ident,
                 "version": dep["version"], "kind": "library",
                 "description": json.dumps({"target": ident, **dep}, sort_keys=True),
+                **{key: dep[key] for key in ("license", "purl", "origin") if dep.get(key)},
+                "buildSupported": bool(dep.get("selectedArchives")),
             }
 
 
@@ -291,15 +453,28 @@ def cyclonedx(inv):
         }
         if "sha256" in row:
             item["hashes"] = [{"alg": "SHA-256", "content": row["sha256"]}]
+        if row.get("license"):
+            item["licenses"] = [{"license": {"id": row["license"]}}]
+        if row.get("purl"):
+            item["purl"] = row["purl"]
+        if row.get("origin"):
+            item["externalReferences"] = [{"type": "vcs", "url": row["origin"]}]
         components.append(item)
-    return {
+    result = {
         "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
         "serialNumber": "urn:uuid:" + str(uuid.uuid4()),
         "metadata": {"timestamp": inv["created"], "component": root},
         "components": components,
-        # No dependsOn edges: identifying strings do not establish a dependency graph.
         "compositions": [{"aggregate": "incomplete", "assemblies": ["release"]}],
     }
+    supported = [row for row in component_rows(inv) if row.get("buildSupported")]
+    if supported:
+        result["dependencies"] = [
+            {"ref": target["id"], "dependsOn": [row["id"] for row in supported
+                                                if row["target"] == target["id"]]}
+            for target in inv["targets"]
+        ]
+    return result
 
 
 def spdx(inv):
@@ -321,12 +496,23 @@ def spdx(inv):
     relations = [{"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES",
                   "relatedSpdxElement": "SPDXRef-release"}]
     for row in component_rows(inv):
-        packages.append(package(row["id"], row["name"], row["version"],
-                                row["description"], row.get("sha256")))
+        item = package(row["id"], row["name"], row["version"],
+                       row["description"], row.get("sha256"))
+        if row.get("license"):
+            item["licenseDeclared"] = row["license"]
+        if row.get("origin"):
+            item["homepage"] = row["origin"]
+        if row.get("purl"):
+            item["externalRefs"] = [{"referenceCategory": "PACKAGE-MANAGER",
+                                     "referenceType": "purl", "referenceLocator": row["purl"]}]
+        packages.append(item)
         relations.append({
-            "spdxElementId": "SPDXRef-release", "relationshipType": "CONTAINS",
+            "spdxElementId": "SPDXRef-" + (row["target"] if row["kind"] == "library" else "release"),
+            "relationshipType": "DEPENDS_ON" if row.get("buildSupported") else "CONTAINS",
             "relatedSpdxElement": "SPDXRef-" + row["id"],
-            "comment": "Scoped binary slice or identifying-string observation, not a dependency edge.",
+            "comment": ("Build-supported archive member selection, not exact retained bytes or a transitive graph."
+                        if row.get("buildSupported") else
+                        "Scoped binary slice or identifying-string observation, not a dependency edge."),
         })
     return {
         "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0",
@@ -347,6 +533,10 @@ def main():
     inputs.add_argument("--binary", type=Path, required=True)
     inputs.add_argument("--output", type=Path, required=True)
     inputs.add_argument("--brotli-provenance", type=Path)
+    inputs.add_argument("--openssl-provenance", type=Path)
+    inputs.add_argument("--manifest", type=Path)
+    inputs.add_argument("--link-map", action="append", default=[])
+    inputs.add_argument("--link-log", type=Path)
     brotli = commands.add_parser("brotli", help="Record freshly built Brotli source/archive evidence")
     brotli.add_argument("--source", type=Path, required=True)
     brotli.add_argument("--vendor", type=Path, required=True)

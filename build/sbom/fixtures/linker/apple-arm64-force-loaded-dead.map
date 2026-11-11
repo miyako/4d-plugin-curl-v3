@@ -1,0 +1,22 @@
+# Path: arm64/force-loaded-dead.dylib
+# Arch: arm64
+# Object files:
+[  0] linker synthesized
+[  1] arm64/main.o
+[  2] arm64/libselected.a(used.o)
+[  3] arm64/libunused.a(unused-library.o)
+[  4] /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/libSystem.tbd
+# Sections:
+# Address	Size    	Segment	Section
+0x000002E0	0x0000001C	__TEXT	__text
+0x000002FC	0x00000060	__TEXT	__unwind_info
+# Symbols:
+# Address	Size    	File  Name
+0x000002E0	0x00000014	[  1] _plugin_probe
+0x000002F4	0x00000008	[  2] _used_dependency
+0x000002FC	0x00000060	[  0] compact unwind info
+
+# Dead Stripped Symbols:
+#        	Size    	File  Name
+<<dead>>	0x00000008	[  2] _unused_in_selected_object
+<<dead>>	0x00000008	[  3] _unused_library_function

@@ -98,6 +98,15 @@ def validate_documents(inv, cdx, spdx, path, version, schemas, registry):
                     and package["checksums"] ==
                     [{"algorithm": "SHA256", "checksumValue": row["sha256"]}],
                     f"Binary/slice hash mismatch: {row['id']}")
+    expected_cdx, expected_spdx = generate.cyclonedx(inv), generate.spdx(inv)
+    require(cdx["components"] == expected_cdx["components"],
+            "CycloneDX package identity/license/origin evidence mismatch")
+    require(cdx.get("dependencies") == expected_cdx.get("dependencies"),
+            "CycloneDX build-supported dependency mismatch")
+    require(spdx["packages"] == expected_spdx["packages"],
+            "SPDX package identity/license/origin evidence mismatch")
+    require(spdx["relationships"] == expected_spdx["relationships"],
+            "SPDX containment/build-supported dependency mismatch")
     # Re-read actual container members, checking architecture, version, markers and
     # evidence-to-binary bindings rather than trusting the inventory's assertions.
     evidence = {}

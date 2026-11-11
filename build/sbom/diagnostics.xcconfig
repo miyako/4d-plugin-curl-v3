@@ -1,0 +1,3 @@
+// Use -xcconfig (or XCODE_XCCONFIG_FILE) without changing the source project.
+LD_GENERATE_MAP_FILE = YES
+LD_MAP_FILE_PATH = $(NATIVE_TRACE_DIRECTORY)/$(PRODUCT_NAME)-$(CURRENT_ARCH).map

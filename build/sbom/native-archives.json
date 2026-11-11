@@ -1,0 +1,777 @@
+{
+  "manifestVersion": 1,
+  "repository": "https://github.com/miyako/4d-plugin-curl-v3",
+  "reviewedSourceCommit": "78e680dd8b533bb393856a968ec51f259ad2273b",
+  "archives": [
+    {
+      "path": "a/libbrotlicommon.a",
+      "sha256": "05ec47739fa8f5f8f5536c7b3a142327cf030f78f57ed22171d14396bf8a0a79",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libbrotlidec.a",
+      "sha256": "08414aa6ef05e3f402029d0fd9899ec59e3dac0ea62fa2bdb5220178192a6acc",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libbrotlienc.a",
+      "sha256": "ce97f16aba1424d84546e386ced32d6c0727650a809d08bfb20d08ef878dff24",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libcares.a",
+      "sha256": "3ea555a5d78b9867832493a9220aac0243d8426c0feff37a9a4ee687fe65b421",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libcurl.a",
+      "sha256": "60309823c86064f8372c4e76f48932272e49378836e0b7af26b6e15b3e0225a9",
+      "targets": {
+        "macos-arm64": {
+          "identities": [
+            {
+              "name": "curl",
+              "version": "8.21.0",
+              "evidenceType": "archive-identifying-string",
+              "marker": "CLIENT libcurl 8.21.0",
+              "offset": 327450,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [
+            {
+              "name": "curl",
+              "version": "8.21.0",
+              "evidenceType": "archive-identifying-string",
+              "marker": "CLIENT libcurl 8.21.0",
+              "offset": 314322,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libiconv.a",
+      "sha256": "d850040f3aac1742835f4fbf018b120735ad3f0f3154c8e56a7b4e53ef1d1333",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libidn2.a",
+      "sha256": "85bf8810a428cc9a0a1766f05be839a1075370c464cbb9d6e288722d0d00a86c",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libjsoncpp.a",
+      "sha256": "6d4e5111f8fbcd7e5f767d9cf413b5ba53bcb2bf48a46cd62e4df9f72956468c",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/liblber.a",
+      "sha256": "0d912e461632c5890e675a09559b14ea35e643845f3613d3f5b62ed4ab456664",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libldap.a",
+      "sha256": "be1a6c40fd9067263b58667127bcde890b1ad80ecd0919a557bd85f73008c522",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libmodman.a",
+      "sha256": "174fb6eff7b8bde89c8f4f92dfaa5e5d1d2ad6362351f017859e8778d36b6075",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libnghttp2.a",
+      "sha256": "b2d3137147681f935f557d354dac29d58684f50bb55377a6e77bf808857660cb",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libnghttp3.a",
+      "sha256": "f689e6e70d077ed16966c8b12a8625d6c05c842bb0f536c503d3c1541b4316d6",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libngtcp2.a",
+      "sha256": "5d150b319f6070ff752bdd382954b26be0024c1fd33105b1d5badd2b002cd59a",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libngtcp2_crypto_ossl.a",
+      "sha256": "5316aca708da5ffc4127ca7f619128ed747dc63ef43fd23191c8684d5ff2b3ea",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libproxy.a",
+      "sha256": "69cf7fcf5525d83a3ff32091429b40cb65e9453cf90fe63eea8bce7ff55da238",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libpsl.a",
+      "sha256": "30092fa6ea333fc7b396eb80a5bfb874ee11beeddb9132f03383b38bc6581b2f",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/librtmp.a",
+      "sha256": "8a0066826fb0665656f260b93a8181f4ccd9bcc2b8721ef3e92c823a4d1c1062",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libssh2.a",
+      "sha256": "4798c04538ec4525872671eb2c0ef6b3c6acb7b2c30374f8338cec0b5324bbba",
+      "targets": {
+        "macos-arm64": {
+          "identities": [
+            {
+              "name": "libssh2",
+              "version": "1.11.1_DEV",
+              "evidenceType": "archive-identifying-string",
+              "marker": "SSH-2.0-libssh2_1.11.1_DEV",
+              "offset": 173791,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [
+            {
+              "name": "libssh2",
+              "version": "1.11.1_DEV",
+              "evidenceType": "archive-identifying-string",
+              "marker": "SSH-2.0-libssh2_1.11.1_DEV",
+              "offset": 174456,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libunistring.a",
+      "sha256": "d75a56cfd4891069fcfd4e306905da66352f50a88a2875fc50b14c2c76feba1c",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libz.a",
+      "sha256": "09c0e1182e0823a84daf285d95f96ef5a5e3b866bb60d7eefaa448568c3ca77e",
+      "targets": {
+        "macos-arm64": {
+          "identities": [
+            {
+              "name": "zlib",
+              "version": "1.3.2",
+              "evidenceType": "archive-identifying-string",
+              "marker": "deflate 1.3.2 Copyright",
+              "offset": 29657,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [
+            {
+              "name": "zlib",
+              "version": "1.3.2",
+              "evidenceType": "archive-identifying-string",
+              "marker": "deflate 1.3.2 Copyright",
+              "offset": 40425,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "a/libzstd.a",
+      "sha256": "c919703e97797fe821ad75c0fe1a4e61590552370c3fb2ca7983d73ecd1d8960",
+      "targets": {
+        "macos-arm64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        },
+        "macos-x86_64": {
+          "identities": [],
+          "targetEvidence": "universal-archive-header"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/brotlicommon.lib",
+      "sha256": "cf962e1a5f07a232e42aab3f1cb7fcf8d7290a1ecb9a44bdda29358d41743560",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/brotlidec.lib",
+      "sha256": "ebee34a6e228dc17abd0c98483366bb43923044b599a908597043b67b31f08d0",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/brotlienc.lib",
+      "sha256": "24ef49cc2abd3221936cc8c116cb424b5e7a75f0ac57ca48c8d796a02cda8f6a",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/cares.lib",
+      "sha256": "215b57afa431d2f15da53d879666d5f3a86a0bfe1944649d76cc4637874fe282",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/charset.lib",
+      "sha256": "378a3d5d954c9a45a23fe9b03b06db191187bfad802b2a5c465ef0342a6019c7",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/iconv.lib",
+      "sha256": "b6ec6797d66824c6fd2076e56e1e9739319aa04f121f2879673fd1548f512822",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/idn2.lib",
+      "sha256": "56e0566d38cae01ca68671369a697dffc57fe66b97de3e8b159b35b4cb9eec48",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/jsoncpp/debug/jsoncpp.lib",
+      "sha256": "2174493bc1dd41cd538bc36a303260b809b19e5d1291f2d80c3c5c3f0499a17e",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/jsoncpp/jsoncpp.lib",
+      "sha256": "586f3b05c24428331058eee4b35b145ab2b8eda01d6415a7570e99daa720319f",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libcurl-d.lib",
+      "sha256": "4fba6ff94880f1dc156fc7df929233016e18e69df1221f4f9f18ceb87e2b8bdb",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [
+            {
+              "name": "curl",
+              "version": "8.9.1-DEV",
+              "evidenceType": "archive-identifying-string",
+              "marker": "libcurl/8.9.1-DEV",
+              "offset": 3057237,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libcurl.lib",
+      "sha256": "b0a5fcbbf5c3d4074b036e7003711012ce78e7a61541d1582ca42581d7cb40e9",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [
+            {
+              "name": "curl",
+              "version": "8.21.0",
+              "evidenceType": "archive-identifying-string",
+              "marker": "libcurl/8.21.0",
+              "offset": 4759929,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libidn2.lib",
+      "sha256": "60986a90ed441a6bcb4032a7f938bfed4f7c67d8c56068b5bc36d1f90b6bbc8e",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libjson/debug/libjson.lib",
+      "sha256": "60f64b19bc12da3569fcebb6b7bc13faa95f4271ed229d770eadb2b2336cb090",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libjson/libjson.lib",
+      "sha256": "22f1f793dcba71b484767772e17f90eef0eaf70bb5b67fc9da35e383a7db05f0",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libproxy/debug/libproxy.lib",
+      "sha256": "74ef7af82eac6ec051fcadc690385eb82fbfb2bf0c07d1045d7640b825bed711",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libproxy.lib",
+      "sha256": "4fcfa7563d122ea3858fb76606a3ead7bbfacac3822cf0d978255e1eeb837dee",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libssh2/debug/libssh2.lib",
+      "sha256": "1a528f4f0480354bf25496f33bfbc4942225516ca3700a24f2d6eb8b7aa06b70",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [
+            {
+              "name": "libssh2",
+              "version": "1.11.0",
+              "evidenceType": "archive-identifying-string",
+              "marker": "SSH-2.0-libssh2_1.11.0",
+              "offset": 544372,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/libssh2.lib",
+      "sha256": "36ff95ef99d4bed6cf18df8d60efcc107ceb748c7515ceb354ce8a88de7909eb",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [
+            {
+              "name": "libssh2",
+              "version": "1.11.1_DEV",
+              "evidenceType": "archive-identifying-string",
+              "marker": "SSH-2.0-libssh2_1.11.1_DEV",
+              "offset": 784845,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/modman/debug/modman.lib",
+      "sha256": "b7e6304db11cc71fb41556d708292f81cda61b0a6b2742c0588c4bea55504e7e",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/modman.lib",
+      "sha256": "4cd35ae3f56ec7ea9202ab8d5ab93e3884a9efb6ddfb14b3002d14a07e4bd775",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/nghttp2.lib",
+      "sha256": "7f2728adf08ffd4cabaf05581e539afbd36510623d8aae577cdb0711bf42492d",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/nghttp3.lib",
+      "sha256": "ffccb19259e4795bba2102a1faf02d1f9b3cc118047efafe43c02eed02e2c4e0",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/ngtcp2.lib",
+      "sha256": "486b82b1170def2438f02ba872f2a5dbec590f04a8377d74b2877d90d91da3ca",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/ngtcp2_crypto_ossl.lib",
+      "sha256": "b25872c4a40002b7dc27be74ec36736f301e994fb740e39da5ffb8fc75288a26",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/unistring.lib",
+      "sha256": "13a9f81b8fcfa79c144e9bd68e700ebc6e7605f98c12ecada757888e5c2377d1",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/zlib.lib",
+      "sha256": "3d991ecd8c9a1b92c14fff3161044224c08bb572a41781a5ae9f20ff03f4fa96",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [
+            {
+              "name": "zlib",
+              "version": "1.3.1",
+              "evidenceType": "archive-identifying-string",
+              "marker": "inflate 1.3.1 Copyright",
+              "offset": 102210,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/zs.lib",
+      "sha256": "f9c2832f0edaa9fddad949bbeda1069041b4e2c4ccadd1e151ccdfd68a953390",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [
+            {
+              "name": "zlib",
+              "version": "1.3.2",
+              "evidenceType": "archive-identifying-string",
+              "marker": "inflate 1.3.2 Copyright",
+              "offset": 111022,
+              "origin": null,
+              "license": null,
+              "purl": null
+            }
+          ],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    },
+    {
+      "path": "lib/64/zstd.lib",
+      "sha256": "3a009907a967ae15237c7782103770b84e4da1fbe3285a7c68b8400653e7b229",
+      "targets": {
+        "windows-x86_64": {
+          "identities": [],
+          "targetEvidence": "repository-directory-intent-not-member-audit"
+        }
+      },
+      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+    }
+  ]
+}

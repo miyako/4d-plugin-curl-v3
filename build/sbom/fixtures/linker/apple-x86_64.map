@@ -1,0 +1,20 @@
+# Path: x86_64/probe.dylib
+# Arch: x86_64
+# Object files:
+[  0] linker synthesized
+[  1] x86_64/main.o
+[  2] x86_64/libselected.a(used.o)
+[  3] /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/libSystem.tbd
+# Sections:
+# Address	Size    	Segment	Section
+0x000002F0	0x00000020	__TEXT	__text
+0x00000310	0x00000058	__TEXT	__unwind_info
+# Symbols:
+# Address	Size    	File  Name
+0x000002F0	0x0000000B	[  1] _plugin_probe
+0x00000300	0x00000010	[  2] _used_dependency
+0x00000310	0x00000058	[  0] compact unwind info
+
+# Dead Stripped Symbols:
+#        	Size    	File  Name
+<<dead>>	0x0000000B	[  2] _unused_in_selected_object

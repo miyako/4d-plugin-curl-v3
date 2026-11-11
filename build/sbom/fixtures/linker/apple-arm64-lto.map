@@ -1,0 +1,16 @@
+# Path: arm64/lto/probe.dylib
+# Arch: arm64
+# Object files:
+[  0] linker synthesized
+[  1] arm64/lto/main.o
+[  2] arm64/lto/libselected.a(used.o)
+[  3] /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/libSystem.tbd
+[  4] /tmp/lto.o
+# Sections:
+# Address	Size    	Segment	Section
+0x000002D8	0x00000008	__TEXT	__text
+0x000002E0	0x00000058	__TEXT	__unwind_info
+# Symbols:
+# Address	Size    	File  Name
+0x000002D8	0x00000008	[  1] _plugin_probe
+0x000002E0	0x00000058	[  0] compact unwind info

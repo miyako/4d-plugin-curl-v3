@@ -29,11 +29,16 @@ The cURL plugin wraps [libcurl](https://curl.se/) to give 4D methods direct acce
 
 **Platforms:** macOS and Windows.
 
-### Release SBOM sidecars (proof of concept)
+### Release SBOM sidecars and native traceability
 
 New release builds generate artifact-bound CycloneDX JSON and SPDX JSON
 sidecars for both the ZIP and DMG, using one partial evidence inventory with
 separate macOS arm64, macOS x86_64 and Windows x64 observations.
+New builds also bind source-built Brotli/OpenSSL identities and verified
+vendored archive observations to actual linker selections, without changing
+static linking. Unknown origins and dead-strip/LTO limitations stay explicit.
+The **Unsigned native linker trace** workflow checks current builds without
+signing or publishing.
 The read-only **Release SBOM proof of concept** workflow can analyze an existing
 release without republishing it. See [usage, evidence and coverage limits](build/sbom/README.md).
 

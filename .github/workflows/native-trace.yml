@@ -1,0 +1,302 @@
+name: Unsigned native linker trace
+
+on:
+  pull_request:
+    paths:
+      - 'build/sbom/**'
+      - '.github/workflows/native-trace.yml'
+      - '.github/workflows/build-brotli.yml'
+      - 'cURL.xcodeproj/**'
+      - 'cURL.vcxproj'
+      - '*.cpp'
+      - '*.h'
+      - 'support/**'
+      - '4D Plugin API/**'
+      - 'include/**'
+      - 'a/**'
+      - 'lib/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-trace-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  brotli:
+    uses: ./.github/workflows/build-brotli.yml
+
+  native:
+    needs: brotli
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      OPENSSL_TAG: openssl-3.5.8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parser regression tests
+        run: python -m unittest discover -s build/sbom -p test_linker.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: brotli-${{ runner.os }}
+          path: .
+      - uses: actions/checkout@v4
+        with:
+          repository: openssl/openssl
+          ref: ${{ env.OPENSSL_TAG }}
+          path: openssl-src
+          persist-credentials: false
+      - uses: microsoft/setup-msbuild@v2
+        if: runner.os == 'Windows'
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Install NASM
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install nasm -y --no-progress
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build source OpenSSL Windows static MT
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: openssl-src
+        run: |
+          perl Configure VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
+          if errorlevel 1 exit /b 1
+          nmake
+          if errorlevel 1 exit /b 1
+          nmake install_sw
+          if errorlevel 1 exit /b 1
+          python ..\build\sbom\provenance.py source-record --source . --install out-win64 --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
+          if errorlevel 1 exit /b 1
+          python ..\build\sbom\provenance.py verify --source . --install out-win64 --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
+          if errorlevel 1 exit /b 1
+          copy /Y out-win64\lib\libssl.lib ..\lib\64\libssl.lib
+          if errorlevel 1 exit /b 1
+          copy /Y out-win64\lib\libcrypto.lib ..\lib\64\libcrypto.lib
+          if errorlevel 1 exit /b 1
+          python ..\build\sbom\provenance.py combine --record out-win64\openssl-build-provenance.json --vendor .. --target windows-x86_64
+          if errorlevel 1 exit /b 1
+      - name: Build source OpenSSL macOS universal
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -R openssl-src openssl-x86_64
+          for arch in arm64 x86_64; do
+            src=openssl-src
+            if [ "$arch" = x86_64 ]; then src=openssl-x86_64; fi
+            (
+              cd "$src"
+              ./Configure "darwin64-${arch}-cc" no-shared no-tests \
+                -mmacosx-version-min=10.13 --prefix="$PWD/out"
+              make -j3
+              make install_sw
+              python ../build/sbom/provenance.py source-record --source . --install out \
+                --target "macos-$arch" -- "darwin64-${arch}-cc" no-shared no-tests \
+                -mmacosx-version-min=10.13 --prefix="$PWD/out"
+              python ../build/sbom/provenance.py verify --source . --install out \
+                --target "macos-$arch" -- "darwin64-${arch}-cc" no-shared no-tests \
+                -mmacosx-version-min=10.13 --prefix="$PWD/out"
+            )
+          done
+          for lib in ssl crypto; do
+            lipo -create "openssl-src/out/lib/lib${lib}.a" \
+              "openssl-x86_64/out/lib/lib${lib}.a" -output "a/lib${lib}.a"
+          done
+          python build/sbom/provenance.py combine \
+            --record openssl-src/out/openssl-build-provenance.json \
+            --record openssl-x86_64/out/openssl-build-provenance.json \
+            --vendor . --target macos-universal
+      - name: Snapshot repository candidate hashes before link
+        shell: python
+        run: |
+          import hashlib, json
+          from pathlib import Path
+          paths = sorted([*Path("a").rglob("*.a"), *Path("lib/64").rglob("*.lib")])
+          Path("native-trace").mkdir(exist_ok=True)
+          Path("native-trace/candidates.json").write_text(json.dumps([
+              {"path": p.as_posix(), "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
+              for p in paths], indent=2))
+      - name: Build actual plugin unsigned macOS and capture per-architecture maps
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project cURL.xcodeproj -target cURL -configuration Default \
+            -xcconfig "$PWD/build/sbom/diagnostics.xcconfig" \
+            "NATIVE_TRACE_DIRECTORY=$PWD/native-trace" \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO MACOSX_DEPLOYMENT_TARGET=10.13 \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee native-trace/xcodebuild.log
+          lipo test/Plugins/cURL.bundle/Contents/MacOS/cURL -verify_arch arm64 x86_64
+          for arch in arm64 x86_64; do
+            python build/sbom/linker.py --target "macos-$arch" \
+              --map "native-trace/cURL-$arch.map" \
+              --candidates native-trace/candidates.json \
+              --output "native-trace/link-$arch.json"
+          done
+      - name: Build actual plugin Windows and capture MSVC map and verbose log
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          msbuild cURL.vcxproj /t:Rebuild /p:Configuration=Release /p:Platform=x64 `
+            /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 `
+            "/p:ForceImportAfterCppTargets=$PWD\build\sbom\diagnostics.props" `
+            "/p:NativeTraceDirectory=$PWD\native-trace" /m:1 /nologo /v:normal `
+            /fl "/flp:logfile=$PWD\native-trace\msbuild.log;verbosity=normal;encoding=UTF-8"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if (!(Test-Path test/Plugins/cURL.bundle/Contents/Windows64/cURL.4DX)) {
+            throw 'Missing linked plugin'
+          }
+          python build/sbom/linker.py --target windows-x86_64 `
+            --map native-trace/cURL-x64.map --verbose native-trace/msbuild.log `
+            --candidates native-trace/candidates.json --output native-trace/link-x64.json
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Require actual archive selections and bind unsigned binary hash
+        shell: python
+        run: |
+          import hashlib, json, os
+          from pathlib import Path
+          binary = Path("test/Plugins/cURL.bundle/Contents") / (
+              "MacOS/cURL" if os.environ["RUNNER_OS"] == "macOS" else "Windows64/cURL.4DX")
+          for path in Path("native-trace").glob("link-*.json"):
+              evidence = json.loads(path.read_text())
+              if not evidence["selectedArchives"]:
+                  raise RuntimeError("No archive selections parsed from actual linker output")
+              evidence["binarySha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
+              path.write_text(json.dumps(evidence, indent=2) + "\n")
+      - name: Collect manifest, source-build and actual linker evidence for SBOM ingestion
+        shell: python
+        run: |
+          import os, subprocess, sys
+          mac = os.environ["RUNNER_OS"] == "macOS"
+          command = [
+              sys.executable, "build/sbom/generate.py", "inputs",
+              "--target", "macos-universal" if mac else "windows-x86_64",
+              "--binary", "test/Plugins/cURL.bundle/Contents/" + (
+                  "MacOS/cURL" if mac else "Windows64/cURL.4DX"),
+              "--manifest", "build/sbom/native-archives.json",
+              "--brotli-provenance", "brotli-provenance.json",
+              "--openssl-provenance", "openssl-provenance.json",
+              "--output", "native-trace/build-evidence.json",
+          ]
+          if mac:
+              for arch in ("arm64", "x86_64"):
+                  command.extend(["--link-map", f"macos-{arch}=native-trace/cURL-{arch}.map"])
+          else:
+              command.extend(["--link-map", "windows-x86_64=native-trace/cURL-x64.map",
+                              "--link-log", "native-trace/msbuild.log"])
+          subprocess.run(command, check=True)
+      - name: Upload unsigned macOS build and ingestion evidence
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-native-build-macOS
+          path: |
+            test/Plugins/cURL.bundle/
+            native-trace/build-evidence.json
+            brotli-provenance.json
+            openssl-provenance.json
+          if-no-files-found: error
+      - name: Upload unsigned Windows build and ingestion evidence
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-native-build-Windows
+          path: |
+            test/Plugins/cURL.bundle/Contents/Windows64/cURL.4DX
+            native-trace/build-evidence.json
+            brotli-provenance.json
+            openssl-provenance.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unsigned-native-trace-${{ runner.os }}
+          path: native-trace/
+          if-no-files-found: error
+
+  package-sbom:
+    name: Validate unsigned ZIP and DMG native SBOMs
+    needs: native
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q -r build/sbom/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned-native-build-macOS
+          path: macos
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned-native-build-Windows
+          path: windows
+      - name: Package unsigned cross-platform test containers without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE=macos/test/Plugins/cURL.bundle
+          mkdir -p "$BUNDLE/Contents/Windows64"
+          cp windows/test/Plugins/cURL.bundle/Contents/Windows64/cURL.4DX "$BUNDLE/Contents/Windows64/cURL.4DX"
+          # Do not carry the repository's stale signature resources into an unsigned test package.
+          rm -f "$BUNDLE/Contents/_CodeSignature/CodeResources"
+          VERSION=$(python -c 'import plistlib; print(plistlib.load(open("macos/test/Plugins/cURL.bundle/Contents/Info.plist", "rb"))["CFBundleShortVersionString"])')
+          echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          ditto -c -k --keepParent "$BUNDLE" unsigned-native.zip
+          hdiutil create -format UDBZ -volname native-trace -srcfolder "$BUNDLE" unsigned-native.dmg
+      - name: Generate and validate all six artifact-bound documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/sbom/generate.py generate --version "$RELEASE_VERSION" --output sbom \
+            --evidence macos/native-trace/build-evidence.json \
+            --evidence windows/native-trace/build-evidence.json \
+            unsigned-native.zip unsigned-native.dmg
+          python build/sbom/validate.py --version "$RELEASE_VERSION" --output sbom \
+            --schema-dir "$RUNNER_TEMP/sbom-schemas" unsigned-native.zip unsigned-native.dmg
+      - name: Require usable source-built identities and correct Windows zlib selection
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("build/sbom/native-archives.json").read_text())
+          zlib_archive = next(a for a in manifest["archives"] if a["path"] == "lib/64/zlib.lib")
+          expected_zlib = zlib_archive["targets"]["windows-x86_64"]["identities"][0]["version"]
+          for path in Path("sbom").glob("*.inventory.json"):
+              inventory = json.loads(path.read_text())
+              for target in inventory["targets"]:
+                  packages = {p["name"]: p for p in target["dependencies"]}
+                  for name in ("Brotli", "OpenSSL"):
+                      package = packages[name]
+                      if not package.get("selectedArchives") or not package.get("license") or not package.get("purl"):
+                          raise RuntimeError(f"{target['id']}: missing usable source identity for {name}")
+                  if target["id"] == "windows-x86_64":
+                      zlib = packages["zlib"]
+                      selected = {a["candidatePath"] for a in zlib.get("selectedArchives", [])}
+                      if zlib["version"] != expected_zlib or "lib/64/zlib.lib" not in selected or "lib/64/zs.lib" in selected:
+                          raise RuntimeError("Windows zlib selection disagrees with the exact-hash manifest")
+                      print(f"{path.name}: Windows zlib {zlib['version']} from zlib.lib; zs.lib not promoted")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-native-sboms
+          path: sbom/*.json
+          if-no-files-found: error
