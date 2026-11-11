@@ -2,6 +2,7 @@
 """Conservative, non-executing inventory of this project's release containers."""
 
 import argparse
+from collections import Counter
 import contextlib
 import datetime
 import hashlib
@@ -72,6 +73,25 @@ def normalized_provenance(value):
         if not value.get(canonical):
             raise ValueError(f"Missing source provenance field: {canonical}")
     return value
+
+
+def compact_link_evidence(trace):
+    """Keep complete member selections, not duplicate entire symbol tables in SBOMs."""
+    symbols = trace.pop("mapSymbols", [])
+    trace["mapSymbolSummary"] = {
+        "total": len(symbols),
+        "byStatus": dict(sorted(Counter(s["status"] for s in symbols).items())),
+        "detailLocation": "Exact-hash raw map/log retained as build artifacts",
+        "symbolExamplesPerArchive": 5,
+    }
+    for archive in trace["archives"]:
+        for field, count in (("liveSymbols", "liveSymbolCount"),
+                             ("deadSymbols", "deadSymbolCount")):
+            details = archive.get(field, [])
+            archive[count] = len(details)
+            archive[field] = details[:5]
+            archive[field + "Truncated"] = len(details) > 5
+    return trace
 
 
 def brotli_provenance(args):
@@ -230,7 +250,7 @@ def collect(args):
                         raise ValueError(f"Selected archive hash mismatch: {relative}")
                     selection["candidatePath"] = relative
             trace["archives"] = selections
-            record["linkEvidence"][target] = trace
+            record["linkEvidence"][target] = compact_link_evidence(trace)
         record["evidenceType"] = "build-derived-resolved-linker-inputs"
     write_json(args.output, record)
 

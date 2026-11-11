@@ -88,6 +88,11 @@ symbol. Thus a live symbol is positive attribution, **not** exact retained bytes
 and absence of live attributed symbols is **not** proof of absence. Raw maps/logs
 are hashed and retained as CI artifacts for audit. These diagnostics add
 observability; no force-load, whole-archive or link-order changes are introduced.
+SBOM build evidence retains complete selected-member lists and per-member
+live/dead symbol counts, but only five live/dead symbol examples per archive,
+with explicit full counts and truncation flags. Full symbol tables remain in
+the exact-hash raw diagnostics/trace artifacts instead of being duplicated
+throughout both SBOM formats and architectures.
 
 nghttp2 and Brotli, among others, can lack sufficiently identifying version
 strings even when statically incorporated. Bare version numbers, header

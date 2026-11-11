@@ -55,6 +55,28 @@ class ArchiveIdentityTests(unittest.TestCase):
 
 
 class SelectedIdentityTests(unittest.TestCase):
+    def test_symbol_details_are_bounded_but_selection_and_counts_are_complete(self):
+        selected = {"candidatePath": "a/libssl.a", "sha256": "a" * 64,
+                    "selectedMembers": ["one.o", "two.o"],
+                    "members": [{"member": "one.o", "liveSymbolCount": 100}],
+                    "liveSymbols": [{"symbol": str(n)} for n in range(100)],
+                    "deadSymbols": [{"symbol": "stripped"}]}
+        trace = {"archives": [selected], "diagnostics": [{"sha256": "b" * 64}],
+                 "mapSymbols": [{"status": "map-live-symbol"} for _ in range(100)]
+                               + [{"status": "ambiguous-map-library"}]}
+        compact = generate.compact_link_evidence(trace)
+        self.assertNotIn("mapSymbols", compact)
+        self.assertEqual(compact["mapSymbolSummary"]["byStatus"]["map-live-symbol"], 100)
+        self.assertEqual(compact["mapSymbolSummary"]["byStatus"]["ambiguous-map-library"], 1)
+        archive = compact["archives"][0]
+        self.assertEqual(archive["liveSymbolCount"], 100)
+        self.assertEqual(len(archive["liveSymbols"]), 5)
+        self.assertTrue(archive["liveSymbolsTruncated"])
+        self.assertFalse(archive["deadSymbolsTruncated"])
+        self.assertEqual(archive["selectedMembers"], ["one.o", "two.o"])
+        self.assertEqual(archive["sha256"], "a" * 64)
+        self.assertEqual(compact["diagnostics"], [{"sha256": "b" * 64}])
+
     def test_source_record_spelling_is_normalized_without_losing_evidence(self):
         source = {
             "library": "OpenSSL", "source_repository": "https://github.com/openssl/openssl",
