@@ -5,6 +5,7 @@ from pathlib import Path
 import plistlib
 import struct
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 import warnings
@@ -187,6 +188,74 @@ class SchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "dependency mismatch"):
             validate.validate_documents(inv, cdx, damaged, self.path, "4.9.6", self.schemas, self.registry)
 
+    def test_named_unknown_version_and_extracted_license(self):
+        records = {}
+        for platform, binary, targets in (
+            ("macos-universal", fat(), ["macos-arm64", "macos-x86_64"]),
+            ("windows-x86_64", pe(), ["windows-x86_64"]),
+        ):
+            identity = {
+                "name": "identified-library", "version": None,
+                "licenseEvidence": {"id": "LicenseRef-Example", "name": "Example public domain",
+                                    "text": "The author places this work in the public domain."},
+            }
+            records[platform] = {
+                "target": platform, "binarySha256": generate.sha256(binary),
+                "coveragePolicy": "all-selected-repository-archives-named",
+                "archiveInventory": [{
+                    "path": "example.a", "sha256": "a" * 64,
+                    "targets": {t: {"identities": [identity]} for t in targets},
+                }],
+                "linkEvidence": {t: {"archives": [{
+                    "candidatePath": "example.a", "sha256": "a" * 64,
+                    "selectedMembers": ["example.o"],
+                }]} for t in targets},
+            }
+        inv = generate.inventory(self.path, "4.9.6", records)
+        cdx, spdx = generate.cyclonedx(inv), generate.spdx(inv)
+        validate.validate_documents(inv, cdx, spdx, self.path, "4.9.6", self.schemas, self.registry)
+        component = next(c for c in cdx["components"] if c["name"] == "identified-library")
+        package = next(p for p in spdx["packages"] if p["name"] == "identified-library")
+        self.assertNotIn("version", component)
+        self.assertNotIn("versionInfo", package)
+        self.assertEqual(package["licenseDeclared"], "LicenseRef-Example")
+        self.assertEqual(len(spdx["hasExtractedLicensingInfos"]), 1)
+        self.assertTrue(all(t["selectedArchiveCoverage"]["namedPackageArchives"] == 1
+                            and t["selectedArchiveCoverage"]["versionedPackageArchives"] == 0
+                            for t in inv["targets"]))
+        uncovered = copy.deepcopy(records)
+        uncovered["macos-universal"]["archiveInventory"][0]["targets"]["macos-arm64"]["identities"] = []
+        with self.assertRaisesRegex(ValueError, "lack named packages"):
+            generate.inventory(self.path, "4.9.6", uncovered)
+        damaged = copy.deepcopy(spdx)
+        damaged["hasExtractedLicensingInfos"][0]["extractedText"] = "MIT"
+        with self.assertRaisesRegex(ValueError, "extracted license"):
+            validate.validate_documents(inv, cdx, damaged, self.path, "4.9.6", self.schemas, self.registry)
+
+    def test_real_embedded_source_evidence_emits_schema_valid_scoped_components(self):
+        import embedded
+        root = Path(__file__).resolve().parents[2]
+        records = {
+            platform: {
+                "target": platform, "binarySha256": generate.sha256(binary),
+                "embeddedSourceEvidence": embedded.collect(root, platform),
+            }
+            for platform, binary in (("macos-universal", fat()), ("windows-x86_64", pe()))
+        }
+        inv = generate.inventory(self.path, "4.9.6", records)
+        cdx, spdx = generate.cyclonedx(inv), generate.spdx(inv)
+        validate.validate_documents(inv, cdx, spdx, self.path, "4.9.6", self.schemas, self.registry)
+        for target in inv["targets"]:
+            sources = [dep for dep in target["dependencies"]
+                       if dep.get("evidenceType") == "build-derived-embedded-source"]
+            self.assertTrue(sources)
+            self.assertTrue(all(dep["scope"] == "compiled-source" for dep in sources))
+            self.assertTrue(all("selectedArchives" not in dep for dep in sources))
+        damaged = copy.deepcopy(records)
+        damaged["macos-universal"]["embeddedSourceEvidence"]["target"] = "windows-x86_64"
+        with self.assertRaises(ValueError):
+            generate.inventory(self.path, "4.9.6", damaged)
+
 
 class BuildEvidenceTests(unittest.TestCase):
     def test_windows_declarations_and_brotli_hash_binding(self):
@@ -227,6 +296,21 @@ class BuildEvidenceTests(unittest.TestCase):
                 self.assertEqual(record["rebuiltArchiveEvidence"][0]["version"], "1.2.1")
                 missing = [i for i in record["declaredInputs"] if i["status"] == "unresolved-declaration"]
                 self.assertEqual(missing, [{"path": "lib/64/kernel32.lib", "status": "unresolved-declaration"}])
+                snapshot = root / "sources.json"
+                source_record = {"schemaVersion": 1, "components": []}
+                args.embedded_sources = True
+                with patch.dict("sys.modules", {"embedded": types.SimpleNamespace(
+                        collect=lambda root, target: source_record)}):
+                    with self.assertRaisesRegex(ValueError, "requires a pre-build snapshot"):
+                        generate.collect(args)
+                    args.embedded_source_snapshot = snapshot
+                    snapshot.write_text(json.dumps(source_record))
+                    generate.collect(args)
+                    self.assertEqual(json.loads(output.read_text())["embeddedSourceEvidence"], source_record)
+                    snapshot.write_text(json.dumps({"schemaVersion": 1, "components": ["changed"]}))
+                    with self.assertRaisesRegex(ValueError, "changed since the pre-build snapshot"):
+                        generate.collect(args)
+                args.embedded_sources = False
                 args.link_map = ["windows-x86_64=plugin.map"]
                 args.link_log = root / "link.log"
                 selected = {

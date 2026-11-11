@@ -35,8 +35,9 @@ claim. There are three separate evidence classes:
    availability or a complete dependency graph.
 2. **Hash-bound native archives:** `native-archives.json` inventories every
    vendored `a/*.a` and `lib/64/**/*.lib`, including unused/debug alternatives.
-   Each SHA-256 binds per-target identities to narrow identifying strings in
-   that archive's bytes, not nearby headers or bare version numbers. Universal
+   Each SHA-256 binds per-target identities to narrow identifying strings or
+   reviewed symbol/object-data evidence in that archive's bytes, not nearby
+   headers or bare version numbers. Universal
    archive headers establish macOS targets; the Windows directory establishes
    intended x64 use, not a full COFF-member architecture audit. Unidentified
    archives remain inventoried with empty identities and explicit unknown
@@ -57,17 +58,32 @@ claim. There are three separate evidence classes:
    unrecorded old cache is not retroactively assigned today's checkout identity.
    Consuming jobs verify source-built hashes against the actual candidate inputs.
 
-Known identities are promoted into ordinary versioned CycloneDX components and
+Known identities are promoted into ordinary CycloneDX components and
 SPDX packages only when an exact-hash archive has **selected member evidence**.
 Source-built Brotli and OpenSSL expose their supported MIT/Apache-2.0 licenses,
 upstream locations and PURLs as standard fields. Matching binary observations
 are merged into the same target package; version conflicts fail. An unselected
 archive does not become an incorporated component. Unknown selected archives
 remain useful hash/path/member evidence without an invented package version.
+An attributable library name without a recoverable version is represented as a
+named package with the standard version field omitted, not with the plugin's
+version or a made-up `unknown` release. Source license evidence remains separate
+from unknown archive acquisition/build provenance. Custom license statements
+use SPDX extracted `LicenseRef` text and matching named CycloneDX license text;
+an explicit public-domain statement is not relabeled MIT or CC0.
 Target-to-package CycloneDX `dependsOn` and SPDX `DEPENDS_ON` edges mean
 build-supported member selection, not an invented transitive dependency graph.
 Archive checksums are evidence about archives, not falsely attached as the hash
 of a logical library package.
+
+New build records enforce `all-selected-repository-archives-named`: every actual
+repository `candidatePath` plus SHA-256 selected by the linker must occur in a
+standard package's `selectedArchives`. An unused declaration or external/system
+input does not enter this denominator. `selectedArchiveCoverage` reports named
+and verified-version archive counts separately and lists unknown-version package
+names. A newly selected hash-only archive fails generation instead of quietly
+reducing coverage. Historical records without this policy remain readable and
+historical containers without records never acquire reconstructed selections.
 
 The checked-in linker declarations still mention libraries beyond the six
 dependencies listed in `build/build-libcurl-macos.sh`, including QUIC/HTTP3,
@@ -94,16 +110,53 @@ with explicit full counts and truncation flags. Full symbol tables remain in
 the exact-hash raw diagnostics/trace artifacts instead of being duplicated
 throughout both SBOM formats and architectures.
 
-nghttp2 and Brotli, among others, can lack sufficiently identifying version
-strings even when statically incorporated. Bare version numbers, header
-versions and printf templates are not enough to assign a binary component
-version. Static linking and dead stripping can also hide libraries entirely.
+Some libraries lack sufficiently identifying version strings even when
+statically incorporated. Reviewed native object-data rules additionally identify
+libiconv (macOS 1.16, Windows 1.18), nghttp2 (1.70.0 on all three targets), and
+nghttp3 (1.15.0 on macOS only). These rules bind reviewed target-slice hashes,
+defined symbols and version object data, including the relocated nghttp version
+string; they do not scan arbitrary strings for plausible versions. Unsupported
+hashes are not promoted. Pinned upstream references explain the interpretation
+of public version data, not the archives' acquisition or build origin.
+Libproxy and libmodman are identified by reviewed defined-symbol evidence but
+have no verified release version. A libproxy module directory containing a
+version is not accepted as release-version proof.
+
+Bare version numbers, header versions and printf templates are not enough to
+assign a binary component version. Static linking and dead stripping can also
+hide libraries entirely.
 Unverified dependency licenses, PURLs and suppliers are not inferred. SPDX uses
 `NOASSERTION`; CycloneDX omits those fields and declares an `incomplete`
 composition. No complete dependency graph is asserted. SPDX `CONTAINS`
 relationships identify scoped observations rather than dependency edges.
-OS frameworks/libraries, CRT/toolchain, 4D SDK, embedded source (such as
-`ftpparse.c`) and non-code resources are not exhaustively inventoried.
+OS frameworks/libraries, CRT/toolchain and non-code resources are not
+exhaustively inventoried. Build-derived embedded source coverage is described
+below; absent historical build evidence it is deliberately not reconstructed.
+
+## Embedded source scope
+
+The `sources` command snapshots project source declarations, relevant include
+witnesses and third-party source files before compilation. `inputs
+--embedded-sources --embedded-source-snapshot PATH` requires the same evidence
+after linking and binds it to the resulting binary hash. Saved evidence is
+validated offline during generation, without consulting today's checkout.
+Before/after hashing detects changed inputs, not transient changes restored
+during a build; declarations establish compile inputs, not exact retained bytes.
+Compiled third-party sources become target-scoped standard packages with source
+hashes and attribution in their descriptions and SPDX containment edges, not
+invented runtime dependencies. SDK/header-only interfaces stay explicit in
+`embeddedSourceEvidence` rather than becoming runtime library dependencies.
+Unknown upstream revisions and unsupported licenses remain absent; the plugin
+version and root MIT license are never substituted.
+
+The compiled-source inventory covers ftpparse (its source-stated `20001223`
+revision and explicit public-domain statement), the 4D Plugin SDK implementation,
+4D C++ wrappers, the 4DPlugin-JSON helper and the ufopen UTF-8 path helper. The
+SDK's supported MIT declaration is source evidence, not the plugin's root MIT
+license. Other helper licenses/revisions remain unknown where unsupported.
+JsonCpp's vendored headers and supported MIT statement are recorded as an
+interface-only input; no JsonCpp implementation package or runtime dependency
+is inferred from those headers.
 
 The reader never loads the plugin, calls its initialization, or executes
 distributed code. ZIP members are read without extraction; DMGs are mounted
@@ -139,7 +192,8 @@ git diff -- build/sbom/native-archives.json
 ```
 
 Commit the reviewed manifest alongside archive updates. `refresh` only derives
-hashes, target evidence and narrow archive markers; it does not invent an
+hashes, target evidence, narrow archive markers and reviewed exact-slice object
+identities; it does not invent an
 upstream download URL or license. To improve an unknown identity, first obtain
 an attributable source/build record or a trustworthy package manifest whose
 archive hash matches. Do not copy a version from a header or infer it from a

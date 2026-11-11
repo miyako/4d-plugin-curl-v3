@@ -8,6 +8,8 @@ import re
 import struct
 import subprocess
 
+from native_archive_identities import identities as reviewed_identities
+
 
 MARKERS = {
     "curl": rb"(?:libcurl/|CLIENT libcurl )([0-9]+\.[0-9]+\.[0-9]+(?:[._-][A-Za-z0-9]+)*)",
@@ -36,7 +38,7 @@ def identities(data):
                 "marker": match.group().decode("ascii"), "offset": match.start(),
                 "origin": None, "license": None, "purl": None,
             })
-    return found
+    return found + reviewed_identities(data)
 
 
 def archive_targets(path, data):
@@ -76,7 +78,7 @@ def refresh(root):
                          else "repository-directory-intent-not-member-audit"}
                 for target, part in sorted(targets.items())
             },
-            "limitations": "Identifying strings establish archive observations, not acquisition "
+            "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition "
                             "provenance or live linked code. Origin/license unknown unless separately recorded.",
         })
     return {

@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "repository": "https://github.com/miyako/4d-plugin-curl-v3",
-  "reviewedSourceCommit": "78e680dd8b533bb393856a968ec51f259ad2273b",
+  "reviewedSourceCommit": "6344cda2eff97ab5d05a0b333a7ea1222e5a4c9c",
   "archives": [
     {
       "path": "a/libbrotlicommon.a",
@@ -16,7 +16,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libbrotlidec.a",
@@ -31,7 +31,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libbrotlienc.a",
@@ -46,7 +46,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libcares.a",
@@ -61,7 +61,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libcurl.a",
@@ -98,22 +98,114 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libiconv.a",
       "sha256": "d850040f3aac1742835f4fbf018b120735ad3f0f3154c8e56a7b4e53ef1d1333",
       "targets": {
         "macos-arm64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libiconv",
+              "version": "1.16",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "__libiconv_version",
+                    "section": "__data",
+                    "objectOffset": 986368
+                  },
+                  {
+                    "symbol": "_libiconv_open",
+                    "section": "__text",
+                    "objectOffset": 8248
+                  },
+                  {
+                    "symbol": "_libiconv_close",
+                    "section": "__text",
+                    "objectOffset": 8556
+                  }
+                ],
+                "versionData": {
+                  "symbol": "__libiconv_version",
+                  "objectOffset": 986368,
+                  "hex": "10010000",
+                  "encoding": "(major << 8) | minor"
+                },
+                "sliceSha256": "18a7d1093833726f715ac425bb960cd10f8e7dcac00843ce93a0601327143ae1",
+                "member": "iconv.o",
+                "memberOffset": 560,
+                "memberSha256": "46cbbd881ef28de7ded55adce6d3af61cf47594a8060566272716016cecfb5bf"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/arthenica/libiconv/blob/baaba39736e3b498e1597bf0e5e899b1f753fb01/lib/iconv.c",
+                  "https://github.com/arthenica/libiconv/blob/baaba39736e3b498e1597bf0e5e899b1f753fb01/include/iconv.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         },
         "macos-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libiconv",
+              "version": "1.16",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "__libiconv_version",
+                    "section": "__data",
+                    "objectOffset": 984336
+                  },
+                  {
+                    "symbol": "_libiconv_open",
+                    "section": "__text",
+                    "objectOffset": 9352
+                  },
+                  {
+                    "symbol": "_libiconv_close",
+                    "section": "__text",
+                    "objectOffset": 9656
+                  }
+                ],
+                "versionData": {
+                  "symbol": "__libiconv_version",
+                  "objectOffset": 984336,
+                  "hex": "10010000",
+                  "encoding": "(major << 8) | minor"
+                },
+                "sliceSha256": "82bc874148487608408c904ff3acc4c080b4f009e330bc5ac789f72a62bedcff",
+                "member": "iconv.o",
+                "memberOffset": 560,
+                "memberSha256": "937fce3a91a2fd45bf4b7651999421d1ea7e88db2f4b792b1afb26619257bbc9"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/arthenica/libiconv/blob/baaba39736e3b498e1597bf0e5e899b1f753fb01/lib/iconv.c",
+                  "https://github.com/arthenica/libiconv/blob/baaba39736e3b498e1597bf0e5e899b1f753fb01/include/iconv.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libidn2.a",
@@ -128,7 +220,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libjsoncpp.a",
@@ -143,7 +235,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/liblber.a",
@@ -158,7 +250,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libldap.a",
@@ -173,52 +265,298 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libmodman.a",
       "sha256": "174fb6eff7b8bde89c8f4f92dfaa5e5d1d2ad6362351f017859e8778d36b6075",
       "targets": {
         "macos-arm64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libmodman",
+              "version": null,
+              "evidenceType": "archive-defined-symbols",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "__ZN9libmodman14module_manager12load_builtinEP9mm_module",
+                    "section": "__text",
+                    "objectOffset": 1200
+                  },
+                  {
+                    "symbol": "__ZN9libmodman14module_managerD1Ev",
+                    "section": "__text",
+                    "objectOffset": 1196
+                  }
+                ],
+                "sliceSha256": "c9127497928cab0f48f1bf4c2468149262abdf213698eac3c8a807e4f1f5314b",
+                "member": "module_manager.o",
+                "memberOffset": 2936,
+                "memberSha256": "725b31f19a2b31571b5aa39f3f7818e6d384f1a4e33251d984159574e54524fb"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/libproxy/libproxy/blob/e78a5ccfe0a2340f2c73e419767f8492ffc2787a/libmodman/module_manager.hpp"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              },
+              "versionStatus": "unknown; defined library-specific symbols establish name, not release version"
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         },
         "macos-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libmodman",
+              "version": null,
+              "evidenceType": "archive-defined-symbols",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "__ZN9libmodman14module_manager12load_builtinEP9mm_module",
+                    "section": "__text",
+                    "objectOffset": 1360
+                  },
+                  {
+                    "symbol": "__ZN9libmodman14module_managerD1Ev",
+                    "section": "__text",
+                    "objectOffset": 1344
+                  }
+                ],
+                "sliceSha256": "dfe9b2ec5b51f2c8d22177777167ec6446c76a626c46e1fa8f7c5a9b19213421",
+                "member": "module_manager.o",
+                "memberOffset": 3232,
+                "memberSha256": "553b2400a03755711286eab1a5daf1d614032e05d0881a7b1148dda9eb62a55a"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/libproxy/libproxy/blob/e78a5ccfe0a2340f2c73e419767f8492ffc2787a/libmodman/module_manager.hpp"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              },
+              "versionStatus": "unknown; defined library-specific symbols establish name, not release version"
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libnghttp2.a",
       "sha256": "b2d3137147681f935f557d354dac29d58684f50bb55377a6e77bf808857660cb",
       "targets": {
         "macos-arm64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "nghttp2",
+              "version": "1.70.0",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "_nghttp2_version",
+                    "section": "__text",
+                    "objectOffset": 568
+                  },
+                  {
+                    "symbol": "_version",
+                    "section": "__data",
+                    "objectOffset": 600
+                  }
+                ],
+                "versionData": {
+                  "symbol": "_version",
+                  "objectOffset": 600,
+                  "hex": "0100000000460100",
+                  "encoding": "age=1; (major << 16) | (minor << 8) | patch",
+                  "relocatedStringObjectOffset": 624,
+                  "relocatedString": "1.70.0"
+                },
+                "sliceSha256": "bd03b62de58593d0db7b3130e7cf689f488250ace172615be4c4084e67bcd79d",
+                "member": "nghttp2_version.c.o",
+                "memberOffset": 237320,
+                "memberSha256": "0e1e039580a6e0f38a5fb69e275601840dd0a85f4e22292b9469a17872c28c3d"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/nghttp2_version.c",
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/includes/nghttp2/nghttp2.h",
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/includes/nghttp2/nghttp2ver.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         },
         "macos-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "nghttp2",
+              "version": "1.70.0",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "_nghttp2_version",
+                    "section": "__text",
+                    "objectOffset": 632
+                  },
+                  {
+                    "symbol": "_version",
+                    "section": "__data",
+                    "objectOffset": 664
+                  }
+                ],
+                "versionData": {
+                  "symbol": "_version",
+                  "objectOffset": 664,
+                  "hex": "0100000000460100",
+                  "encoding": "age=1; (major << 16) | (minor << 8) | patch",
+                  "relocatedStringObjectOffset": 688,
+                  "relocatedString": "1.70.0"
+                },
+                "sliceSha256": "e13190a374d20c5d4a69628dc63c546d4a33e3c967bc6e7410ad8efeef522680",
+                "member": "nghttp2_version.c.o",
+                "memberOffset": 243648,
+                "memberSha256": "bcb847e5e2fa962819e636da9bc585f66d88cd70e2f97b5173168b6822ee5f32"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/nghttp2_version.c",
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/includes/nghttp2/nghttp2.h",
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/includes/nghttp2/nghttp2ver.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libnghttp3.a",
       "sha256": "f689e6e70d077ed16966c8b12a8625d6c05c842bb0f536c503d3c1541b4316d6",
       "targets": {
         "macos-arm64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "nghttp3",
+              "version": "1.15.0",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "_nghttp3_version",
+                    "section": "__text",
+                    "objectOffset": 552
+                  },
+                  {
+                    "symbol": "_version",
+                    "section": "__data",
+                    "objectOffset": 624
+                  }
+                ],
+                "versionData": {
+                  "symbol": "_version",
+                  "objectOffset": 624,
+                  "hex": "01000000000f0100",
+                  "encoding": "age=1; (major << 16) | (minor << 8) | patch",
+                  "relocatedStringObjectOffset": 640,
+                  "relocatedString": "1.15.0"
+                },
+                "sliceSha256": "23c73903217f27d41161d29f2736fc8c5da32ce8c60e6e5419af5171fa228973",
+                "member": "nghttp3_version.o",
+                "memberOffset": 278800,
+                "memberSha256": "5b3def2c7ea9881352524d0338908c0f5f5eafefc91631f3eaf61ae8ea7be971"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/ngtcp2/nghttp3/blob/a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1/lib/nghttp3_version.c",
+                  "https://github.com/ngtcp2/nghttp3/blob/a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1/lib/includes/nghttp3/nghttp3.h",
+                  "https://github.com/ngtcp2/nghttp3/blob/a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1/lib/includes/nghttp3/version.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         },
         "macos-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "nghttp3",
+              "version": "1.15.0",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "_nghttp3_version",
+                    "section": "__text",
+                    "objectOffset": 1272
+                  },
+                  {
+                    "symbol": "_version",
+                    "section": "__data",
+                    "objectOffset": 1304
+                  }
+                ],
+                "versionData": {
+                  "symbol": "_version",
+                  "objectOffset": 1304,
+                  "hex": "01000000000f0100",
+                  "encoding": "age=1; (major << 16) | (minor << 8) | patch",
+                  "relocatedStringObjectOffset": 1320,
+                  "relocatedString": "1.15.0"
+                },
+                "sliceSha256": "b9b48d4a288b93b7887dddd63ef0593ca922d9a6d25893b4db3736b07c69eefe",
+                "member": "nghttp3_version.o",
+                "memberOffset": 814712,
+                "memberSha256": "4ca741c61209a0814f6e156c7c6165998767b02fc30c391d2c8de4bf894b9965"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/ngtcp2/nghttp3/blob/a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1/lib/nghttp3_version.c",
+                  "https://github.com/ngtcp2/nghttp3/blob/a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1/lib/includes/nghttp3/nghttp3.h",
+                  "https://github.com/ngtcp2/nghttp3/blob/a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1/lib/includes/nghttp3/version.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libngtcp2.a",
@@ -233,7 +571,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libngtcp2_crypto_ossl.a",
@@ -248,22 +586,112 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libproxy.a",
       "sha256": "69cf7fcf5525d83a3ff32091429b40cb65e9453cf90fe63eea8bce7ff55da238",
       "targets": {
         "macos-arm64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libproxy",
+              "version": null,
+              "evidenceType": "archive-defined-symbols",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "_px_proxy_factory_new",
+                    "section": "__text",
+                    "objectOffset": 19444
+                  },
+                  {
+                    "symbol": "_px_proxy_factory_free",
+                    "section": "__text",
+                    "objectOffset": 20368
+                  },
+                  {
+                    "symbol": "_px_proxy_factory_get_proxies",
+                    "section": "__text",
+                    "objectOffset": 19512
+                  },
+                  {
+                    "symbol": "_px_proxy_factory_free_proxies",
+                    "section": "__text",
+                    "objectOffset": 20304
+                  }
+                ],
+                "sliceSha256": "1a6bf0a9de67201ead76b7d7ff71484f0c146ef17cb7750d2944a1584a8a9417",
+                "member": "proxy.o",
+                "memberOffset": 101976,
+                "memberSha256": "4aa3824a744ccb21bf3ced87b4bc0293ee0bb8e77f204405382e48180614c887"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/libproxy/libproxy/blob/e78a5ccfe0a2340f2c73e419767f8492ffc2787a/libproxy/proxy.h"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              },
+              "versionStatus": "unknown; defined library-specific symbols establish name, not release version"
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         },
         "macos-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libproxy",
+              "version": null,
+              "evidenceType": "archive-defined-symbols",
+              "evidence": {
+                "objectFormat": "mach-o-64",
+                "definitions": [
+                  {
+                    "symbol": "_px_proxy_factory_new",
+                    "section": "__text",
+                    "objectOffset": 20064
+                  },
+                  {
+                    "symbol": "_px_proxy_factory_free",
+                    "section": "__text",
+                    "objectOffset": 20976
+                  },
+                  {
+                    "symbol": "_px_proxy_factory_get_proxies",
+                    "section": "__text",
+                    "objectOffset": 20128
+                  },
+                  {
+                    "symbol": "_px_proxy_factory_free_proxies",
+                    "section": "__text",
+                    "objectOffset": 20912
+                  }
+                ],
+                "sliceSha256": "0b2fbb63f4dafad308f6d297ed0e4be66ad7376758f93a8fbdaa74d80e8fe9a5",
+                "member": "proxy.o",
+                "memberOffset": 104376,
+                "memberSha256": "d62f0156f3a265cb63e1ae0899def523e2ba53b21ab05abcd76349450cf5eceb"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/libproxy/libproxy/blob/e78a5ccfe0a2340f2c73e419767f8492ffc2787a/libproxy/proxy.h"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              },
+              "versionStatus": "unknown; defined library-specific symbols establish name, not release version"
+            }
+          ],
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libpsl.a",
@@ -278,7 +706,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/librtmp.a",
@@ -293,7 +721,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libssh2.a",
@@ -330,7 +758,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libunistring.a",
@@ -345,7 +773,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libz.a",
@@ -382,7 +810,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "a/libzstd.a",
@@ -397,7 +825,7 @@
           "targetEvidence": "universal-archive-header"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/brotlicommon.lib",
@@ -408,7 +836,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/brotlidec.lib",
@@ -419,7 +847,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/brotlienc.lib",
@@ -430,7 +858,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/cares.lib",
@@ -441,7 +869,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/charset.lib",
@@ -452,18 +880,64 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/iconv.lib",
       "sha256": "b6ec6797d66824c6fd2076e56e1e9739319aa04f121f2879673fd1548f512822",
       "targets": {
         "windows-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libiconv",
+              "version": "1.18",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "coff-amd64",
+                "definitions": [
+                  {
+                    "symbol": "_libiconv_version",
+                    "section": ".data",
+                    "objectOffset": 1209702
+                  },
+                  {
+                    "symbol": "libiconv_open",
+                    "section": ".text$mn",
+                    "objectOffset": 1602788
+                  },
+                  {
+                    "symbol": "libiconv_close",
+                    "section": ".text$mn",
+                    "objectOffset": 1602478
+                  }
+                ],
+                "versionData": {
+                  "symbol": "_libiconv_version",
+                  "objectOffset": 1209702,
+                  "hex": "12010000",
+                  "encoding": "(major << 8) | minor"
+                },
+                "sliceSha256": "b6ec6797d66824c6fd2076e56e1e9739319aa04f121f2879673fd1548f512822",
+                "member": "iconv.obj",
+                "memberOffset": 40844,
+                "memberSha256": "522532f74bd2e853f5c7f58300149a9446672cca472c15cd6c4cf9e54ff14af0"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/arthenica/libiconv/blob/baaba39736e3b498e1597bf0e5e899b1f753fb01/lib/iconv.c",
+                  "https://github.com/arthenica/libiconv/blob/baaba39736e3b498e1597bf0e5e899b1f753fb01/include/iconv.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/idn2.lib",
@@ -474,7 +948,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/jsoncpp/debug/jsoncpp.lib",
@@ -485,7 +959,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/jsoncpp/jsoncpp.lib",
@@ -496,7 +970,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libcurl-d.lib",
@@ -518,7 +992,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libcurl.lib",
@@ -540,7 +1014,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libidn2.lib",
@@ -551,7 +1025,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libjson/debug/libjson.lib",
@@ -562,7 +1036,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libjson/libjson.lib",
@@ -573,7 +1047,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libproxy/debug/libproxy.lib",
@@ -584,18 +1058,63 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libproxy.lib",
       "sha256": "4fcfa7563d122ea3858fb76606a3ead7bbfacac3822cf0d978255e1eeb837dee",
       "targets": {
         "windows-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libproxy",
+              "version": null,
+              "evidenceType": "archive-defined-symbols",
+              "evidence": {
+                "objectFormat": "coff-amd64",
+                "definitions": [
+                  {
+                    "symbol": "px_proxy_factory_new",
+                    "section": ".text$mn",
+                    "objectOffset": 163337
+                  },
+                  {
+                    "symbol": "px_proxy_factory_free",
+                    "section": ".text$mn",
+                    "objectOffset": 162031
+                  },
+                  {
+                    "symbol": "px_proxy_factory_get_proxies",
+                    "section": ".text$mn",
+                    "objectOffset": 162181
+                  },
+                  {
+                    "symbol": "px_proxy_factory_free_proxies",
+                    "section": ".text$mn",
+                    "objectOffset": 162088
+                  }
+                ],
+                "sliceSha256": "4fcfa7563d122ea3858fb76606a3ead7bbfacac3822cf0d978255e1eeb837dee",
+                "member": "x64\\Release\\proxy.obj",
+                "memberOffset": 874396,
+                "memberSha256": "e4b75e704d7d6b26086803e4f4d24ab08c97c890100f1d9b08828738679f3481"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/libproxy/libproxy/blob/e78a5ccfe0a2340f2c73e419767f8492ffc2787a/libproxy/proxy.h"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              },
+              "versionStatus": "unknown; defined library-specific symbols establish name, not release version"
+            }
+          ],
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libssh2/debug/libssh2.lib",
@@ -617,7 +1136,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/libssh2.lib",
@@ -639,7 +1158,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/modman/debug/modman.lib",
@@ -650,29 +1169,108 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/modman.lib",
       "sha256": "4cd35ae3f56ec7ea9202ab8d5ab93e3884a9efb6ddfb14b3002d14a07e4bd775",
       "targets": {
         "windows-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "libmodman",
+              "version": null,
+              "evidenceType": "archive-defined-symbols",
+              "evidence": {
+                "objectFormat": "coff-amd64",
+                "definitions": [
+                  {
+                    "symbol": "?load_builtin@module_manager@libmodman@@QEAA_NPEAUmm_module@@@Z",
+                    "section": ".text$mn",
+                    "objectOffset": 84284
+                  },
+                  {
+                    "symbol": "??1module_manager@libmodman@@QEAA@XZ",
+                    "section": ".text$mn",
+                    "objectOffset": 63277
+                  }
+                ],
+                "sliceSha256": "4cd35ae3f56ec7ea9202ab8d5ab93e3884a9efb6ddfb14b3002d14a07e4bd775",
+                "member": "x64\\Release\\module_manager.obj",
+                "memberOffset": 87820,
+                "memberSha256": "f9c04f1c8f8c335045ffcd29af6710abc92ceadd5ad3788592b8fb70ca25ef93"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/libproxy/libproxy/blob/e78a5ccfe0a2340f2c73e419767f8492ffc2787a/libmodman/module_manager.hpp"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              },
+              "versionStatus": "unknown; defined library-specific symbols establish name, not release version"
+            }
+          ],
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/nghttp2.lib",
       "sha256": "7f2728adf08ffd4cabaf05581e539afbd36510623d8aae577cdb0711bf42492d",
       "targets": {
         "windows-x86_64": {
-          "identities": [],
+          "identities": [
+            {
+              "name": "nghttp2",
+              "version": "1.70.0",
+              "evidenceType": "archive-version-object-data",
+              "evidence": {
+                "objectFormat": "coff-amd64",
+                "definitions": [
+                  {
+                    "symbol": "nghttp2_version",
+                    "section": ".text$mn",
+                    "objectOffset": 3301
+                  },
+                  {
+                    "symbol": "version",
+                    "section": ".data",
+                    "objectOffset": 3619
+                  }
+                ],
+                "versionData": {
+                  "symbol": "version",
+                  "objectOffset": 3619,
+                  "hex": "0100000000460100",
+                  "encoding": "age=1; (major << 16) | (minor << 8) | patch",
+                  "relocatedStringObjectOffset": 3291,
+                  "relocatedString": "1.70.0"
+                },
+                "sliceSha256": "7f2728adf08ffd4cabaf05581e539afbd36510623d8aae577cdb0711bf42492d",
+                "member": "lib\\CMakeFiles\\nghttp2_static.dir\\nghttp2_version.c.obj",
+                "memberOffset": 381686,
+                "memberSha256": "6376fbbcec1f45558c4ec975fbed99bd9e231486307c8fb4e02e17682dfc0f23"
+              },
+              "origin": null,
+              "license": null,
+              "purl": null,
+              "sourceMetadata": {
+                "references": [
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/nghttp2_version.c",
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/includes/nghttp2/nghttp2.h",
+                  "https://github.com/nghttp2/nghttp2/blob/28d4846d201f0444f208cf6373b8563258feaafb/lib/includes/nghttp2/nghttp2ver.h.in"
+                ],
+                "relationship": "API/symbol interpretation only; archive origin and source revision unknown."
+              }
+            }
+          ],
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/nghttp3.lib",
@@ -683,7 +1281,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/ngtcp2.lib",
@@ -694,7 +1292,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/ngtcp2_crypto_ossl.lib",
@@ -705,7 +1303,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/unistring.lib",
@@ -716,7 +1314,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/zlib.lib",
@@ -738,7 +1336,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/zs.lib",
@@ -760,7 +1358,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
       "path": "lib/64/zstd.lib",
@@ -771,7 +1369,7 @@
           "targetEvidence": "repository-directory-intent-not-member-audit"
         }
       },
-      "limitations": "Identifying strings establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
+      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     }
   ]
 }
