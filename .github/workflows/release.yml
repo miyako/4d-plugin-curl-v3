@@ -185,6 +185,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force native-linker | Out-Null
+          python sbom-tools/build/sbom/generate.py sources --target windows-x86_64 --output native-linker/embedded-sources.json
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           msbuild "${{ env.VCX_SOLUTION }}" /p:Configuration=Release /p:Platform=x64 `
             /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /m `
             "/p:ForceImportAfterCppTargets=$PWD\sbom-tools\build\sbom\diagnostics.props" `
@@ -207,7 +209,8 @@ jobs:
             --binary "test/Plugins/${{ env.PRODUCT_NAME }}.bundle/Contents/Windows64/${{ env.PRODUCT_NAME }}.4DX" `
             --brotli-provenance brotli-provenance.json `
             --openssl-provenance openssl-provenance.json `
-            --manifest sbom-tools/build/sbom/native-archives.json `
+            --manifest sbom-tools/build/sbom/native-archives.json --embedded-sources `
+            --embedded-source-snapshot native-linker/embedded-sources.json `
             --link-map windows-x86_64=native-linker/cURL-x64.map `
             --link-log native-linker/msbuild.log --output sbom-windows.json
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -391,6 +394,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p native-linker
+          python sbom-tools/build/sbom/generate.py sources --target macos-universal --output native-linker/embedded-sources.json
           xcodebuild -project "${{ env.XCODE_PROJECT }}" \
             -target "${{ env.PRODUCT_NAME }}" \
             -configuration Default \
@@ -459,7 +463,8 @@ jobs:
             --binary "$BUNDLE_PATH/Contents/MacOS/${{ env.PRODUCT_NAME }}" \
             --brotli-provenance brotli-provenance.json \
             --openssl-provenance openssl-provenance.json \
-            --manifest sbom-tools/build/sbom/native-archives.json \
+            --manifest sbom-tools/build/sbom/native-archives.json --embedded-sources \
+            --embedded-source-snapshot native-linker/embedded-sources.json \
             --link-map macos-arm64=native-linker/arm64.map \
             --link-map macos-x86_64=native-linker/x86_64.map \
             --output sbom-evidence/sbom-macos.json

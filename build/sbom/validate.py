@@ -87,7 +87,7 @@ def validate_documents(inv, cdx, spdx, path, version, schemas, registry):
         component = components[row["id"]]
         package = packages["SPDXRef-" + row["id"]]
         require(component["name"] == package["name"] == row["name"]
-                and component["version"] == package["versionInfo"] == row["version"],
+                and component.get("version") == package.get("versionInfo") == row.get("version"),
                 f"Cross-format component mismatch: {row['id']}")
         require(component["description"] == package["description"] == row["description"],
                 f"Lost evidence/target distinction: {row['id']}")
@@ -107,6 +107,8 @@ def validate_documents(inv, cdx, spdx, path, version, schemas, registry):
             "SPDX package identity/license/origin evidence mismatch")
     require(spdx["relationships"] == expected_spdx["relationships"],
             "SPDX containment/build-supported dependency mismatch")
+    require(spdx.get("hasExtractedLicensingInfos") == expected_spdx.get("hasExtractedLicensingInfos"),
+            "SPDX extracted license evidence mismatch")
     # Re-read actual container members, checking architecture, version, markers and
     # evidence-to-binary bindings rather than trusting the inventory's assertions.
     evidence = {}

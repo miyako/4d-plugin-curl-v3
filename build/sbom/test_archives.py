@@ -42,7 +42,7 @@ class ArchiveIdentityTests(unittest.TestCase):
             archives.verify_manifest(damaged, root)
 
     def test_hash_identity_and_target_mismatch_rejected(self):
-        with tempfile.TemporaryDirectory() as temp:
+        with tempfile.TemporaryDirectory(dir=".") as temp:
             root = Path(temp)
             (root / "test.lib").write_bytes(b"!<arch>\nCLIENT libcurl 8.21.0")
             entry = {"path": "test.lib", "sha256": archives.digest(root / "test.lib"),

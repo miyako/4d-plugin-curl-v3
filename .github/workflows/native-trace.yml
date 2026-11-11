@@ -124,13 +124,16 @@ jobs:
       - name: Snapshot repository candidate hashes before link
         shell: python
         run: |
-          import hashlib, json
+          import hashlib, json, os, subprocess, sys
           from pathlib import Path
           paths = sorted([*Path("a").rglob("*.a"), *Path("lib/64").rglob("*.lib")])
           Path("native-trace").mkdir(exist_ok=True)
           Path("native-trace/candidates.json").write_text(json.dumps([
               {"path": p.as_posix(), "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
               for p in paths], indent=2))
+          subprocess.run([sys.executable, "build/sbom/generate.py", "sources",
+              "--target", "macos-universal" if os.environ["RUNNER_OS"] == "macOS" else "windows-x86_64",
+              "--output", "native-trace/embedded-sources.json"], check=True)
       - name: Build actual plugin unsigned macOS and capture per-architecture maps
         if: runner.os == 'macOS'
         shell: bash
@@ -190,6 +193,8 @@ jobs:
               "--binary", "test/Plugins/cURL.bundle/Contents/" + (
                   "MacOS/cURL" if mac else "Windows64/cURL.4DX"),
               "--manifest", "build/sbom/native-archives.json",
+              "--embedded-sources",
+              "--embedded-source-snapshot", "native-trace/embedded-sources.json",
               "--brotli-provenance", "brotli-provenance.json",
               "--openssl-provenance", "openssl-provenance.json",
               "--output", "native-trace/build-evidence.json",
@@ -284,11 +289,26 @@ jobs:
           for path in Path("sbom").glob("*.inventory.json"):
               inventory = json.loads(path.read_text())
               for target in inventory["targets"]:
+                  coverage = target["selectedArchiveCoverage"]
+                  if coverage["uncoveredArchives"] or coverage["namedPackageArchives"] != coverage["selectedRepositoryArchives"]:
+                      raise RuntimeError(f"{target['id']}: selected archive/package coverage regressed")
+                  print(f"{path.name}: {target['id']}: {coverage}")
                   packages = {p["name"]: p for p in target["dependencies"]}
                   for name in ("Brotli", "OpenSSL"):
                       package = packages[name]
                       if not package.get("selectedArchives") or not package.get("license") or not package.get("purl"):
                           raise RuntimeError(f"{target['id']}: missing usable source identity for {name}")
+                  expected = {"libiconv": "1.18" if target["id"].startswith("windows") else "1.16",
+                              "nghttp2": "1.70.0"}
+                  if target["id"].startswith("macos"):
+                      expected["nghttp3"] = "1.15.0"
+                  elif "nghttp3" in packages:
+                      raise RuntimeError("nghttp3 must not be inferred on Windows")
+                  for name, version in expected.items():
+                      if packages[name].get("version") != version or not packages[name].get("selectedArchives"):
+                          raise RuntimeError(f"{target['id']}: incorrect selected {name} identity")
+                  if coverage["unknownVersionPackages"] != ["libmodman", "libproxy"]:
+                      raise RuntimeError("Unknown-version selected packages changed; review evidence explicitly")
                   if target["id"] == "windows-x86_64":
                       zlib = packages["zlib"]
                       selected = {a["candidatePath"] for a in zlib.get("selectedArchives", [])}

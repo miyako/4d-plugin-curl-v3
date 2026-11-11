@@ -170,6 +170,7 @@ def collect(args):
                ".github/workflows/build-brotli.yml"]
     record = {
         "target": args.target,
+        "coveragePolicy": "all-selected-repository-archives-named",
         "binarySha256": sha256(args.binary.read_bytes()),
         "sourceCommit": git(root, "rev-parse", "HEAD"),
         "evidenceType": "build-derived-declarations-not-linker-map",
@@ -183,6 +184,14 @@ def collect(args):
         "tooling": [{"path": p.name, "sha256": sha256(p.read_bytes())}
                     for p in sorted(Path(__file__).parent.glob("*.py"))],
     }
+    if getattr(args, "embedded_sources", False):
+        import embedded
+        record["embeddedSourceEvidence"] = embedded.collect(root, args.target)
+        snapshot = getattr(args, "embedded_source_snapshot", None)
+        if not snapshot:
+            raise ValueError("Embedded source capture requires a pre-build snapshot")
+        if json.loads(snapshot.read_text(encoding="utf-8")) != record["embeddedSourceEvidence"]:
+            raise ValueError("Embedded source inputs changed since the pre-build snapshot")
     rebuilt = []
     for provenance_path in [args.brotli_provenance, getattr(args, "openssl_provenance", None)]:
         if not provenance_path:
@@ -373,13 +382,13 @@ def build_dependencies(record, target, observed):
                 raise ValueError(f"{target}: selected archive disagrees with manifest: {path}")
             identities = entry.get("targets", {}).get(target, {}).get("identities", [])
         for identity in identities:
-            name, version = identity["name"], identity["version"]
+            name, version = identity["name"], identity.get("version")
             previous = dependencies.get(name)
-            if previous and previous["version"] != version:
+            if previous and previous.get("version") and version and previous["version"] != version:
                 raise ValueError(f"{target}: binary/build version disagreement for {name}")
             if not previous or "selectedArchives" not in previous:
                 dependencies[name] = {
-                    "name": name, "version": version,
+                    "name": name, "version": version or (previous or {}).get("version"),
                     **({"binaryObservation": previous} if previous else {}),
                     "evidenceType": "hash-bound-selected-archive-identity",
                     "selectedArchives": [],
@@ -387,7 +396,9 @@ def build_dependencies(record, target, observed):
                     "incorporation": "linker-selected-members; retained bytes not established",
                 }
             dependency = dependencies[name]
-            for key in ("license", "purl", "origin"):
+            if version and not dependency.get("version"):
+                dependency["version"] = version
+            for key in ("license", "licenseEvidence", "purl", "origin"):
                 value = identity.get(key)
                 if value:
                     if dependency.get(key) and dependency[key] != value:
@@ -426,6 +437,27 @@ def inventory(path, version, evidence):
                 raise ValueError(f"{target}: build evidence does not match packaged binary")
             item["buildEvidence"] = record
             item["dependencies"] = build_dependencies(record, target, item["dependencies"])
+            if "embeddedSourceEvidence" in record:
+                import embedded
+                source_record = record["embeddedSourceEvidence"]
+                embedded.verify_record(source_record)
+                if source_record["target"] != key:
+                    raise ValueError(f"{target}: embedded source evidence target mismatch")
+                names = {dep["name"] for dep in item["dependencies"]}
+                for component in source_record["components"]:
+                    if component["scope"] != "compiled-source":
+                        continue
+                    if component["name"] in names:
+                        raise ValueError(f"{target}: duplicate embedded/native identity")
+                    names.add(component["name"])
+                    item["dependencies"].append({
+                        **component, "evidenceType": "build-derived-embedded-source",
+                        "incorporation": "declared compiled source input; retained bytes not established",
+                    })
+                item["dependencies"].sort(key=lambda dep: dep["name"])
+            if record.get("coveragePolicy") == "all-selected-repository-archives-named":
+                from coverage import require_selected_coverage
+                item["selectedArchiveCoverage"] = require_selected_coverage(item)
         targets.append(item)
     return {
         "inventoryVersion": 1, "name": "cURL", "version": version,
@@ -446,13 +478,17 @@ def component_rows(inv):
                                       sort_keys=True),
         }
         for dep in target["dependencies"]:
+            name_id = dep["name"]
+            if not re.fullmatch(r"[A-Za-z0-9.-]+", name_id):
+                name_id = re.sub(r"[^A-Za-z0-9.-]", "-", name_id) + "-" + sha256(dep["name"].encode())[:8]
             yield {
-                "id": ident + "-" + dep["name"], "name": dep["name"],
+                "id": ident + "-" + name_id, "name": dep["name"],
                 "target": ident,
-                "version": dep["version"], "kind": "library",
+                "version": dep.get("version"), "kind": "library",
                 "description": json.dumps({"target": ident, **dep}, sort_keys=True),
-                **{key: dep[key] for key in ("license", "purl", "origin") if dep.get(key)},
+                **{key: dep[key] for key in ("license", "licenseEvidence", "purl", "origin") if dep.get(key)},
                 "buildSupported": bool(dep.get("selectedArchives")),
+                "sourceSupported": dep.get("evidenceType") == "build-derived-embedded-source",
             }
 
 
@@ -468,12 +504,20 @@ def cyclonedx(inv):
     for row in component_rows(inv):
         item = {
             "bom-ref": row["id"], "type": row["kind"], "name": row["name"],
-            "version": row["version"], "description": row["description"],
+            "description": row["description"],
             "properties": [{"name": "release:target", "value": row["target"]}],
         }
+        if row.get("version"):
+            item["version"] = row["version"]
         if "sha256" in row:
             item["hashes"] = [{"alg": "SHA-256", "content": row["sha256"]}]
-        if row.get("license"):
+        if row.get("licenseEvidence"):
+            evidence = row["licenseEvidence"]
+            item["licenses"] = [{"license": {
+                "name": evidence["name"],
+                "text": {"contentType": "text/plain", "content": evidence["text"]},
+            }}]
+        elif row.get("license"):
             item["licenses"] = [{"license": {"id": row["license"]}}]
         if row.get("purl"):
             item["purl"] = row["purl"]
@@ -500,11 +544,13 @@ def cyclonedx(inv):
 def spdx(inv):
     def package(ident, name, version, description, digest=None):
         item = {
-            "SPDXID": "SPDXRef-" + ident, "name": name, "versionInfo": version,
+            "SPDXID": "SPDXRef-" + ident, "name": name,
             "downloadLocation": "NOASSERTION", "filesAnalyzed": False,
             "licenseConcluded": "NOASSERTION", "licenseDeclared": "NOASSERTION",
             "copyrightText": "NOASSERTION", "description": description,
         }
+        if version:
+            item["versionInfo"] = version
         if digest:
             item["checksums"] = [{"algorithm": "SHA256", "checksumValue": digest}]
         return item
@@ -518,7 +564,9 @@ def spdx(inv):
     for row in component_rows(inv):
         item = package(row["id"], row["name"], row["version"],
                        row["description"], row.get("sha256"))
-        if row.get("license"):
+        if row.get("licenseEvidence"):
+            item["licenseDeclared"] = row["licenseEvidence"]["id"]
+        elif row.get("license"):
             item["licenseDeclared"] = row["license"]
         if row.get("origin"):
             item["homepage"] = row["origin"]
@@ -532,9 +580,11 @@ def spdx(inv):
             "relatedSpdxElement": "SPDXRef-" + row["id"],
             "comment": ("Build-supported archive member selection, not exact retained bytes or a transitive graph."
                         if row.get("buildSupported") else
+                        "Build-derived compiled source input, not a runtime dependency or exact retained bytes."
+                        if row.get("sourceSupported") else
                         "Scoped binary slice or identifying-string observation, not a dependency edge."),
         })
-    return {
+    result = {
         "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT", "name": inv["artifact"]["name"],
         "documentNamespace": REPOSITORY + "/sbom/" + str(uuid.uuid4()),
@@ -542,6 +592,18 @@ def spdx(inv):
         "comment": inv["limitations"], "packages": packages,
         "relationships": relations,
     }
+    extracted = {}
+    for row in component_rows(inv):
+        if row.get("licenseEvidence"):
+            evidence = row["licenseEvidence"]
+            entry = {"licenseId": evidence["id"], "name": evidence["name"],
+                     "extractedText": evidence["text"]}
+            if entry["licenseId"] in extracted and extracted[entry["licenseId"]] != entry:
+                raise ValueError("Conflicting extracted license text")
+            extracted[entry["licenseId"]] = entry
+    if extracted:
+        result["hasExtractedLicensingInfos"] = [extracted[key] for key in sorted(extracted)]
+    return result
 
 
 def main():
@@ -557,6 +619,13 @@ def main():
     inputs.add_argument("--manifest", type=Path)
     inputs.add_argument("--link-map", action="append", default=[])
     inputs.add_argument("--link-log", type=Path)
+    inputs.add_argument("--embedded-sources", action="store_true",
+                        help="Capture actual checked-out third-party source inputs on the build runner")
+    inputs.add_argument("--embedded-source-snapshot", type=Path)
+    sources = commands.add_parser("sources", help="Snapshot third-party source inputs before compilation")
+    sources.add_argument("--root", type=Path, default=Path("."))
+    sources.add_argument("--target", choices=["macos-universal", "windows-x86_64"], required=True)
+    sources.add_argument("--output", type=Path, required=True)
     brotli = commands.add_parser("brotli", help="Record freshly built Brotli source/archive evidence")
     brotli.add_argument("--source", type=Path, required=True)
     brotli.add_argument("--vendor", type=Path, required=True)
@@ -566,6 +635,10 @@ def main():
     generate.add_argument("--evidence", type=Path, action="append", default=[])
     generate.add_argument("artifacts", type=Path, nargs="+")
     args = parser.parse_args()
+    if args.command == "sources":
+        import embedded
+        write_json(args.output, embedded.collect(args.root.resolve(), args.target))
+        return
     if args.command == "brotli":
         brotli_provenance(args)
         return
