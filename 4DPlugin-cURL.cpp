@@ -10,6 +10,13 @@
 
 #include "4DPlugin-cURL.h"
 
+#include <cstdlib>
+#include <cstring>
+#include <istream>
+#include <sstream>
+#include <streambuf>
+#include <vector>
+
 std::mutex mutexPf;
 
 pxProxyFactory *pf = NULL;

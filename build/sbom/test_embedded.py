@@ -2,9 +2,11 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import embedded
 
@@ -20,7 +22,7 @@ class EmbeddedTests(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
         paths = {*embedded.HASHES, *embedded.WITNESSES,
-                 "cURL.vcxproj", "cURL.xcodeproj/project.pbxproj"}
+                 "cURL.vcxproj", "cURL.xcodeproj/project.pbxproj", embedded.PIN_PATH}
         for name in paths:
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -128,7 +130,7 @@ class EmbeddedTests(unittest.TestCase):
         for target in embedded.TARGETS:
             with self.subTest(target=target):
                 record = self.collect(target)
-                self.assertEqual(len(record["components"]), 6)
+                self.assertEqual(len(record["components"]), 5)
                 self.assertEqual(len(record["declarations"]["translationUnits"]), 8)
                 self.assertEqual(len(record["declarations"]["headers"]), 13)
                 self.assertEqual(
@@ -163,11 +165,11 @@ class EmbeddedTests(unittest.TestCase):
         self.assertNotIn("Keisuke", sdk["licenseText"]["text"])
         self.assertIn("LICENSE.md", sdk["licenseText"]["url"])
         for component in components.values():
-            self.assertNotIn("purl", component)
-            self.assertNotIn("sourceCommit", component)
             self.assertNotIn("dependencies", component)
-            if component is not ftp:
+            if component not in (ftp, sdk):
                 self.assertNotIn("version", component)
+                self.assertNotIn("purl", component)
+                self.assertNotIn("sourceCommit", component)
             evidence = component.get("licenseText", component.get("licenseEvidence"))
             if evidence:
                 self.assertEqual(evidence["sha256"],
@@ -176,13 +178,11 @@ class EmbeddedTests(unittest.TestCase):
                      "embedded-utf-path-helper"):
             self.assertNotIn("license", components[name])
             self.assertNotIn("licenseEvidence", components[name])
-        jsoncpp = components["interface-jsoncpp"]
-        self.assertEqual(jsoncpp["kind"], "build-interface")
-        self.assertEqual(jsoncpp["scope"], "sdk-interface")
+            self.assertEqual(components[name]["scope"], "first-party-product-source")
+        self.assertNotIn("interface-jsoncpp", components)
         self.assertEqual(sdk["scope"], "compiled-source")
-        self.assertTrue(all(f["role"] == "header-interface"
-                            for f in jsoncpp["sourceFiles"]))
-        self.assertIn("numeric patch 3", jsoncpp["limitations"][0])
+        self.assertEqual(sdk["sourceCommit"], embedded.SDK_COMMIT)
+        self.assertEqual(sdk["version"], embedded.SDK_COMMIT)
 
     def test_sdk_interfaces_do_not_become_runtime_components(self):
         win, mac = [self.collect(t) for t in embedded.TARGETS]
@@ -281,7 +281,7 @@ class EmbeddedTests(unittest.TestCase):
                 project.write_bytes(original)
 
     def test_missing_include_witness_is_not_a_valid_build_interface(self):
-        self.edit("4DPlugin-cURL.h", '#include "json/json.h"', '// no JsonCpp include')
+        self.edit("4DPlugin-cURL.h", '#include "4DPlugin-JSON.h"', '// no native JSON include')
         with self.assertRaisesRegex(ValueError, "Missing reviewed plugin include"):
             self.collect()
 
@@ -304,8 +304,8 @@ class EmbeddedTests(unittest.TestCase):
             lambda r: r["components"][1].update(version="14", purl="pkg:generic/4d@14"),
             lambda r: r["components"][2].update(license="MIT"),
             lambda r: r["components"][3].update(license="MIT"),
-            lambda r: r["components"][5].update(kind="compiled-source", version="1.9.4"),
-            lambda r: r["components"][5].update(scope="compiled-source"),
+            lambda r: r["components"][2].update(scope="compiled-source"),
+            lambda r: r["components"][1].update(sourceCommit="f" * 40),
             lambda r: r["declarations"]["translationUnits"].append("unknown.c"),
             lambda r: r["declarations"].update(includeDirectories=[]),
             lambda r: r.update(declarations=None),
@@ -313,7 +313,7 @@ class EmbeddedTests(unittest.TestCase):
             lambda r: r["sourceWitnesses"][0].update(path="/absolute.c"),
             lambda r: r["sourceWitnesses"][0].update(sha256="f" * 63),
             lambda r: r.update(schemaVersion=True),
-            lambda r: r.update(schemaVersion=2),
+            lambda r: r.update(schemaVersion=3),
             lambda r: r.update(target="linux"),
             lambda r: r.update(evidenceType="binary-detection"),
             lambda r: r.update(limitations=[]),
@@ -333,6 +333,68 @@ class EmbeddedTests(unittest.TestCase):
         evidence["sha256"] = embedded.sha256(evidence["text"].encode())
         with self.assertRaisesRegex(ValueError, "identity/hash/license metadata"):
             embedded.validate(record)
+
+    def test_sdk_pin_and_product_commit_are_validated_offline(self):
+        record = self.collect()
+        self.assertEqual(record["schemaVersion"], 2)
+        self.assertEqual(record["sdkPin"], embedded.SDK_PIN)
+        self.assertRegex(record["productSource"]["commit"], r"^[a-f0-9]{40}$")
+        for mutate in (
+            lambda r: r["sdkPin"].update(commit="f" * 40),
+            lambda r: r["productSource"].update(commit="master"),
+            lambda r: r["productSource"].update(repository="https://example.invalid"),
+        ):
+            changed = copy.deepcopy(record)
+            mutate(changed)
+            with self.assertRaises(ValueError):
+                embedded.verify_record(changed)
+        path = self.root / embedded.PIN_PATH
+        path.write_text("{}")
+        with self.assertRaisesRegex(ValueError, "SDK pin"):
+            self.collect()
+
+    def test_obsolete_json_inputs_absent_and_native_json_implementation_retained(self):
+        for name in ("include/json", "include/libjson", "a/libjsoncpp.a",
+                     "lib/64/jsoncpp", "lib/64/libjson"):
+            self.assertFalse((ROOT / name).exists(), name)
+        for name in ("4DPlugin-cURL.h", "cURL.vcxproj", "cURL.xcodeproj/project.pbxproj"):
+            text = (ROOT / name).read_text()
+            self.assertNotRegex(text.lower(), r"jsoncpp|libjson|json/json\.h")
+        manifest = json.loads((ROOT / "build/sbom/native-archives.json").read_text())
+        self.assertFalse(any(re.search(r"jsoncpp|libjson", row["path"], re.I)
+                             for row in manifest["archives"]))
+        text = (ROOT / "support/4DPlugin-JSON.cpp").read_text()
+        self.assertIn("PA_ObjectRef", text)
+        self.assertNotIn("Json::", text)
+
+    def test_saved_schema_one_records_survive_sdk_and_json_removal(self):
+        legacy = embedded.legacy
+        sources, headers = legacy._expected_lists("windows-x86_64")
+        record = {
+            "schemaVersion": 1, "target": "windows-x86_64",
+            "evidenceType": legacy.EVIDENCE,
+            "configuration": [{"path": "cURL.vcxproj",
+                               "sha256": "32f2920adbf29abc189511bb720cd3bc86060f264984634be363766d15cb69e6"}],
+            "declarations": {"translationUnits": sources, "headers": headers,
+                             "includeDirectories": ["support", "include\\libjson", "include\\curl",
+                                                    "include", "4D Plugin API\\Classes",
+                                                    "4D Plugin API", "%(AdditionalIncludeDirectories)"]},
+            "sourceWitnesses": [
+                {"path": "4DPlugin-cURL.cpp",
+                 "sha256": "91a7e090a719aa592a798d1a05994c2c93caa3fd6bed3f55fcd9a00d63ae118f"},
+                {"path": "4DPlugin-cURL.h",
+                 "sha256": "9dfbbde959e78a79b353218e9351b12709009abdf0cecf7bf37c976ac8d79e8d"},
+            ],
+            "components": legacy._components("windows-x86_64"),
+            "limitations": list(legacy.LIMITATIONS),
+        }
+        with patch.object(Path, "read_bytes", side_effect=AssertionError("Offline validation read checkout")):
+            self.assertEqual(embedded.verify_record(record), record)
+        with self.assertRaises(ValueError):
+            embedded.verify_record(record, self.root)
+        record["components"][1]["sourceFiles"][0]["sha256"] = "0" * 64
+        with self.assertRaises(ValueError):
+            embedded.verify_record(record)
 
     def test_target_mismatch_unknown_target_and_malformed_record(self):
         record = self.collect()

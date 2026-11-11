@@ -19,9 +19,9 @@
 #include <time.h>
 #include <mutex>
 #include <chrono>
+#include <string>
 
 #include "curl/curl.h"
-#include "json/json.h"
 #include "proxy.h"
 
 #include "iconv.h"

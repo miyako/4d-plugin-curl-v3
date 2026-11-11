@@ -443,6 +443,12 @@ def inventory(path, version, evidence):
                 embedded.verify_record(source_record)
                 if source_record["target"] != key:
                     raise ValueError(f"{target}: embedded source evidence target mismatch")
+                if source_record["schemaVersion"] == 2:
+                    item["productSourceInventory"] = {
+                        **source_record["productSource"],
+                        "components": [component for component in source_record["components"]
+                                       if component["scope"] == "first-party-product-source"],
+                    }
                 names = {dep["name"] for dep in item["dependencies"]}
                 for component in source_record["components"]:
                     if component["scope"] != "compiled-source":

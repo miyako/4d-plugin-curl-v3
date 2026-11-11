@@ -428,17 +428,18 @@ void			PA_SetPointerValue           ( PA_Pointer pointer, PA_Variable variable )
 // a plugin command
 // -----------------------------------------
 
-void PA_ReturnShort    ( PA_PluginParameters params, short value );
-void PA_ReturnLong     ( PA_PluginParameters params, PA_long32 value );
-void PA_ReturnDouble   ( PA_PluginParameters params, double value );
-void PA_ReturnString   ( PA_PluginParameters params, PA_Unichar* string );
-void PA_ReturnBlob     ( PA_PluginParameters params, void* blob, PA_long32 len );
-void PA_ReturnPicture  ( PA_PluginParameters params, PA_Picture picture );
-void PA_ReturnDate     ( PA_PluginParameters params, short day, short month, short year );
-void PA_ReturnTime     ( PA_PluginParameters params, PA_long32 value );
+void PA_ReturnShort         ( PA_PluginParameters params, short value );
+void PA_ReturnLong          ( PA_PluginParameters params, PA_long32 value );
+void PA_ReturnDouble        ( PA_PluginParameters params, double value );
+void PA_ReturnString        ( PA_PluginParameters params, PA_Unichar* string );
+void PA_ReturnBlob          ( PA_PluginParameters params, void* blob, PA_long32 len );
+void PA_ReturnPicture       ( PA_PluginParameters params, PA_Picture picture );
+void PA_ReturnDate          ( PA_PluginParameters params, short day, short month, short year );
+void PA_ReturnTime          ( PA_PluginParameters params, PA_long32 value );
 void PA_ReturnObject		( PA_PluginParameters params, PA_ObjectRef object);
 void PA_ReturnCollection	( PA_PluginParameters params, PA_CollectionRef object);
 void PA_ReturnBlobHandle    ( PA_PluginParameters params, PA_Handle hblob );
+void PA_ReturnVariable      ( PA_PluginParameters params, PA_Variable* variable);
 
 
 // -----------------------------------------------------

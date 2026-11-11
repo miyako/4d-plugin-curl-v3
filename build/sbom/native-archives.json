@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "repository": "https://github.com/miyako/4d-plugin-curl-v3",
-  "reviewedSourceCommit": "6344cda2eff97ab5d05a0b333a7ea1222e5a4c9c",
+  "reviewedSourceCommit": "0a4dd6f2f34f5cc13e782dbcec6fa47de9ad20cc",
   "archives": [
     {
       "path": "a/libbrotlicommon.a",
@@ -210,21 +210,6 @@
     {
       "path": "a/libidn2.a",
       "sha256": "85bf8810a428cc9a0a1766f05be839a1075370c464cbb9d6e288722d0d00a86c",
-      "targets": {
-        "macos-arm64": {
-          "identities": [],
-          "targetEvidence": "universal-archive-header"
-        },
-        "macos-x86_64": {
-          "identities": [],
-          "targetEvidence": "universal-archive-header"
-        }
-      },
-      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
-    },
-    {
-      "path": "a/libjsoncpp.a",
-      "sha256": "6d4e5111f8fbcd7e5f767d9cf413b5ba53bcb2bf48a46cd62e4df9f72956468c",
       "targets": {
         "macos-arm64": {
           "identities": [],
@@ -951,28 +936,6 @@
       "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
     },
     {
-      "path": "lib/64/jsoncpp/debug/jsoncpp.lib",
-      "sha256": "2174493bc1dd41cd538bc36a303260b809b19e5d1291f2d80c3c5c3f0499a17e",
-      "targets": {
-        "windows-x86_64": {
-          "identities": [],
-          "targetEvidence": "repository-directory-intent-not-member-audit"
-        }
-      },
-      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
-    },
-    {
-      "path": "lib/64/jsoncpp/jsoncpp.lib",
-      "sha256": "586f3b05c24428331058eee4b35b145ab2b8eda01d6415a7570e99daa720319f",
-      "targets": {
-        "windows-x86_64": {
-          "identities": [],
-          "targetEvidence": "repository-directory-intent-not-member-audit"
-        }
-      },
-      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
-    },
-    {
       "path": "lib/64/libcurl-d.lib",
       "sha256": "4fba6ff94880f1dc156fc7df929233016e18e69df1221f4f9f18ceb87e2b8bdb",
       "targets": {
@@ -1019,28 +982,6 @@
     {
       "path": "lib/64/libidn2.lib",
       "sha256": "60986a90ed441a6bcb4032a7f938bfed4f7c67d8c56068b5bc36d1f90b6bbc8e",
-      "targets": {
-        "windows-x86_64": {
-          "identities": [],
-          "targetEvidence": "repository-directory-intent-not-member-audit"
-        }
-      },
-      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
-    },
-    {
-      "path": "lib/64/libjson/debug/libjson.lib",
-      "sha256": "60f64b19bc12da3569fcebb6b7bc13faa95f4271ed229d770eadb2b2336cb090",
-      "targets": {
-        "windows-x86_64": {
-          "identities": [],
-          "targetEvidence": "repository-directory-intent-not-member-audit"
-        }
-      },
-      "limitations": "Identifying strings and reviewed object evidence establish archive observations, not acquisition provenance or live linked code. Origin/license unknown unless separately recorded."
-    },
-    {
-      "path": "lib/64/libjson/libjson.lib",
-      "sha256": "22f1f793dcba71b484767772e17f90eef0eaf70bb5b67fc9da35e383a7db05f0",
       "targets": {
         "windows-x86_64": {
           "identities": [],
