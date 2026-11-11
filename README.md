@@ -29,6 +29,14 @@ The cURL plugin wraps [libcurl](https://curl.se/) to give 4D methods direct acce
 
 **Platforms:** macOS and Windows.
 
+### Release SBOM sidecars (proof of concept)
+
+New release builds generate artifact-bound CycloneDX JSON and SPDX JSON
+sidecars for both the ZIP and DMG, using one partial evidence inventory with
+separate macOS arm64, macOS x86_64 and Windows x64 observations.
+The read-only **Release SBOM proof of concept** workflow can analyze an existing
+release without republishing it. See [usage, evidence and coverage limits](build/sbom/README.md).
+
 ### Brotli security update
 
 Release **v4.9.6** updates the statically linked Brotli decoder to **1.2.1**
