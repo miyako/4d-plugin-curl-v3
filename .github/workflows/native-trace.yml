@@ -292,6 +292,9 @@ jobs:
                   coverage = target["selectedArchiveCoverage"]
                   if coverage["uncoveredArchives"] or coverage["namedPackageArchives"] != coverage["selectedRepositoryArchives"]:
                       raise RuntimeError(f"{target['id']}: selected archive/package coverage regressed")
+                  expected_selected, expected_versioned = (11, 9) if target["id"].startswith("windows") else (12, 10)
+                  if (coverage["selectedRepositoryArchives"], coverage["versionedPackageArchives"]) != (expected_selected, expected_versioned):
+                      raise RuntimeError(f"{target['id']}: actual selected/versioned archive counts changed")
                   print(f"{path.name}: {target['id']}: {coverage}")
                   packages = {p["name"]: p for p in target["dependencies"]}
                   for name in ("Brotli", "OpenSSL"):
@@ -309,18 +312,23 @@ jobs:
                           raise RuntimeError(f"{target['id']}: incorrect selected {name} identity")
                   if coverage["unknownVersionPackages"] != ["libmodman", "libproxy"]:
                       raise RuntimeError("Unknown-version selected packages changed; review evidence explicitly")
-                  expected_sources = {"ftpparse", "4D Plugin SDK", "4D plugin C++ wrappers",
-                                      "4DPlugin-JSON helper", "ufopen UTF-8 path helper"}
+                  expected_sources = {"ftpparse", "4D Plugin SDK"}
                   actual_sources = {p["name"] for p in target["dependencies"]
                                     if p.get("evidenceType") == "build-derived-embedded-source"}
                   if actual_sources != expected_sources:
                       raise RuntimeError(f"{target['id']}: embedded compiled-source coverage changed")
                   if packages["ftpparse"].get("license") != "LicenseRef-ftpparse-public-domain":
                       raise RuntimeError("ftpparse public-domain statement must not be relabeled")
-                  interfaces = {p["name"] for p in target["buildEvidence"]["embeddedSourceEvidence"]["components"]
-                                if p["scope"] == "sdk-interface"}
-                  if "JsonCpp header interface" not in interfaces or "JsonCpp header interface" in packages:
-                      raise RuntimeError("JsonCpp header interface must remain explicitly interface-only")
+                  source = target["buildEvidence"]["embeddedSourceEvidence"]
+                  first_party = {p["name"] for p in source["components"]
+                                 if p["scope"] == "first-party-product-source"}
+                  if first_party != {"4D plugin C++ wrappers", "4DPlugin-JSON helper", "ufopen UTF-8 path helper"}:
+                      raise RuntimeError("First-party product source inventory changed")
+                  if first_party.intersection(packages) or any("JsonCpp" in p for p in packages):
+                      raise RuntimeError("Product helpers or obsolete JsonCpp promoted to dependencies")
+                  sdk = packages["4D Plugin SDK"]
+                  if sdk.get("sourceCommit") != "ad7944bc7a13d93db8097c4c8ff55ba2f6e36f86" or not sdk.get("purl"):
+                      raise RuntimeError("Missing immutable SDK source identity")
                   if target["id"] == "windows-x86_64":
                       zlib = packages["zlib"]
                       selected = {a["candidatePath"] for a in zlib.get("selectedArchives", [])}

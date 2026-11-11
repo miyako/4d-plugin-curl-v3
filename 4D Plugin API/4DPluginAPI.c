@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if __APPLE__
+#if VERSIONMAC
 #include <CoreGraphics/CoreGraphics.h>
 #endif
 
@@ -507,7 +507,7 @@ PA_Picture PA_DuplicatePicture( PA_Picture picture, char retainOnly )
 PA_ObjectRef PA_CreateObject()
 {
 	PA_ulong32 version = PA_Get4DVersion() & 0x0000FFFF;
-	PA_Variable params[2], result;
+	PA_Variable params[2] = {0}, result;
 	PA_ObjectRef object = NULL;
 	PA_Unistring string;
 	PA_Unichar json[] = {'{','}',0};
@@ -553,7 +553,7 @@ void PA_DisposeCollection(PA_CollectionRef collection)
 
 PA_ObjectRef PA_DuplicateObject( PA_ObjectRef object )
 {
-	PA_Variable	params[1], result;
+	PA_Variable	params[1] = {0}, result;
 	
 	if( object == NULL )
 		return NULL;
@@ -669,7 +669,7 @@ void PA_SetObjectProperty( PA_ObjectRef object, PA_Unistring* key, PA_Variable v
 
 void PA_RemoveObjectProperty( PA_ObjectRef object, PA_Unistring* key )
 {
-	PA_Variable params[2];
+	PA_Variable params[2] = {0};
 	
 	PA_SetObjectVariable( &params[0], object );
 	PA_SetStringVariable( &params[1], key );
@@ -680,7 +680,7 @@ void PA_RemoveObjectProperty( PA_ObjectRef object, PA_Unistring* key )
 
 char PA_HasObjectProperty( PA_ObjectRef object, PA_Unistring* key )
 {
-	PA_Variable params[2], result;
+	PA_Variable params[2] = {0}, result;
 	
 	PA_SetObjectVariable( &params[0], object );
 	PA_SetStringVariable( &params[1], key );
@@ -693,7 +693,7 @@ char PA_HasObjectProperty( PA_ObjectRef object, PA_Unistring* key )
 
 PA_VariableKind  PA_GetObjectPropertyType( PA_ObjectRef object, PA_Unistring* key )
 {
-	PA_Variable params[2], result;
+	PA_Variable params[2] = {0}, result;
 	PA_VariableKind type;
 	
 	PA_SetObjectVariable( &params[0], object );
@@ -711,7 +711,7 @@ PA_VariableKind  PA_GetObjectPropertyType( PA_ObjectRef object, PA_Unistring* ke
 
 PA_Variable PA_JsonParse( PA_Unistring* json, PA_VariableKind kind )
 {
-	PA_Variable params[2], result;
+	PA_Variable params[2] = {0}, result;
 	
 	if( kind == eVK_ArrayObject )
 	{
@@ -733,7 +733,7 @@ PA_Variable PA_JsonParse( PA_Unistring* json, PA_VariableKind kind )
 
 PA_Unistring PA_JsonStringify( PA_Variable value, char prettyPrint )
 {
-	PA_Variable params[2], result;
+	PA_Variable params[2] = {0}, result;
 	
 	params[0] = value;
 	PA_SetOperationVariable( &params[1], '*' );
@@ -2339,7 +2339,7 @@ PA_Variable PA_GetVariableParameter( PA_PluginParameters params, short index )
 
 PA_Pointer PA_GetPointerParameter( PA_PluginParameters params, short index )
 {
-	if ( PA_IsCompiled( 1) )
+	if ( PA_IsCompiled( 0) )
 	{
 		PA_Variable* ptvar;
 
@@ -2649,6 +2649,13 @@ void PA_ReturnCollection(PA_PluginParameters params, PA_CollectionRef collection
 	*(PA_CollectionRef*)params->fResult = collection;
 
 }
+
+void PA_ReturnVariable(PA_PluginParameters params, PA_Variable* variable)
+{
+	*((sLONG_PTR*)params->fResult) = (sLONG_PTR)variable;
+}
+
+
 // -----------------------------------------
 //
 // Get events in a plugin area

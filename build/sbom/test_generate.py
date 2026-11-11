@@ -251,6 +251,13 @@ class SchemaTests(unittest.TestCase):
             self.assertTrue(sources)
             self.assertTrue(all(dep["scope"] == "compiled-source" for dep in sources))
             self.assertTrue(all("selectedArchives" not in dep for dep in sources))
+            self.assertEqual({dep["name"] for dep in sources}, {"ftpparse", "4D Plugin SDK"})
+            self.assertEqual(len(target["productSourceInventory"]["components"]), 3)
+            self.assertFalse(any("helper" in row["name"] or "wrappers" in row["name"]
+                                 for row in generate.component_rows(inv)))
+            sdk = next(dep for dep in sources if dep["name"] == "4D Plugin SDK")
+            self.assertEqual(sdk["version"], embedded.SDK_COMMIT)
+            self.assertEqual(sdk["purl"], "pkg:github/4d/4D-Plugin-SDK@" + embedded.SDK_COMMIT)
         damaged = copy.deepcopy(records)
         damaged["macos-universal"]["embeddedSourceEvidence"]["target"] = "windows-x86_64"
         with self.assertRaises(ValueError):

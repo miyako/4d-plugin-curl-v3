@@ -149,14 +149,30 @@ invented runtime dependencies. SDK/header-only interfaces stay explicit in
 Unknown upstream revisions and unsupported licenses remain absent; the plugin
 version and root MIT license are never substituted.
 
-The compiled-source inventory covers ftpparse (its source-stated `20001223`
-revision and explicit public-domain statement), the 4D Plugin SDK implementation,
-4D C++ wrappers, the 4DPlugin-JSON helper and the ufopen UTF-8 path helper. The
-SDK's supported MIT declaration is source evidence, not the plugin's root MIT
-license. Other helper licenses/revisions remain unknown where unsupported.
-JsonCpp's vendored headers and supported MIT statement are recorded as an
-interface-only input; no JsonCpp implementation package or runtime dependency
-is inferred from those headers.
+Schema 2 separates two third-party compiled-source packages (ftpparse, with its
+source-stated `20001223` revision and explicit public-domain dedication, and the
+4D Plugin SDK) from first-party product source. The user-owned C++ Classes,
+4DPlugin-JSON native-object glue and ufopen helpers remain hashed build inputs
+bound to the product commit and binary, not independently versioned dependency
+packages. This classification does not invent licenses or erase existing notices.
+Frozen schema-1 interpretation remains available for saved earlier evidence;
+it never reads today's source tree to reconstruct a historical build.
+
+The SDK is vendored at commit `ad7944bc7a13d93db8097c4c8ff55ba2f6e36f86`,
+the latest master commit by committer date before the end of 2026-11-08 JST
+(`2026-11-08T14:59:59Z`). `sdk-pin.json` records upstream paths, exact before/after
+hashes and the SDK's own license. Its standard version and GitHub PURL identify
+the commit, not an invented release tag. Builds never fetch floating master.
+Only explicitly reviewed original/LF/CRLF source bytes are accepted.
+The sole local SDK patch preserves the existing eleven setter `fFiller = 0`
+assignments: product callers use those setters to initialize `PA_Variable`
+values. Both upstream and patched hashes are recorded; all other SDK bytes match
+the pin. The upstream fix initializes seven command-parameter arrays, avoiding
+the documented `OB Is defined` / `OB Copy` crashes.
+
+Obsolete JsonCpp headers, unused macOS/Windows release/debug archives and stale
+libjson project inputs are removed. Native 4D object JSON support remains in
+`support/4DPlugin-JSON.cpp/.h`; it does not depend on either removed library.
 
 The reader never loads the plugin, calls its initialization, or executes
 distributed code. ZIP members are read without extraction; DMGs are mounted
