@@ -11,19 +11,6 @@ import sdk_reviewed
 
 ROOT = Path(__file__).resolve().parents[2]
 SDK_SOURCE = "4D Plugin API/4DPluginAPI.c"
-FILLER_SETTERS = (
-    "PA_SetStringVariable",
-    "PA_SetBlobVariable",
-    "PA_SetBlobHandleVariable",
-    "PA_SetPictureVariable",
-    "PA_SetRealVariable",
-    "PA_SetLongintVariable",
-    "PA_SetTimeVariable",
-    "PA_SetDateVariable",
-    "PA_SetBooleanVariable",
-    "PA_SetObjectVariable",
-    "PA_SetCollectionVariable",
-)
 ZERO_INITIALIZERS = {
     "PA_CreateObject": 2,
     "PA_DuplicateObject": 1,
@@ -103,35 +90,18 @@ class SDKPinTests(unittest.TestCase):
                 )
                 self.assertRegex(body["body"], declaration)
 
-    def test_only_eleven_documented_filler_assignments_differ_from_upstream(self):
-        patches = self.pin["compatibility_patches"]
-        self.assertEqual(len(patches), 1)
-        self.assertEqual(patches[0]["path"], SDK_SOURCE)
+    def test_sdk_source_is_pristine_without_local_setter_patches(self):
+        self.assertEqual(self.pin["compatibility_patches"], [])
         source = canonical_bytes(SDK_SOURCE)
-        assignment = b"\tvariable->fFiller = 0;\n"
-        self.assertEqual(source.count(assignment), 11)
-        for function in FILLER_SETTERS:
-            with self.subTest(function=function):
-                self.assertIn(function, patches[0]["description"])
-                prefix = (
-                    rb"(?m)(^void " + function.encode()
-                    + rb"\([^\n]*\)\n\{\n\tvariable->fType = [^\n]+;\n)"
-                )
-                source, count = re.subn(
-                    prefix + re.escape(assignment), rb"\1", source
-                )
-                self.assertEqual(count, 1)
-        self.assertNotIn(assignment, source)
+        self.assertNotIn(b"variable->fFiller = 0;", source)
         upstream = self.files[SDK_SOURCE]
-        self.assertNotEqual(upstream["after_sha256"], upstream["upstream_sha256"])
+        self.assertEqual(upstream["after_sha256"], upstream["upstream_sha256"])
         self.assertEqual(sha256(source), upstream["upstream_sha256"])
         blob = b"blob " + str(len(source)).encode() + b"\0" + source
         self.assertEqual(hashlib.sha1(blob).hexdigest(), upstream["upstream_blob_sha"])
 
-    def test_all_other_source_and_license_bytes_match_upstream(self):
+    def test_all_nine_source_and_license_bytes_match_upstream(self):
         for path, row in self.files.items():
-            if path == SDK_SOURCE:
-                continue
             with self.subTest(path=path):
                 source = canonical_bytes(path)
                 self.assertEqual(sha256(source), row["upstream_sha256"])
@@ -159,6 +129,84 @@ class SDKPinTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.files[path]["before_sha256"], embedded_v1.HASHES[path])
         self.assertIsNone(self.files["4D Plugin API/LICENSE.md"]["before_sha256"])
+
+    def test_firstparty_command_arguments_are_initialized_before_use(self):
+        core = canonical_bytes("4DPlugin-cURL.cpp")
+        self.assertRegex(
+            core,
+            rb"PA_Variable params\[2\];\s*"
+            rb"params\[0\] = PA_CreateVariable\(eVK_Longint\);\s*"
+            rb"PA_SetLongintVariable\(&params\[0\], currentProcessNumber\);\s*"
+            rb"params\[1\] = PA_CreateVariable\(eVK_Real\);\s*"
+            rb"PA_SetRealVariable\(&params\[1\], 6\);[^\n]*\n\s*"
+            rb"PA_ExecuteCommandByID\(323 /\*DELAY_PROCESS\*/ , params, 2\);",
+        )
+        self.assertRegex(
+            core,
+            rb"PA_Variable params;\s*"
+            rb"bool isProcessDying = PA_GetBooleanVariable\(PA_ExecuteCommandByID"
+            rb"\(672/\* Process aborted \*/, &params, 0\)\);",
+        )
+        support = canonical_bytes("support/4DPlugin-JSON.cpp")
+        self.assertRegex(
+            support,
+            rb"PA_Variable\s+_params\[1\];\n"
+            rb"\s*_params\[0\] = PA_CreateVariable\(eVK_Object\);\n"
+            rb"\s*PA_SetObjectVariable\(&_params\[0\], PA_DuplicateObject\(obj\)\);",
+        )
+
+    def test_every_firstparty_setter_destination_has_reviewed_initialization(self):
+        paths = [ROOT / "4DPlugin-cURL.cpp"]
+        paths += sorted((ROOT / "support").rglob("*"))
+        paths += sorted((ROOT / "4D Plugin API/Classes").rglob("*"))
+        counts = {}
+        for path in paths:
+            if not path.is_file() or path.suffix not in (".cpp", ".h", ".c"):
+                continue
+            relative = path.relative_to(ROOT).as_posix()
+            source = canonical_bytes(relative)
+            for call in re.finditer(rb"\bPA_Set\w*Variable\s*\(\s*&([^,]+),", source):
+                counts[relative] = counts.get(relative, 0) + 1
+                destination = call[1].strip()
+                with self.subTest(path=relative, destination=destination, offset=call.start()):
+                    prefix = source[:call.start()].rsplit(b"\n}", 1)[-1]
+                    if destination == b"v":
+                        self.assertRegex(
+                            prefix, rb"\bPA_Variable v = PA_CreateVariable\(eVK_\w+\);"
+                        )
+                    elif destination in (b"params[0]", b"params[1]", b"_params[0]"):
+                        self.assertIn(
+                            destination + b" = PA_CreateVariable(", prefix
+                        )
+                    else:
+                        self.assertEqual(relative, "4DPlugin-cURL.cpp")
+                        self.assertIn(destination, (b"cbparams[0]", b"cbparams[2]"))
+                        self.assertRegex(prefix, rb"PA_Variable\s+cbparams\[4\];")
+        self.assertEqual(counts, {"4DPlugin-cURL.cpp": 11, "support/4DPlugin-JSON.cpp": 13})
+
+    def test_existing_callback_variants_and_host_copies_are_not_reset(self):
+        core = canonical_bytes("4DPlugin-cURL.cpp")
+        self.assertRegex(
+            core,
+            rb"if \(method_id\)\s*\{\s*"
+            rb"cbparams\[0\] = PA_CreateVariable\(eVK_Object\);\s*"
+            rb"cbparams\[1\] = PA_CreateVariable\(eVK_Unistring\);",
+        )
+        self.assertRegex(
+            core,
+            rb"if \(execute_callback_method\)\s*\{\s*"
+            rb"cbparams\[0\] = PA_CreateVariable\(eVK_Unistring\);\s*"
+            rb"cbparams\[1\] = PA_CreateVariable\(eVK_Boolean\);\s*"
+            rb"cbparams\[2\] = PA_CreateVariable\(eVK_Object\);\s*"
+            rb"cbparams\[3\] = PA_CreateVariable\(eVK_Unistring\);",
+        )
+        self.assertIn(b"PA_Variable statusCode = cbparams[1];", core)
+        self.assertNotRegex(core, rb"cbparams\[[0-3]\]\s*=\s*\{\s*\}")
+        self.assertNotRegex(core, rb"memset\s*\(\s*(?:&\s*)?cbparams\b")
+        arrays = canonical_bytes("4D Plugin API/Classes/ARRAY_TEXT.cpp")
+        self.assertEqual(
+            arrays.count(b"PA_Variable arr = *((PA_Variable*) pParams[index - 1]);"), 2
+        )
 
 
 if __name__ == "__main__":

@@ -164,11 +164,12 @@ the latest master commit by committer date before the end of 2026-11-08 JST
 hashes and the SDK's own license. Its standard version and GitHub PURL identify
 the commit, not an invented release tag. Builds never fetch floating master.
 Only explicitly reviewed original/LF/CRLF source bytes are accepted.
-The sole local SDK patch preserves the existing eleven setter `fFiller = 0`
-assignments: product callers use those setters to initialize `PA_Variable`
-values. Both upstream and patched hashes are recorded; all other SDK bytes match
-the pin. The upstream fix initializes seven command-parameter arrays, avoiding
-the documented `OB Is defined` / `OB Copy` crashes.
+All nine vendored SDK files match upstream exactly (or their explicitly reviewed
+checkout line endings), without local patches. First-party callers initialize
+their own `PA_Variable` values before using SDK setters rather than relying on
+the old locally modified setter behavior. The upstream fix initializes seven
+command-parameter arrays, avoiding the documented `OB Is defined` / `OB Copy`
+crashes.
 
 Obsolete JsonCpp headers, unused macOS/Windows release/debug archives and stale
 libjson project inputs are removed. Native 4D object JSON support remains in

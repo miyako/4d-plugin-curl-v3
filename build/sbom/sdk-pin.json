@@ -18,7 +18,7 @@
       "path": "4D Plugin API/4DPluginAPI.c",
       "upstream_path": "4D Plugin API/4DPluginAPI.c",
       "before_sha256": "5bac571c5c4cafd280fa7f23d775458a23701287e8735be27d4a2190002f4e3f",
-      "after_sha256": "f13b25d011db2285bc0b6284bb4c626ae645b5f35945dc7b6d8b922d44a7aad0",
+      "after_sha256": "91fae4e018fe7e63d56f2f0f6fe002ab46853a28380113735393bbe82fb783ab",
       "upstream_sha256": "91fae4e018fe7e63d56f2f0f6fe002ab46853a28380113735393bbe82fb783ab",
       "upstream_blob_sha": "01f07152c86e0b29eca1591b7e4a45515c1c436c"
     },
@@ -93,16 +93,14 @@
     "upstream_path": "LICENSE.md",
     "sha256": "3ec16157270f99f94e461cb5fb3da1ccd6486400829244f3b98860b94481f1d0"
   },
-  "compatibility_patches": [
-    {
-      "path": "4D Plugin API/4DPluginAPI.c",
-      "description": "Retain the pre-existing local fFiller = 0 assignments in PA_SetStringVariable, PA_SetBlobVariable, PA_SetBlobHandleVariable, PA_SetPictureVariable, PA_SetRealVariable, PA_SetLongintVariable, PA_SetTimeVariable, PA_SetDateVariable, PA_SetBooleanVariable, PA_SetObjectVariable and PA_SetCollectionVariable. These preserve initialized ABI filler bytes for local callers such as support/4DPlugin-JSON.cpp ob_stringify, which initializes an uninitialized PA_Variable through a setter. All other API bytes match the pinned upstream files."
-    }
-  ],
+  "compatibility_patches": [],
   "compatibility_review": [
     "Use upstream VERSIONMAC rather than the old local __APPLE__ CoreGraphics guard; Flags.h derives VERSIONMAC from __APPLE__ on the supported Apple target.",
     "Accept upstream zero-initialized object/JSON parameter arrays, PA_GetPointerParameter PA_IsCompiled(0) correction, and the added PA_ReturnVariable declaration/implementation. The plugin does not call PA_GetPointerParameter or PA_ReturnVariable.",
     "4DPluginAPI.def, Flags.h, PrivateTypes.h, PublicTypes.h and Readme.md were already byte-identical to this upstream commit and were refreshed without local changes.",
-    "Before removal, no first-party source used Json:: or libjson APIs; only the unused json/json.h include and build include/link references remained. Native support/4DPlugin-JSON.* uses 4D PA_* APIs and is preserved."
+    "Before removal, no first-party source used Json:: or libjson APIs; only the unused json/json.h include and build include/link references remained. Native support/4DPlugin-JSON.* uses 4D PA_* APIs and is preserved.",
+    "All nine vendored SDK files are pristine upstream bytes. Remove the eleven former local setter fFiller assignments; initialization belongs to first-party callers.",
+    "Reviewed every first-party PA_Set*Variable call in 4DPlugin-cURL.cpp, support and Classes. Every scalar setter destination is initialized by PA_CreateVariable; callback array elements are initialized by their existing branch-specific PA_CreateVariable assignments. Classes copies host variables and has no PA_Set*Variable calls; preserve those values.",
+    "No first-party source changes are necessary: ob_stringify already assigns PA_CreateVariable(eVK_Object) to _params[0] before its setter; delay params[2] assigns PA_CreateVariable to both elements; callback branches initialize every used argument with PA_CreateVariable. The lone params is passed with argument count zero, so it is not read. Preserve these existing assignments, callback variants and host-variable copies."
   ]
 }

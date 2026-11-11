@@ -55,11 +55,10 @@ def _components(target):
                 sourceCommit=SDK_COMMIT,
                 version=SDK_COMMIT,
                 purl="pkg:github/4d/4D-Plugin-SDK@" + SDK_COMMIT,
-                sourcePatches=copy.deepcopy(SDK_PIN["compatibility_patches"]),
                 limitations=[
                     "Exact upstream commit, not a release tag. The SDK's own MIT "
                     "license does not relicense local Classes or product helpers. "
-                    "The declared local compatibility patch is not pristine upstream bytes.",
+                    "All SDK source/license bytes match the pinned upstream snapshot.",
                 ],
             )
             component["licenseText"] = legacy._license(

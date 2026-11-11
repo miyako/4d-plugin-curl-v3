@@ -340,3 +340,10 @@ jobs:
           name: unsigned-native-sboms
           path: sbom/*.json
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-native-containers
+          path: |
+            unsigned-native.zip
+            unsigned-native.dmg
+          if-no-files-found: error

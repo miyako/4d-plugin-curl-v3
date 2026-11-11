@@ -20,7 +20,7 @@ SDK_PIN = {'schema_version': 1,
  'files': [{'path': '4D Plugin API/4DPluginAPI.c',
             'upstream_path': '4D Plugin API/4DPluginAPI.c',
             'before_sha256': '5bac571c5c4cafd280fa7f23d775458a23701287e8735be27d4a2190002f4e3f',
-            'after_sha256': 'f13b25d011db2285bc0b6284bb4c626ae645b5f35945dc7b6d8b922d44a7aad0',
+            'after_sha256': '91fae4e018fe7e63d56f2f0f6fe002ab46853a28380113735393bbe82fb783ab',
             'upstream_sha256': '91fae4e018fe7e63d56f2f0f6fe002ab46853a28380113735393bbe82fb783ab',
             'upstream_blob_sha': '01f07152c86e0b29eca1591b7e4a45515c1c436c'},
            {'path': '4D Plugin API/4DPluginAPI.def',
@@ -75,17 +75,7 @@ SDK_PIN = {'schema_version': 1,
              'path': '4D Plugin API/LICENSE.md',
              'upstream_path': 'LICENSE.md',
              'sha256': '3ec16157270f99f94e461cb5fb3da1ccd6486400829244f3b98860b94481f1d0'},
- 'compatibility_patches': [{'path': '4D Plugin API/4DPluginAPI.c',
-                            'description': 'Retain the pre-existing local fFiller = 0 assignments in '
-                                           'PA_SetStringVariable, PA_SetBlobVariable, '
-                                           'PA_SetBlobHandleVariable, PA_SetPictureVariable, '
-                                           'PA_SetRealVariable, PA_SetLongintVariable, PA_SetTimeVariable, '
-                                           'PA_SetDateVariable, PA_SetBooleanVariable, PA_SetObjectVariable '
-                                           'and PA_SetCollectionVariable. These preserve initialized ABI '
-                                           'filler bytes for local callers such as support/4DPlugin-JSON.cpp '
-                                           'ob_stringify, which initializes an uninitialized PA_Variable '
-                                           'through a setter. All other API bytes match the pinned upstream '
-                                           'files.'}],
+ 'compatibility_patches': [],
  'compatibility_review': ['Use upstream VERSIONMAC rather than the old local __APPLE__ CoreGraphics guard; '
                           'Flags.h derives VERSIONMAC from __APPLE__ on the supported Apple target.',
                           'Accept upstream zero-initialized object/JSON parameter arrays, '
@@ -97,9 +87,12 @@ SDK_PIN = {'schema_version': 1,
                           'changes.',
                           'Before removal, no first-party source used Json:: or libjson APIs; only the '
                           'unused json/json.h include and build include/link references remained. Native '
-                          'support/4DPlugin-JSON.* uses 4D PA_* APIs and is preserved.']}
+                          'support/4DPlugin-JSON.* uses 4D PA_* APIs and is preserved.',
+                          'All nine vendored SDK files are pristine upstream bytes. Remove the eleven former local setter fFiller assignments; initialization belongs to first-party callers.',
+                          'Reviewed every first-party PA_Set*Variable call in 4DPlugin-cURL.cpp, support and Classes. Every scalar setter destination is initialized by PA_CreateVariable; callback array elements are initialized by their existing branch-specific PA_CreateVariable assignments. Classes copies host variables and has no PA_Set*Variable calls; preserve those values.',
+                          "No first-party source changes are necessary: ob_stringify already assigns PA_CreateVariable(eVK_Object) to _params[0] before its setter; delay params[2] assigns PA_CreateVariable to both elements; callback branches initialize every used argument with PA_CreateVariable. The lone params is passed with argument count zero, so it is not read. Preserve these existing assignments, callback variants and host-variable copies."]}
 
-HASHES = {'4D Plugin API/4DPluginAPI.c': 'f13b25d011db2285bc0b6284bb4c626ae645b5f35945dc7b6d8b922d44a7aad0',
+HASHES = {'4D Plugin API/4DPluginAPI.c': '91fae4e018fe7e63d56f2f0f6fe002ab46853a28380113735393bbe82fb783ab',
  '4D Plugin API/4DPluginAPI.def': 'ab72ac2a2e371e8ef97c1d0c9bb9597af6f21a8f2a1429ce839817ca800197b2',
  '4D Plugin API/4DPluginAPI.h': '054977f36970d95ff1ee665707812a2afcbc35ffdcad439c51995e71303de6de',
  '4D Plugin API/EntryPoints.h': '0deb73e2c1550160fe74b170828c16e03e619452866debe559f4b4606ce2c4b3',
@@ -109,7 +102,7 @@ HASHES = {'4D Plugin API/4DPluginAPI.c': 'f13b25d011db2285bc0b6284bb4c626ae645b5
  '4D Plugin API/PublicTypes.h': '7b8c3959f24267a2a398680ddd114acc14b33082974b1debc2a940a82cdb6155',
  '4D Plugin API/Readme.md': 'e33b61a7ff7fb8f079095c7684e37237a41808dad41f9a454161ed8827b4bd8a'}
 
-CRLF_HASHES = {'4D Plugin API/4DPluginAPI.c': 'd9dead333604a359fb0a365c197ece937b115f8a51e574c754ceb6f648faadf1',
+CRLF_HASHES = {'4D Plugin API/4DPluginAPI.c': '98c791e3ebad524f7b1adcbba63db9d5bbeb89308f1c6f35f6751f48af0dcf10',
  '4D Plugin API/4DPluginAPI.def': 'db4ccfe9dac3e987ddd8c1a143528b51dfb16425a2e65dcafb930c214dc4ba87',
  '4D Plugin API/4DPluginAPI.h': 'e7b92e3cb837b337cdeb4f3b1a423c33b16bcae9eef47bafffbc5f21d34a0890',
  '4D Plugin API/EntryPoints.h': '770ac6aed9f7c89ada2906ad2859636c357a079aca398f9c41d6583260e3b599',
@@ -119,7 +112,7 @@ CRLF_HASHES = {'4D Plugin API/4DPluginAPI.c': 'd9dead333604a359fb0a365c197ece937
  '4D Plugin API/PublicTypes.h': 'a166bbadc0b8dcd3bf2e21b5eaf879eb32968a7edce87b3958ae724701f5db93',
  '4D Plugin API/Readme.md': '84af3d6e6f56b599e6feec0359e6e22712f5f90480359bd4dd0e0f194f012732'}
 
-LF_HASHES = {'4D Plugin API/4DPluginAPI.c': 'f13b25d011db2285bc0b6284bb4c626ae645b5f35945dc7b6d8b922d44a7aad0',
+LF_HASHES = {'4D Plugin API/4DPluginAPI.c': '91fae4e018fe7e63d56f2f0f6fe002ab46853a28380113735393bbe82fb783ab',
  '4D Plugin API/4DPluginAPI.def': 'ab72ac2a2e371e8ef97c1d0c9bb9597af6f21a8f2a1429ce839817ca800197b2',
  '4D Plugin API/4DPluginAPI.h': '054977f36970d95ff1ee665707812a2afcbc35ffdcad439c51995e71303de6de',
  '4D Plugin API/EntryPoints.h': '0deb73e2c1550160fe74b170828c16e03e619452866debe559f4b4606ce2c4b3',
