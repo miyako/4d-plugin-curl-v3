@@ -217,9 +217,57 @@ class LinkerTests(unittest.TestCase):
             self.assertEqual(archive["members"][0]["liveSymbolCount"], 0)
 
     def test_search_does_not_imply_selection_or_live_contribution(self):
-        evidence = self.windows(f" Searching {self.lib}:\n Found discarded\n")
+        evidence = self.windows(f" Searching {self.root / 'lib/unused.lib'}:\n Found discarded\n")
         self.assertEqual(evidence["selectedArchives"], [])
         self.assertEqual(evidence["mapSymbols"][0]["status"], "unresolved-map-library")
+
+    def test_ltcg_search_only_output_requires_positive_map_attribution(self):
+        evidence = self.windows(
+            f" Searching {self.lib}:\n Searching {self.lib}:\n"
+            f" Searching {self.root / 'lib/unused.lib'}:\n",
+            [{"path": "lib/demo.lib", "sha256": linker.digest(self.lib)}])
+        selected = evidence["archives"]
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0]["candidatePath"], "lib/demo.lib")
+        self.assertEqual(selected[0]["selectedMembers"], ["live.obj"])
+        self.assertEqual(selected[0]["members"][0]["selection"],
+                         "map-symbol-and-unique-diagnostic-path")
+        self.assertEqual(selected[0]["members"][0]["liveSymbolCount"], 2)
+
+    def test_ltcg_duplicate_searched_basenames_are_never_guessed(self):
+        evidence = self.windows(
+            f" Searching {self.lib}:\n Searching C:\\developer\\demo.lib:\n",
+            [{"path": "lib/demo.lib", "sha256": linker.digest(self.lib)}])
+        self.assertEqual(evidence["archives"], [])
+        self.assertEqual(evidence["mapSymbols"][0]["status"], "ambiguous-map-library")
+        self.assertEqual(len(evidence["mapSymbols"][0]["pathCandidates"]), 2)
+
+    def test_real_v143_ltcg_shapes_and_unused_encoder_not_selected(self):
+        selected, symbols = linker.parse_msvc(
+            (FIXTURES / "msvc-ltcg.log").read_text(),
+            (FIXTURES / "msvc-ltcg.map").read_text())
+        self.assertEqual({item["archive"] for item in selected}, {
+            r"lib\64\brotlicommon.lib", r"lib\64\brotlidec.lib", r"lib\64\libcrypto.lib",
+            r"lib\64\libssl.lib", r"lib\64\libcurl.lib", r"lib\64\zlib.lib",
+        })
+        self.assertEqual(len(symbols), 6)
+        self.assertTrue(all(item["selection"] == "map-symbol-and-unique-diagnostic-path"
+                            for item in selected))
+        searched_only = " cURL\n Address Publics by Value Rva+Base Lib:Object\n"
+        self.assertEqual(linker.parse_msvc(
+            (FIXTURES / "msvc-ltcg.log").read_text(), searched_only)[0], [])
+
+    def test_ltcg_diagnostic_path_with_spaces_and_absolute_ambiguity(self):
+        library = self.root / "library with spaces/demo.lib"
+        library.parent.mkdir()
+        library.write_bytes(b"selected archive")
+        evidence = self.windows(f' Searching "{library}":\n', [
+            {"path": "library with spaces/demo.lib", "sha256": linker.digest(library)}])
+        self.assertEqual(evidence["archives"][0]["candidatePath"], "library with spaces/demo.lib")
+        selected, _ = linker.parse_msvc(
+            " Searching C:\\first path\\demo.lib:\n Searching D:\\second path\\demo.lib:\n",
+            MSVC_MAP)
+        self.assertEqual(selected, [])
 
     def test_lto_synthetic_or_unknown_objects_not_assigned_to_archives(self):
         text = APPLE.format(archive="missing.a").replace(

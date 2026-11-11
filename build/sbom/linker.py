@@ -65,14 +65,15 @@ def parse_apple(text, arch):
 
 
 def parse_msvc(verbose, map_text):
-    """Use /VERBOSE:LIB selection, not the map's ambiguous library basenames."""
+    """Combine explicit loads or positive map attribution with resolved searches."""
     if "Publics by Value" not in map_text:
         raise ValueError("Missing MSVC map public symbol table")
-    selected, searching, found = [], None, None
+    selected, searching, found, searched = [], None, None, {}
     for line in verbose.splitlines():
         match = re.match(r"\s*Searching\s+(.+):\s*$", line)
         if match:
             searching, found = match[1].strip().strip('"'), None
+            searched[ntpath.normcase(ntpath.normpath(searching))] = searching
         match = re.match(r"\s*Found\s+(.+)", line)
         if match:
             found = match[1].strip()
@@ -103,6 +104,29 @@ def parse_msvc(verbose, map_text):
             lib, obj = match[2].rsplit(":", 1)
             symbols.append({"symbol": match[1], "libraryLabel": lib,
                             "member": obj})
+    # LTCG can emit only Searching lines. A positive map member attribution plus
+    # one explicit searched file establishes selection; a search alone does not.
+    possible = {}
+    for path in [*searched.values(), *(item["archive"] for item in selected)]:
+        label = ntpath.splitext(ntpath.basename(path))[0].lower()
+        possible.setdefault(label, {})[ntpath.normcase(ntpath.normpath(path))] = path
+    represented = {(ntpath.normcase(ntpath.normpath(item["archive"])),
+                    item["member"].lower()) for item in selected}
+    for symbol in symbols:
+        label = ntpath.splitext(ntpath.basename(symbol["libraryLabel"]))[0].lower()
+        choices = possible.get(label, {})
+        symbol["pathCandidates"] = sorted(choices.values())
+        if len(choices) != 1:
+            continue
+        key, archive = next(iter(choices.items()))
+        identity = (key, symbol["member"].lower())
+        if identity not in represented:
+            selected.append({
+                "archive": archive, "member": symbol["member"],
+                "selection": "map-symbol-and-unique-diagnostic-path",
+                "foundSymbol": symbol["symbol"], "liveSymbolCount": 0,
+            })
+            represented.add(identity)
     return selected, symbols
 
 
@@ -175,6 +199,9 @@ def collect(root, target, diagnostic_paths, candidates):
 
     if windows:
         for symbol in symbols:
+            if len(symbol.get("pathCandidates", [])) > 1:
+                symbol["status"] = "ambiguous-map-library"
+                continue
             label = ntpath.basename(symbol["libraryLabel"]).lower()
             keys = [key for key, archive in archives.items()
                     if ntpath.splitext(ntpath.basename(archive["reportedPath"]))[0].lower()

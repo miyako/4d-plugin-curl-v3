@@ -311,8 +311,15 @@ force-loaded/dead-stripped and LTO map fixtures for both architectures.
 
 Apple object tables report member selection, not live code. Only symbol-table
 rows are recorded as limited live observations; dead-stripped rows are separate.
-MSVC `/VERBOSE:LIB` supplies selected paths; `Searching`/`Found` alone do not
-establish member loading. Map `LIB:obj` labels are correlated only when a unique
-selected archive/member exists; duplicate library basenames remain ambiguous.
+MSVC `/VERBOSE:LIB` explicit `Loaded` lines establish selected members when
+available. Real v143 `/LTCG:incremental` output can omit those lines entirely.
+In that case a **positive** map `LIB:obj` attribution is correlated only to a
+unique explicit file path reported by the linker's search diagnostics; a
+`Searching`/`Found` line without positive map attribution never becomes selection.
+Duplicate searched/loaded basenames remain ambiguous, even if a repository
+candidate exists. This is diagnostic-path correlation, not basename-based
+substitution from the repository. Fixtures include real LTCG excerpts with
+COMDAT-folded symbols sharing an address; attribution does not establish
+exclusive ownership of those bytes.
 COMDAT folding, LTO synthesis and incomplete map visibility preclude claiming
 that a loaded member contributes live code, or that unobserved code is absent.
