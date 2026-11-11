@@ -130,7 +130,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: openssl-src\out-win64
-          key: openssl-${{ env.OPENSSL_GIT_TAG }}-win64-mt-v1
+          # v2 caches build-time evidence alongside the installed archives.
+          key: openssl-${{ env.OPENSSL_GIT_TAG }}-win64-mt-provenance-v2-${{ hashFiles('sbom-tools/build/sbom/provenance.py') }}
 
       # -MT matches this project's Release|x64 RuntimeLibrary=MultiThreaded,
       # so the plugin and OpenSSL agree on which CRT they're statically
@@ -143,15 +144,26 @@ jobs:
         working-directory: openssl-src
         run: |
           perl Configure VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
+          if errorlevel 1 exit /b 1
           nmake
+          if errorlevel 1 exit /b 1
           nmake install_sw
+          if errorlevel 1 exit /b 1
+          python ..\sbom-tools\build\sbom\provenance.py source-record --source . --install out-win64 --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
+
+      - name: verify OpenSSL source, configuration and installed archives
+        shell: cmd
+        working-directory: openssl-src
+        run: |
+          python ..\sbom-tools\build\sbom\provenance.py verify --source . --install out-win64 --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
 
       - name: copy OpenSSL libs into vendor path
         shell: cmd
         run: |
           if not exist lib\64 mkdir lib\64
-          copy /Y openssl-src\out-win64\lib\libssl.lib lib\64\libssl.lib
-          copy /Y openssl-src\out-win64\lib\libcrypto.lib lib\64\libcrypto.lib
+          copy /Y openssl-src\out-win64\lib\libssl.lib lib\64\libssl.lib || exit /b 1
+          copy /Y openssl-src\out-win64\lib\libcrypto.lib lib\64\libcrypto.lib || exit /b 1
+          python sbom-tools\build\sbom\provenance.py combine --record openssl-src\out-win64\openssl-build-provenance.json --vendor . --target windows-x86_64
       # ---- end OpenSSL build ----
 
       # GitHub-hosted windows-latest ships VS2022 (v143 toolset) but not the
@@ -169,8 +181,16 @@ jobs:
       # is actually installed on the runner, rather than pinning an exact
       # build number that may not match the image.
       - name: build x64
-        shell: cmd
-        run: msbuild "${{ env.VCX_SOLUTION }}" /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /m
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force native-linker | Out-Null
+          msbuild "${{ env.VCX_SOLUTION }}" /p:Configuration=Release /p:Platform=x64 `
+            /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /m `
+            "/p:ForceImportAfterCppTargets=$PWD\sbom-tools\build\sbom\diagnostics.props" `
+            "/p:NativeTraceDirectory=$PWD\native-linker" `
+            /fl "/flp:logfile=$PWD\native-linker\msbuild.log;verbosity=normal;encoding=UTF-8"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - name: upload windows binaries
         uses: actions/upload-artifact@v4
@@ -185,7 +205,11 @@ jobs:
         run: |
           python sbom-tools/build/sbom/generate.py inputs --target windows-x86_64 `
             --binary "test/Plugins/${{ env.PRODUCT_NAME }}.bundle/Contents/Windows64/${{ env.PRODUCT_NAME }}.4DX" `
-            --brotli-provenance brotli-provenance.json --output sbom-windows.json
+            --brotli-provenance brotli-provenance.json `
+            --openssl-provenance openssl-provenance.json `
+            --manifest sbom-tools/build/sbom/native-archives.json `
+            --link-map windows-x86_64=native-linker/cURL-x64.map `
+            --link-log native-linker/msbuild.log --output sbom-windows.json
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - uses: actions/upload-artifact@v4
@@ -193,6 +217,17 @@ jobs:
           name: sbom-windows-evidence
           path: sbom-windows.json
           if-no-files-found: error
+
+      - name: retain native linker diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-linker-evidence
+          path: |
+            native-linker/
+            openssl-provenance.json
+            sbom-windows.json
+          if-no-files-found: warn
 
   build-macos:
     name: Build macOS, package, sign, notarize & release
@@ -254,7 +289,8 @@ jobs:
           path: |
             openssl-arm64/out
             openssl-x86_64/out
-          key: openssl-${{ env.OPENSSL_GIT_TAG }}-macos-universal-${{ env.MACOS_DEPLOYMENT_TARGET }}-v1
+          # Older caches have no verifiable build-time source/configuration.
+          key: openssl-${{ env.OPENSSL_GIT_TAG }}-macos-universal-${{ env.MACOS_DEPLOYMENT_TARGET }}-provenance-v2-${{ hashFiles('sbom-tools/build/sbom/provenance.py') }}
 
       - name: build OpenSSL (arm64)
         if: steps.cache-openssl-mac.outputs.cache-hit != 'true'
@@ -266,6 +302,10 @@ jobs:
             --prefix="$PWD/out"
           make -j"$(sysctl -n hw.ncpu)"
           make install_sw
+          python ../sbom-tools/build/sbom/provenance.py source-record \
+            --source . --install out --target macos-arm64 -- \
+            darwin64-arm64-cc no-shared no-tests \
+            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/out"
 
       - name: build OpenSSL (x86_64)
         if: steps.cache-openssl-mac.outputs.cache-hit != 'true'
@@ -277,6 +317,22 @@ jobs:
             --prefix="$PWD/out"
           make -j"$(sysctl -n hw.ncpu)"
           make install_sw
+          python ../sbom-tools/build/sbom/provenance.py source-record \
+            --source . --install out --target macos-x86_64 -- \
+            darwin64-x86_64-cc no-shared no-tests \
+            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/out"
+
+      - name: verify OpenSSL sources, configurations and installed archives
+        run: |
+          set -euo pipefail
+          python sbom-tools/build/sbom/provenance.py verify \
+            --source openssl-arm64 --install openssl-arm64/out --target macos-arm64 -- \
+            darwin64-arm64-cc no-shared no-tests \
+            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/openssl-arm64/out"
+          python sbom-tools/build/sbom/provenance.py verify \
+            --source openssl-x86_64 --install openssl-x86_64/out --target macos-x86_64 -- \
+            darwin64-x86_64-cc no-shared no-tests \
+            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/openssl-x86_64/out"
 
       - name: merge into universal libs & copy into vendor path
         run: |
@@ -292,6 +348,10 @@ jobs:
             -output a/libcrypto.a
           lipo -info a/libssl.a
           lipo -info a/libcrypto.a
+          python sbom-tools/build/sbom/provenance.py combine \
+            --record openssl-arm64/out/openssl-build-provenance.json \
+            --record openssl-x86_64/out/openssl-build-provenance.json \
+            --vendor . --target macos-universal
       # ---- end OpenSSL build ----
 
       - name: import Developer ID certificate
@@ -329,12 +389,16 @@ jobs:
 
       - name: build macOS plugin (universal)
         run: |
+          set -euo pipefail
+          mkdir -p native-linker
           xcodebuild -project "${{ env.XCODE_PROJECT }}" \
             -target "${{ env.PRODUCT_NAME }}" \
             -configuration Default \
             ARCHS="arm64 x86_64" \
             ONLY_ACTIVE_ARCH=NO \
             MACOSX_DEPLOYMENT_TARGET="${{ env.MACOS_DEPLOYMENT_TARGET }}" \
+            LD_GENERATE_MAP_FILE=YES \
+            'LD_MAP_FILE_PATH=$(PROJECT_DIR)/native-linker/$(CURRENT_ARCH).map' \
             CODE_SIGNING_ALLOWED=NO \
             build
 
@@ -393,12 +457,28 @@ jobs:
           PYTHON="$RUNNER_TEMP/sbom-venv/bin/python"
           "$PYTHON" sbom-tools/build/sbom/generate.py inputs --target macos-universal \
             --binary "$BUNDLE_PATH/Contents/MacOS/${{ env.PRODUCT_NAME }}" \
-            --brotli-provenance brotli-provenance.json --output sbom-evidence/sbom-macos.json
+            --brotli-provenance brotli-provenance.json \
+            --openssl-provenance openssl-provenance.json \
+            --manifest sbom-tools/build/sbom/native-archives.json \
+            --link-map macos-arm64=native-linker/arm64.map \
+            --link-map macos-x86_64=native-linker/x86_64.map \
+            --output sbom-evidence/sbom-macos.json
           "$PYTHON" sbom-tools/build/sbom/generate.py generate --version "$RELEASE_VERSION" --output sbom \
             --evidence sbom-evidence/sbom-windows.json --evidence sbom-evidence/sbom-macos.json \
             "$ZIP_PATH" "$DMG_PATH"
           "$PYTHON" sbom-tools/build/sbom/validate.py --version "$RELEASE_VERSION" --output sbom \
             --schema-dir "$RUNNER_TEMP/sbom-schemas" "$ZIP_PATH" "$DMG_PATH"
+
+      - name: retain native linker diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-linker-evidence
+          path: |
+            native-linker/
+            openssl-provenance.json
+            sbom-evidence/sbom-macos.json
+          if-no-files-found: warn
 
       - name: create GitHub Release
         uses: softprops/action-gh-release@v2

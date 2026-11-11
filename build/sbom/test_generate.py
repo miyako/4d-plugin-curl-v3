@@ -139,6 +139,54 @@ class SchemaTests(unittest.TestCase):
                                         generate.spdx(damaged), self.path, "4.9.6",
                                         self.schemas, self.registry)
 
+    def test_build_supported_known_packages_and_relations_in_official_schemas(self):
+        records = {}
+        for platform, binary, targets, prefix, suffix in (
+            ("macos-universal", fat(), ["macos-arm64", "macos-x86_64"], "a/lib", ".a"),
+            ("windows-x86_64", pe(), ["windows-x86_64"], "lib/64/", ".lib"),
+        ):
+            sources, selected = [], []
+            for name, archive_name, version, license_id, origin, purl in (
+                ("Brotli", "brotlidec", "1.2.1", "MIT", "https://github.com/google/brotli",
+                 "pkg:github/google/brotli@1.2.1"),
+                ("OpenSSL", "ssl", "3.5.8", "Apache-2.0", "https://github.com/openssl/openssl",
+                 "pkg:generic/openssl@3.5.8"),
+            ):
+                path = prefix + archive_name + suffix
+                digest = generate.sha256(path.encode())
+                sources.append({
+                    "name": name, "version": version, "license": license_id,
+                    "sourceRepository": origin, "sourceCommit": "a" * 40, "purl": purl,
+                    "archives": [{"path": path, "sha256": digest}],
+                })
+                selected.append({"candidatePath": path, "sha256": digest,
+                                 "selectedMembers": ["object.o"], "liveSymbols": []})
+            records[platform] = {
+                "target": platform, "binarySha256": generate.sha256(binary),
+                "rebuiltArchiveEvidence": sources,
+                "linkEvidence": {target: {"archives": selected} for target in targets},
+            }
+        inv = generate.inventory(self.path, "4.9.6", records)
+        cdx, spdx = generate.cyclonedx(inv), generate.spdx(inv)
+        validate.validate_documents(inv, cdx, spdx, self.path, "4.9.6", self.schemas, self.registry)
+        for target in inv["targets"]:
+            packages = {dep["name"]: dep for dep in target["dependencies"]}
+            self.assertEqual(packages["Brotli"]["version"], "1.2.1")
+            self.assertEqual(packages["OpenSSL"]["license"], "Apache-2.0")
+            self.assertEqual(sum(dep["name"] == "OpenSSL" for dep in target["dependencies"]), 1)
+        self.assertEqual(len([p for p in spdx["packages"] if p["licenseDeclared"] == "MIT"]), 3)
+        self.assertEqual(sum(len(d["dependsOn"]) for d in cdx["dependencies"]), 6)
+        self.assertEqual(sum(r["relationshipType"] == "DEPENDS_ON" for r in spdx["relationships"]), 6)
+        damaged = copy.deepcopy(cdx)
+        next(c for c in damaged["components"] if c["name"] == "Brotli")["purl"] = "pkg:generic/wrong@1"
+        with self.assertRaisesRegex(ValueError, "identity/license/origin"):
+            validate.validate_documents(inv, damaged, spdx, self.path, "4.9.6", self.schemas, self.registry)
+        damaged = copy.deepcopy(spdx)
+        next(r for r in damaged["relationships"] if r["relationshipType"] == "DEPENDS_ON")[
+            "relationshipType"] = "CONTAINS"
+        with self.assertRaisesRegex(ValueError, "dependency mismatch"):
+            validate.validate_documents(inv, cdx, damaged, self.path, "4.9.6", self.schemas, self.registry)
+
 
 class BuildEvidenceTests(unittest.TestCase):
     def test_windows_declarations_and_brotli_hash_binding(self):
@@ -163,6 +211,9 @@ class BuildEvidenceTests(unittest.TestCase):
                 "#define BROTLI_VERSION_MAJOR 1\n#define BROTLI_VERSION_MINOR 2\n"
                 "#define BROTLI_VERSION_PATCH 1\n"
             )
+            (source / "LICENSE").write_text(
+                'Permission is hereby granted, free of charge\nTHE SOFTWARE IS PROVIDED "AS IS"\n'
+            )
             output = root / "evidence.json"
             binary = root / "cURL.4DX"
             binary.write_bytes(pe())
@@ -176,6 +227,29 @@ class BuildEvidenceTests(unittest.TestCase):
                 self.assertEqual(record["rebuiltArchiveEvidence"][0]["version"], "1.2.1")
                 missing = [i for i in record["declaredInputs"] if i["status"] == "unresolved-declaration"]
                 self.assertEqual(missing, [{"path": "lib/64/kernel32.lib", "status": "unresolved-declaration"}])
+                args.link_map = ["windows-x86_64=plugin.map"]
+                args.link_log = root / "link.log"
+                selected = {
+                    "target": "windows-x86_64", "selectedArchives": [{
+                        "resolvedPath": str(root / "lib/64/brotlidec.lib"),
+                        "sha256": generate.sha256(b"brotlidec"),
+                        "members": [{"member": "decode.obj", "selection": "verbose-loaded"}],
+                    }],
+                }
+                with patch("linker.collect", return_value=copy.deepcopy(selected)):
+                    generate.collect(args)
+                traced = json.loads(output.read_text())
+                chosen = traced["linkEvidence"]["windows-x86_64"]["archives"][0]
+                self.assertEqual(chosen["candidatePath"], "lib/64/brotlidec.lib")
+                self.assertEqual(generate.build_dependencies(traced, "windows-x86_64", [])[0]["name"], "Brotli")
+                selected["selectedArchives"][0]["sha256"] = "0" * 64
+                with patch("linker.collect", return_value=selected):
+                    with self.assertRaisesRegex(ValueError, "Selected archive hash mismatch"):
+                        generate.collect(args)
+                args.link_map = ["macos-arm64=plugin.map"]
+                with self.assertRaisesRegex(ValueError, "Expected link maps"):
+                    generate.collect(args)
+                args.link_map = []
                 (root / "lib/64/brotlidec.lib").write_bytes(b"stale replacement")
                 with self.assertRaisesRegex(ValueError, "does not match"):
                     generate.collect(args)

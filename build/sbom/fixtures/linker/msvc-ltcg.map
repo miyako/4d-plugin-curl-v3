@@ -1,0 +1,15 @@
+ cURL
+
+ Timestamp is 00000000
+ Preferred load address is 0000000180000000
+
+  Address         Publics by Value              Rva+Base               Lib:Object
+
+ 0001:00000000       OPENSSL_atomic_add         0000000180001000     libcrypto:libcrypto-lib-x86_64cpuid.obj
+ 0001:0011b9a0       Curl_async_global_cleanup  000000018011c9a0 f i libcurl:asyn-thrdd.c.obj
+ 0001:0011b9a0       ossl_quic_deinit           000000018011c9a0 f i libssl:libssl-lib-quic_impl.obj
+ 0001:00146dc0       BrotliInitBitReader        0000000180147dc0 f   brotlidec:bit_reader.obj
+ 0001:00284110       zcalloc                    0000000180285110 f   zlib:zutil.c.obj
+ 0001:00284120       BrotliDefaultFreeFunc      0000000180285120 f   brotlicommon:platform.obj
+
+ Static symbols
