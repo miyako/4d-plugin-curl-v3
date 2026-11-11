@@ -278,7 +278,7 @@ jobs:
             unsigned-native.zip unsigned-native.dmg
           python build/sbom/validate.py --version "$RELEASE_VERSION" --output sbom \
             --schema-dir "$RUNNER_TEMP/sbom-schemas" unsigned-native.zip unsigned-native.dmg
-      - name: Require usable source-built identities and correct Windows zlib selection
+      - name: Require complete selected-package and embedded-source coverage
         shell: python
         run: |
           import json
@@ -309,6 +309,18 @@ jobs:
                           raise RuntimeError(f"{target['id']}: incorrect selected {name} identity")
                   if coverage["unknownVersionPackages"] != ["libmodman", "libproxy"]:
                       raise RuntimeError("Unknown-version selected packages changed; review evidence explicitly")
+                  expected_sources = {"ftpparse", "4D Plugin SDK", "4D plugin C++ wrappers",
+                                      "4DPlugin-JSON helper", "ufopen UTF-8 path helper"}
+                  actual_sources = {p["name"] for p in target["dependencies"]
+                                    if p.get("evidenceType") == "build-derived-embedded-source"}
+                  if actual_sources != expected_sources:
+                      raise RuntimeError(f"{target['id']}: embedded compiled-source coverage changed")
+                  if packages["ftpparse"].get("license") != "LicenseRef-ftpparse-public-domain":
+                      raise RuntimeError("ftpparse public-domain statement must not be relabeled")
+                  interfaces = {p["name"] for p in target["buildEvidence"]["embeddedSourceEvidence"]["components"]
+                                if p["scope"] == "sdk-interface"}
+                  if "JsonCpp header interface" not in interfaces or "JsonCpp header interface" in packages:
+                      raise RuntimeError("JsonCpp header interface must remain explicitly interface-only")
                   if target["id"] == "windows-x86_64":
                       zlib = packages["zlib"]
                       selected = {a["candidatePath"] for a in zlib.get("selectedArchives", [])}

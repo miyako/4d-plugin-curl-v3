@@ -149,6 +149,15 @@ invented runtime dependencies. SDK/header-only interfaces stay explicit in
 Unknown upstream revisions and unsupported licenses remain absent; the plugin
 version and root MIT license are never substituted.
 
+The compiled-source inventory covers ftpparse (its source-stated `20001223`
+revision and explicit public-domain statement), the 4D Plugin SDK implementation,
+4D C++ wrappers, the 4DPlugin-JSON helper and the ufopen UTF-8 path helper. The
+SDK's supported MIT declaration is source evidence, not the plugin's root MIT
+license. Other helper licenses/revisions remain unknown where unsupported.
+JsonCpp's vendored headers and supported MIT statement are recorded as an
+interface-only input; no JsonCpp implementation package or runtime dependency
+is inferred from those headers.
+
 The reader never loads the plugin, calls its initialization, or executes
 distributed code. ZIP members are read without extraction; DMGs are mounted
 read-only with browsing/auto-opening disabled and detached afterward.

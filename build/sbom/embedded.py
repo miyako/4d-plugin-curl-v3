@@ -18,6 +18,9 @@ the Windows export definition and JsonCpp headers are build interfaces.
 
 The source allowlist is intentionally exact: updating vendored files requires
 reviewing identities, attribution and licenses here, not merely refreshing hashes.
+Only the reviewed originals and their deterministic all-LF/all-CRLF checkout
+forms are allowed. Captured hashes always describe actual bytes, not normalized
+content. Offline verification checks these pre-reviewed exact-byte alternatives.
 There is no network access, Git requirement, timestamp, or binary detection.
 """
 
@@ -85,6 +88,46 @@ HASHES = {
     "include/json/writer.h": "7fc693de912d4d571504aa350518fe675f319f00054eba09cd5afb7c82e6aa13",
 }
 
+# Generated once from the reviewed bytes above, never from an untrusted checkout
+# during collection. The two mixed-ending originals remain separately approved.
+CRLF_HASHES = {
+    "include/ftpparse.c": "18465260fa1641f568138a26da654452b096472ee39cd4e9381181dd4832d719",
+    "include/ftpparse.h": "a440b44306d4f9714e39410d4881fe9a72c3487a8f46926c1f17508bec0e88e9",
+    "4D Plugin API/4DPluginAPI.c": "bc126d8e5baba27600843c72e40015b8e28ac1c5c61f3c5b5d22aff13829a5cd",
+    "4D Plugin API/4DPluginAPI.def": "db4ccfe9dac3e987ddd8c1a143528b51dfb16425a2e65dcafb930c214dc4ba87",
+    "4D Plugin API/4DPluginAPI.h": "0892201f07cf22ea8265a74688e2e5187d5945de9aef6e911201b39baf152f6f",
+    "4D Plugin API/EntryPoints.h": "d6a06a21c3a380fe3828b6036c04ebefab65633b43132eb2af9203be7aa92061",
+    "4D Plugin API/Flags.h": "8252981f0c6f99a16ba080933d04e2a0770d9aed50034b799d2e2cd481bd4fe5",
+    "4D Plugin API/PrivateTypes.h": "421afd3e6178c308fe053fd6b25469c2cf17557f95df91cca723face35083cb5",
+    "4D Plugin API/PublicTypes.h": "a166bbadc0b8dcd3bf2e21b5eaf879eb32968a7edce87b3958ae724701f5db93",
+    "4D Plugin API/Classes/C_BLOB.cpp": "a7f0eacf158fcee7eba765843d703e1ca98afa3ee852c78f423af4cfdef19f3e",
+    "4D Plugin API/Classes/C_BLOB.h": "3d6f8d6e8a3e222b39991319ff08bcd2ab69f284879a7f273039fa2e59f23a66",
+    "4D Plugin API/Classes/C_LONGINT.cpp": "7a5145b9b91da813037a75113380123fd2e3f1f7e2a5af7e4ada818505ca257f",
+    "4D Plugin API/Classes/C_LONGINT.h": "68a921711a9fe2f833afdb431d700f4a2d1142a48abd005dc5ec10d8b973e52e",
+    "4D Plugin API/Classes/C_TEXT.cpp": "0539c0f83b20aa4a4968d1ee4cc491ce0ee46e9abb0bacccea1deac5a73c2311",
+    "4D Plugin API/Classes/C_TEXT.h": "9c159256f0a71ab8e00eb746e630a0b4dc5c2ba8c6a462a289adad6ab5aa13ab",
+    "4D Plugin API/Classes/C_TYPES.h": "5859ff4d7004d983e68e38c974e19d20ad2d9dc670158564e2d9fceaf179a0af",
+    "support/4DPlugin-JSON.cpp": "f87141549a0553df4e6225dd8fce6bcb71ba32d53066ec3824ef91f013365fa8",
+    "support/4DPlugin-JSON.h": "444119ca68bbf7cbe15d7a6850215331c4dc3ec8715cdebfb100016a7dc35dd0",
+    "support/ufopen.c": "e02701b8a69686fa42f2c85efc4621dc3744bbbbead3f6522a7c8982bb24312f",
+    "support/ufopen.h": "42d50edc0cfb9ddf872d901965061a7644326d4fad012a147df9627aa7282442",
+    "include/json/allocator.h": "e4576213639d00bd3f7a2fee4ef2ee215411969f84dc8d62ad8a312d7bb544a6",
+    "include/json/assertions.h": "50382957eccd1b2a5fa2a1975421de03329907dc3e987a5392ca10fe590a4383",
+    "include/json/config.h": "6353f33cdb9df81531b87b7af4af3f8b1f5b29470b77107200fab2a71eb6af16",
+    "include/json/forwards.h": "ade21d924814095f751dc2b8062d1ddcad4d6d4ae45fee2d3b1ff24819d6d340",
+    "include/json/json.h": "6e41eb708610f65318a5ea4d02b37ba3ad2713a806e864af2c0eee44de645411",
+    "include/json/json_features.h": "3d4992ca99b287e4fea8bb760adc61126a1e84369084e808a3c2024187a3f21f",
+    "include/json/reader.h": "d6b1d5e21ac9c839d8666c37129f69530e4fa504b4e8f7464885c840851c7a58",
+    "include/json/value.h": "d8a9b330253f8a0bfff18ce1ed8b876623c3c23a8738dc01ca54cd2b5613ed07",
+    "include/json/version.h": "9f5304d790d6df24aa9e24ce3190bb52e3cef5f9af666e2da70cf974bcdab0b2",
+    "include/json/writer.h": "d4e12e2110287b68bd282c7056f2b2cb5199f3686fff1df4255544994f13c38c",
+}
+LF_HASHES = {
+    "4D Plugin API/Classes/C_TYPES.h": "07a2dbc6f772f53bf332dd87986890995e793678138216726897943a6a7d17c0",
+    "support/4DPlugin-JSON.cpp": "fe791db1202de5847c162abbb18e659e0005e6670d69c850c6424b5ba526ff98",
+    "support/4DPlugin-JSON.h": "361bd4eeb0ea309ec9c0e50a3ec9f7f96a8c6f4261a4ea0d6801440acfda649f",
+}
+
 MIT_BODY = """Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -121,6 +164,10 @@ WITNESSES = ("4DPlugin-cURL.cpp", "4DPlugin-cURL.h")
 
 def sha256(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def _approved_hashes(path):
+    return {HASHES[path], CRLF_HASHES[path], LF_HASHES.get(path, HASHES[path])}
 
 
 def _file(root, name):
@@ -163,7 +210,8 @@ def _components(target):
         component(
             "embedded-ftpparse", "ftpparse", ["include/ftpparse.c", "include/ftpparse.h"],
             "D. J. Bernstein FTP LIST parser, compiled directly into the plugin.",
-            ["Exact published 20001223 bytes; the 2023 dedication supersedes the older "
+            ["Reviewed published 20001223 bytes or their approved exact CRLF checkout "
+             "form; the 2023 dedication supersedes the older "
              "commercial-use notification in the source. Public domain is not "
              "relabelled as MIT or CC0; no package-manager identifier is inferred."],
             "https://cr.yp.to/ftpparse.html", version="20001223",
@@ -394,8 +442,10 @@ def collect(root, target):
     components = _components(target)
     for component in components:
         for source in component["sourceFiles"]:
-            if sha256(_file(root, source["path"])) != source["sha256"]:
+            actual_hash = sha256(_file(root, source["path"]))
+            if actual_hash not in _approved_hashes(source["path"]):
                 raise ValueError("Unreviewed embedded source hash: " + source["path"])
+            source["sha256"] = actual_hash
     witnesses = [{"path": p, "sha256": sha256(_file(root, p))} for p in WITNESSES]
     plugin_header = _file(root, WITNESSES[1]).decode("utf-8")
     for name in ("4DPluginAPI.h", "4DPlugin-JSON.h", "json/json.h", "ftpparse.h",
@@ -432,7 +482,21 @@ def validate(record, target=None):
             or not all(isinstance(d, str) and d for d in directories)
             or set(declarations) != {"translationUnits", "headers", "includeDirectories"}):
         raise ValueError("Invalid embedded-source declarations")
-    if record.get("components") != _components(actual_target):
+    expected_components = _components(actual_target)
+    components = record.get("components")
+    if not isinstance(components, list) or len(components) != len(expected_components):
+        raise ValueError("Embedded source identity/hash/license metadata mismatch")
+    for component, expected in zip(components, expected_components):
+        files = component.get("sourceFiles") if isinstance(component, dict) else None
+        if not isinstance(files, list) or len(files) != len(expected["sourceFiles"]):
+            raise ValueError("Embedded source identity/hash/license metadata mismatch")
+        for source, expected_source in zip(files, expected["sourceFiles"]):
+            actual_hash = source.get("sha256") if isinstance(source, dict) else None
+            if (not isinstance(actual_hash, str)
+                    or actual_hash not in _approved_hashes(expected_source["path"])):
+                raise ValueError("Embedded source identity/hash/license metadata mismatch")
+            expected_source["sha256"] = actual_hash
+    if components != expected_components:
         raise ValueError("Embedded source identity/hash/license metadata mismatch")
     for key, paths in (("configuration", [_project(actual_target)]),
                        ("sourceWitnesses", list(WITNESSES))):

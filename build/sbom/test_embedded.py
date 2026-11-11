@@ -35,6 +35,95 @@ class EmbeddedTests(unittest.TestCase):
         self.assertIn(old.encode(), data)
         path.write_bytes(data.replace(old.encode(), new.encode(), 1))
 
+    def checkout_endings(self, ending):
+        paths = {*embedded.HASHES, *embedded.WITNESSES,
+                 "cURL.vcxproj", "cURL.xcodeproj/project.pbxproj"}
+        for name in paths:
+            path = self.root / name
+            data = path.read_bytes().replace(b"\r\n", b"\n")
+            path.write_bytes(data.replace(b"\n", ending))
+
+    def test_reviewed_lf_and_crlf_allowlist_matches_exact_transformations(self):
+        self.assertEqual(set(embedded.CRLF_HASHES), set(embedded.HASHES))
+        for name in embedded.HASHES:
+            with self.subTest(path=name):
+                original = (self.root / name).read_bytes()
+                lf = original.replace(b"\r\n", b"\n")
+                crlf = lf.replace(b"\n", b"\r\n")
+                self.assertEqual(
+                    embedded.LF_HASHES.get(name, embedded.HASHES[name]),
+                    embedded.sha256(lf),
+                )
+                self.assertEqual(embedded.CRLF_HASHES[name], embedded.sha256(crlf))
+
+    def test_lf_and_windows_crlf_checkouts_preserve_actual_evidence(self):
+        for ending in (b"\n", b"\r\n"):
+            self.checkout_endings(ending)
+            for target in embedded.TARGETS:
+                with self.subTest(ending=ending, target=target):
+                    record = self.collect(target)
+                    self.assertEqual(embedded.verify_record(record), record)
+                    self.assertEqual(embedded.verify_record(record, self.root), record)
+                    for component in record["components"]:
+                        for source in component["sourceFiles"]:
+                            actual = (self.root / source["path"]).read_bytes()
+                            self.assertEqual(source["sha256"], embedded.sha256(actual))
+                            if ending == b"\r\n":
+                                self.assertEqual(
+                                    source["sha256"], embedded.CRLF_HASHES[source["path"]]
+                                )
+                    for source in record["sourceWitnesses"] + record["configuration"]:
+                        actual = (self.root / source["path"]).read_bytes()
+                        self.assertEqual(source["sha256"], embedded.sha256(actual))
+                    ftp = record["components"][0]["sourceFiles"][0]
+                    expected = (embedded.CRLF_HASHES if ending == b"\r\n"
+                                else embedded.HASHES)["include/ftpparse.c"]
+                    self.assertEqual(ftp["sha256"], expected)
+
+    def test_every_crlf_source_rejects_one_byte_edit_and_forged_hash(self):
+        self.checkout_endings(b"\r\n")
+        record = self.collect()
+        for name in embedded.HASHES:
+            with self.subTest(path=name):
+                path = self.root / name
+                original = path.read_bytes()
+                changed = bytes([original[0] ^ 1]) + original[1:]
+                path.write_bytes(changed)
+                with self.assertRaisesRegex(ValueError, "Unreviewed embedded source hash"):
+                    self.collect()
+                forged = copy.deepcopy(record)
+                source = next(f for c in forged["components"] for f in c["sourceFiles"]
+                              if f["path"] == name)
+                source["sha256"] = embedded.sha256(changed)
+                with self.assertRaisesRegex(ValueError, "identity/hash/license metadata"):
+                    embedded.verify_record(forged)
+                path.write_bytes(original)
+
+    def test_unapproved_mixed_endings_are_not_normalized_into_approved_source(self):
+        self.checkout_endings(b"\r\n")
+        record = self.collect()
+        name = "include/ftpparse.c"
+        path = self.root / name
+        path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n", 1))
+        with self.assertRaisesRegex(ValueError, "Unreviewed embedded source hash"):
+            self.collect()
+        record["components"][0]["sourceFiles"][0]["sha256"] = embedded.sha256(
+            path.read_bytes()
+        )
+        with self.assertRaisesRegex(ValueError, "identity/hash/license metadata"):
+            embedded.verify_record(record)
+
+    def test_before_after_snapshot_rejects_even_approved_line_ending_change(self):
+        self.checkout_endings(b"\n")
+        before = self.collect()
+        self.checkout_endings(b"\r\n")
+        after = self.collect()
+        self.assertNotEqual(before, after)
+        self.assertEqual(embedded.verify_record(before), before)
+        self.assertEqual(embedded.verify_record(after), after)
+        with self.assertRaisesRegex(ValueError, "current build inputs"):
+            embedded.verify_record(before, self.root)
+
     def test_real_project_coverage_and_serializable_round_trip(self):
         for target in embedded.TARGETS:
             with self.subTest(target=target):

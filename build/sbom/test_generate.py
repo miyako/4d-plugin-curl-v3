@@ -201,6 +201,7 @@ class SchemaTests(unittest.TestCase):
             }
             records[platform] = {
                 "target": platform, "binarySha256": generate.sha256(binary),
+                "coveragePolicy": "all-selected-repository-archives-named",
                 "archiveInventory": [{
                     "path": "example.a", "sha256": "a" * 64,
                     "targets": {t: {"identities": [identity]} for t in targets},
@@ -219,6 +220,13 @@ class SchemaTests(unittest.TestCase):
         self.assertNotIn("versionInfo", package)
         self.assertEqual(package["licenseDeclared"], "LicenseRef-Example")
         self.assertEqual(len(spdx["hasExtractedLicensingInfos"]), 1)
+        self.assertTrue(all(t["selectedArchiveCoverage"]["namedPackageArchives"] == 1
+                            and t["selectedArchiveCoverage"]["versionedPackageArchives"] == 0
+                            for t in inv["targets"]))
+        uncovered = copy.deepcopy(records)
+        uncovered["macos-universal"]["archiveInventory"][0]["targets"]["macos-arm64"]["identities"] = []
+        with self.assertRaisesRegex(ValueError, "lack named packages"):
+            generate.inventory(self.path, "4.9.6", uncovered)
         damaged = copy.deepcopy(spdx)
         damaged["hasExtractedLicensingInfos"][0]["extractedText"] = "MIT"
         with self.assertRaisesRegex(ValueError, "extracted license"):
