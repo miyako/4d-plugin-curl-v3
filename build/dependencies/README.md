@@ -287,6 +287,24 @@ the isolated curl source/configuration gate, not network-transfer compatibility
 or production adoption. The original curl and GNU kits also have separately
 verified archive backups outside both worktree and session storage.
 
+### Shared source inventory integration
+
+`build/sbom/native_provenance.py` adapts inspected curl/zlib/nghttp2/nghttp3
+kits into the existing `rebuiltArchiveEvidence` model, consumed by both SBOM
+emitters. It rechecks original source/compiler/archive records, requires both
+macOS architectures, binds every universal slice or Windows copy, and retains
+original record/recipe/toolchain hashes. A signed release tarball remains an
+exact-hash source archive; its related Git tag is not promoted to a source commit.
+`generate.py inputs --native-source-kit PATH` repeats inspection at final input
+collection. Only actual hash-matched linker selections receive package identity.
+
+The adapter's CLI creates a **new** isolated vendor-layout directory; it refuses
+existing outputs. The curl source workflow stages curl/zlib/nghttp2 on both
+platforms using this path and retains merge commands/tool identity. This is not a
+full plugin or release package. LGPL proxy/modman/iconv and the mixed-notice SSH
+adapter/delivery gates remain open; historical input collection without the new
+option is unchanged. Normalized sidecars alone do not satisfy relink/host gates.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

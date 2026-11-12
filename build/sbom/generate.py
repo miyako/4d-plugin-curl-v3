@@ -72,8 +72,18 @@ def normalized_provenance(value):
             if canonical in value and value[canonical] != value[alternate]:
                 raise ValueError(f"Conflicting source provenance field: {canonical}")
             value[canonical] = value.pop(alternate)
-        if not value.get(canonical):
+        if not value.get(canonical) and canonical != "sourceCommit":
             raise ValueError(f"Missing source provenance field: {canonical}")
+    if not value.get("sourceCommit"):
+        source = value.get("sourceArchive")
+        if (not isinstance(source, dict)
+                or not isinstance(source.get("sha256"), str)
+                or not re.fullmatch(r"[0-9a-f]{64}", source.get("sha256", ""))
+                or not isinstance(source.get("url"), str)
+                or not source.get("url", "").startswith("https://")
+                or source.get("library") != value["name"]
+                or source.get("version") != value.get("version")):
+            raise ValueError("Missing source provenance field: sourceCommit or pinned sourceArchive")
     return value
 
 
@@ -195,6 +205,10 @@ def collect(args):
         if json.loads(snapshot.read_text(encoding="utf-8")) != record["embeddedSourceEvidence"]:
             raise ValueError("Embedded source inputs changed since the pre-build snapshot")
     rebuilt = []
+    native_kits = getattr(args, "native_source_kit", [])
+    if native_kits:
+        import native_provenance
+        rebuilt.extend(native_provenance.collect(root, args.target, native_kits))
     for provenance_path in [args.brotli_provenance, getattr(args, "openssl_provenance", None)]:
         if not provenance_path:
             continue
@@ -204,6 +218,14 @@ def collect(args):
             if declared.get(archive["path"], {}).get("sha256") != archive["sha256"]:
                 raise ValueError(f"{provenance.get('name', 'Library')} build provenance does not match declared archive")
         rebuilt.append(provenance)
+    if len({a["path"] for p in rebuilt for a in p["archives"]}) != sum(
+            len(p["archives"]) for p in rebuilt):
+        raise ValueError("Duplicate source-build archive provenance")
+    declared = {item["path"]: item for item in inputs}
+    for provenance in rebuilt:
+        for archive in provenance["archives"]:
+            if declared.get(archive["path"], {}).get("sha256") != archive["sha256"]:
+                raise ValueError("Native source provenance differs from declared archive")
     if rebuilt:
         record["rebuiltArchiveEvidence"] = rebuilt
     manifest_path = getattr(args, "manifest", None)
@@ -638,6 +660,8 @@ def main():
     inputs.add_argument("--output", type=Path, required=True)
     inputs.add_argument("--brotli-provenance", type=Path)
     inputs.add_argument("--openssl-provenance", type=Path)
+    inputs.add_argument("--native-source-kit", type=Path, action="append", default=[],
+                        help="Inspect original native candidate kit and bind its installed archive")
     inputs.add_argument("--manifest", type=Path)
     inputs.add_argument("--link-map", action="append", default=[])
     inputs.add_argument("--link-log", type=Path)

@@ -141,3 +141,44 @@ jobs:
           path: ${{ runner.temp }}/native-libcurl/
           include-hidden-files: true
           if-no-files-found: warn
+
+  inventory:
+    needs: curl-source
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: native-libcurl-*
+          path: ${{ runner.temp }}/native-kits
+      - name: Inspect original kits and bind isolated vendor-layout copies to the shared inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s build/sbom -p test_native_provenance.py
+          KITS="$RUNNER_TEMP/native-kits"
+          python build/sbom/native_provenance.py --target macos-universal \
+            --kit "$KITS/native-libcurl-macos-arm64" \
+            --kit "$KITS/native-libcurl-macos-x86_64" \
+            --kit "$KITS/native-libcurl-macos-arm64/providers/zlib" \
+            --kit "$KITS/native-libcurl-macos-x86_64/providers/zlib" \
+            --kit "$KITS/native-libcurl-macos-arm64/providers/http" \
+            --kit "$KITS/native-libcurl-macos-x86_64/providers/http" \
+            --output "$RUNNER_TEMP/native-source-inventory/macos"
+          python build/sbom/native_provenance.py --target windows-x86_64 \
+            --kit "$KITS/native-libcurl-windows-x86_64" \
+            --kit "$KITS/native-libcurl-windows-x86_64/providers/zlib" \
+            --kit "$KITS/native-libcurl-windows-x86_64/providers/http" \
+            --output "$RUNNER_TEMP/native-source-inventory/windows"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: isolated-native-source-inventory
+          path: ${{ runner.temp }}/native-source-inventory/
+          include-hidden-files: true
+          if-no-files-found: warn
