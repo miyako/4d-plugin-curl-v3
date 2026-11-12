@@ -1,5 +1,7 @@
 #include <stdio.h>
+#ifndef SSH_ONLY
 #include "curl/curl.h"
+#endif
 #include "libssh2.h"
 
 static void string(const char *text) {
@@ -90,6 +92,13 @@ static int ssh_algorithms(void) {
 }
 
 int main(void) {
+#ifdef SSH_ONLY
+    fputs("{\"version\":", stdout);
+    string(libssh2_version(0));
+    if (ssh_algorithms()) return 1;
+    fputs("}\n", stdout);
+    return 0;
+#else
     curl_version_info_data *info;
     CURLcode status = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (status != CURLE_OK) {
@@ -129,4 +138,5 @@ int main(void) {
     fputs("}\n", stdout);
     curl_global_cleanup();
     return 0;
+#endif
 }

@@ -1,6 +1,50 @@
 {
   "schemaVersion": 1,
   "status": "isolated-source-prerequisites-not-production",
+  "sourceAcquisitionsAwaitingBuild": [
+    {
+      "library": "curl",
+      "version": "8.21.0",
+      "targets": ["macos-arm64", "macos-x86_64", "windows-x86_64"],
+      "url": "https://curl.se/download/curl-8.21.0.tar.xz",
+      "sha256": "aa1b66a70eace83dc624508745646c08ae561de512ab403adffb93ac87fc72e6",
+      "signatureUrl": "https://curl.se/download/curl-8.21.0.tar.xz.asc",
+      "signatureResult": "VALIDSIG; no personal trust endorsement",
+      "signerFingerprint": "27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2",
+      "fingerprintReference": "https://curl.se/docs/verify.html",
+      "licenseFile": "COPYING",
+      "licenseSha256": "82f2f4427d6545ee5aaac4f0b80428da6cc8ba41c2cf5da3a03680ec327b9681",
+      "relatedGitTagCommit": "68720b4837284335b2d63cb358f8f6ce65f5bc55",
+      "gitTagBanner": "8.21.0-DEV",
+      "releaseArchiveBanner": "8.21.0"
+    },
+    {
+      "library": "libiconv",
+      "version": "1.16",
+      "targets": ["macos-arm64", "macos-x86_64"],
+      "url": "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.16.tar.gz",
+      "sha256": "e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04",
+      "signatureUrl": "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.16.tar.gz.sig",
+      "signatureResult": "VALIDSIG with EXPKEYSIG; signature predates key expiry",
+      "signerFingerprint": "68D94D8AAEEAD48AE7DC5B904F494A942E4616C2",
+      "publicKeyringUrl": "https://ftp.gnu.org/gnu/gnu-keyring.gpg",
+      "licenseFile": "COPYING.LIB",
+      "licenseSha256": "56bdea73b6145ef6ac5259b3da390b981d840c24cb03b8e1cbc678de7ecfa18d"
+    },
+    {
+      "library": "libiconv",
+      "version": "1.18",
+      "targets": ["windows-x86_64"],
+      "url": "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.18.tar.gz",
+      "sha256": "3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8",
+      "signatureUrl": "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.18.tar.gz.sig",
+      "signatureResult": "VALIDSIG with EXPKEYSIG; signature predates key expiry",
+      "signerFingerprint": "9001B85AF9E1B83DF1BDA942F5BE8B267C6A406D",
+      "publicKeyringUrl": "https://ftp.gnu.org/gnu/gnu-keyring.gpg",
+      "licenseFile": "COPYING.LIB",
+      "licenseSha256": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95"
+    }
+  ],
   "libraries": {
     "zlib": {
       "repository": "https://github.com/madler/zlib",

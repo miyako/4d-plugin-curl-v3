@@ -183,6 +183,58 @@ compile inputs and unused gitlink pointers remain distinct evidence.
 Old/new HTTP interoperability, libiconv, libssh2, curl rebuild,
 complete plugin materials and host validation are still open gates.
 
+### Version-matched SSH and pending release-source acquisitions
+
+`build_ssh.py` builds libssh2 tag `libssh2-1.11.1`, pinned commit
+`a312b43325e3383c865a87bb1d26cb52e3292641`, against the verified matching-source
+OpenSSL provider. The tag itself reports `1.11.1_DEV`; this matches the
+observed banner but does not identify the historical archive's source commit.
+The isolated arm64 build passes upstream `test_simple` and exactly preserves
+all eight ordered supported-algorithm lists, including disabled SSH compression.
+Native CI runs the same gate on each target, reusing its fresh baseline/provider
+job rather than choosing an unobserved Windows configuration.
+
+The producer retains source kits, original provider records and installed headers,
+generated configuration, compiler objects, archive-member payload bindings,
+actual probe selections, binary/map hashes and original test outputs. It never
+replaces the production libssh2. Docker/sshd tests are disabled and only the
+standalone `test_simple` case is run; neither that case nor supported-algorithm
+equality proves live SSH negotiation, authentication or SFTP interoperability.
+
+```sh
+python3 build/dependencies/build_ssh.py build \
+  --source /clean/pinned/libssh2 --target macos-arm64 \
+  --openssl-install /matching/openssl/install \
+  --baseline /measured/curl-observation --output /fresh/ssh-evidence
+python3 build/dependencies/build_ssh.py inspect /downloaded/ssh-evidence
+```
+
+The project COPYING text is BSD-3-Clause, but it does not erase embedded
+BSD-2-Clause, public-domain or ISC-style notices. In particular,
+`bcrypt_pbkdf.c` contains ISC-style permission terms despite its upstream `MIT`
+SPDX comment. These original file notices are retained and explicitly inventoried;
+public-domain fragments must not be relabeled MIT/CC0. Final normalized license
+assertions and redistribution materials still require consolidation.
+
+`native-sources.json` separately pins **acquisitions awaiting builds**, not
+selected-production archive identities. Official curl 8.21.0 release source
+and signature were verified against the fingerprint published in
+[curl's verification instructions](https://curl.se/docs/verify.html).
+Its release header reports `8.21.0`; the Git tag's `8.21.0-DEV` banner is a
+packaging distinction, not a reason to rewrite an unverified source banner.
+The signed release archive is available for the source producer.
+
+Both original GNU libiconv source archives/signatures and the official GNU
+public keyring are preserved. Signature verification reports `VALIDSIG` with
+expired-key warnings; both signatures predate the observed key expiries.
+This is not a current key-trust endorsement. `COPYING.LIB` and the library's
+`iconv.c` specify LGPL-2.1-or-later; root GPL tool terms must not indiscriminately
+be assigned to the library or ignored for tools actually redistributed.
+Upstream's MSVC instructions require Cygwin/GNU make with the supplied compiler
+and archive wrappers, not nmake or MSYS2. A static-CRT recipe, actual encoding/
+conversion comparison and corresponding-source/relink delivery remain necessary;
+neither source acquisition nor identifying LGPL text satisfies those gates.
+
 ## Host-verification prerequisites
 
 Host verification is feasible but has not been performed. A local macOS 26.7

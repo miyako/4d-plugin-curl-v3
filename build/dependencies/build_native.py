@@ -80,6 +80,7 @@ def stage(source, output, commit, checkout):
             target = staged / item["path"]
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(archive.extractfile(item["path"]).read())
+            target.chmod(0o755 if archive.getmember(item["path"]).mode & 0o111 else 0o644)
     return staged, tree_files(staged)
 
 

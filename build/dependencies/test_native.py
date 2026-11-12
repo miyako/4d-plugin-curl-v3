@@ -1,5 +1,8 @@
+import io
 import json
+import os
 from pathlib import Path
+import tarfile
 import tempfile
 import unittest
 from unittest import mock
@@ -71,6 +74,19 @@ class NativePrerequisiteTests(unittest.TestCase):
             self.skipTest("symbolic links require host permission")
         with self.assertRaisesRegex(ValueError, "symbolic link"):
             build_native.tree_files(source)
+
+    @unittest.skipIf(os.name == "nt", "Windows does not enforce POSIX executable modes")
+    def test_git_source_staging_preserves_upstream_script_executability(self):
+        with tarfile.open(self.root / "upstream-source.tar", "w") as archive:
+            for name, mode in (("configure", 0o755), ("header.h", 0o644)):
+                entry = tarfile.TarInfo(name)
+                entry.mode, entry.size = mode, 1
+                archive.addfile(entry, io.BytesIO(b"x"))
+        with mock.patch.object(build_native.subprocess, "run"):
+            staged, _ = build_native.stage(
+                self.root, self.root, "pinned", [{"path": "configure"}, {"path": "header.h"}])
+        self.assertTrue((staged / "configure").stat().st_mode & 0o111)
+        self.assertFalse((staged / "header.h").stat().st_mode & 0o111)
 
     def test_existing_outputs_cannot_receive_fresh_provenance(self):
         output = self.root / "old-output"

@@ -172,6 +172,12 @@ jobs:
           python-version: '3.12'
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          repository: libssh2/libssh2
+          ref: a312b43325e3383c865a87bb1d26cb52e3292641 # libssh2-1.11.1 (source banner 1.11.1_DEV)
+          path: libssh2-source
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
           repository: google/brotli
           ref: db24a98aed38a16de78cc05ca15cdd8dc2a0d92d # Brotli 1.2.1
           path: brotli-source
@@ -282,6 +288,23 @@ jobs:
             --brotli-vendor "$RUNNER_TEMP/baseline-brotli" \
             --output "$RUNNER_TEMP/curl-evidence/observation"
           python build/dependencies/observe_curl.py inspect "$RUNNER_TEMP/curl-evidence/observation"
+      - name: Build isolated version-matched SSH and compare actual algorithm configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/dependencies/build_ssh.py build \
+            --source libssh2-source --target "${{ matrix.target }}" \
+            --openssl-install openssl-source/out \
+            --baseline "$RUNNER_TEMP/curl-evidence/observation" \
+            --output "$RUNNER_TEMP/native-libssh2"
+          python build/dependencies/build_ssh.py inspect "$RUNNER_TEMP/native-libssh2"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: native-libssh2-${{ matrix.target }}
+          path: ${{ runner.temp }}/native-libssh2/
+          if-no-files-found: warn
+          include-hidden-files: true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
