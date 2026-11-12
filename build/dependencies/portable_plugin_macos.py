@@ -152,7 +152,7 @@ def export(project, output):
         source = Path(__file__).resolve().parents[1] / folder
         for path in source.iterdir():
             if path.is_file() and path.suffix in (".py", ".json"):
-                destination = output / "tools" / folder / path.name
+                destination = output / "tools/build" / folder / path.name
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(path, destination)
     record = {
@@ -176,7 +176,7 @@ def export(project, output):
     return record
 
 
-def replay(kit, output, replacements):
+def replay(kit, output, replacements, iconv_replacements=None):
     if platform.system() != "Darwin":
         raise ValueError("Portable replay requires macOS and the recorded Apple toolchain")
     record = json.loads((kit / MANIFEST).read_text())
@@ -192,8 +192,13 @@ def replay(kit, output, replacements):
     sdk = Path(subprocess.check_output(["xcrun", "--show-sdk-path"], text=True).strip())
     if record["toolchain"] != toolchain(driver, sdk):
         raise ValueError("Portable replay toolchain/SDK differs from the original build")
-    if replacements and set(replacements) != {"macos-arm64", "macos-x86_64"}:
-        raise ValueError("Both modified proxy architecture archives are required")
+    changes = {"proxy": replacements, "iconv": iconv_replacements or {}}
+    for library, archives in changes.items():
+        if archives and set(archives) != {"macos-arm64", "macos-x86_64"}:
+            raise ValueError("Both modified " + library + " architecture archives are required")
+    modified = any(changes.values())
+    replacement_hashes = {library: {t: digest(p) for t, p in archives.items()}
+                          for library, archives in changes.items() if archives}
     if len(record["architectures"]) != 2 or {a["target"] for a in record["architectures"]} != {
             "macos-arm64", "macos-x86_64"}:
         raise ValueError("Portable architecture coverage changed")
@@ -214,16 +219,20 @@ def replay(kit, output, replacements):
                 argument = argument.replace(token, value)
             arguments.append(argument)
         arguments[arguments.index("-filelist") + 1] = str(filelist)
-        if replacements:
-            arguments[arguments.index("-lproxy")] = str(replacements[target])
-            arguments.append("-Wl,-u,_proxy_user_relink_probe")
+        for library, archives in changes.items():
+            if archives:
+                if arguments.count("-l" + library) != 1:
+                    raise ValueError("Expected one original " + library + " selection")
+                arguments[arguments.index("-l" + library)] = str(archives[target])
+                arguments.append("-Wl,-u,_" + library + "_user_relink_probe")
         with (folder / "link.log").open("w") as stream:
             subprocess.run(arguments, cwd=kit, stdout=stream, stderr=subprocess.STDOUT, check=True)
         binary = folder / "cURL"
-        if replacements:
-            if (not local.defines_marker(binary.read_bytes())
+        if modified:
+            if (not all(local.defines_marker(binary.read_bytes(), "_" + library + "_user_relink_probe")
+                        for library, archives in changes.items() if archives)
                     or digest(binary) == recipe["originalSliceSha256"]):
-                raise ValueError("Modified portable replay did not retain defined proxy code")
+                raise ValueError("Modified portable replay did not retain defined replacement code")
         elif digest(binary) != recipe["originalSliceSha256"]:
             raise ValueError("Relocated baseline does not match the original plugin slice")
         results.append({"target": target, "sha256": digest(binary), "command": arguments})
@@ -235,10 +244,13 @@ def replay(kit, output, replacements):
         raise ValueError("Portable universal slices differ from their link outputs")
     if any(digest(relative_path(kit, item["path"])) != item["sha256"] for item in record["files"]):
         raise ValueError("Portable input bytes changed during relinking")
+    if replacement_hashes != {library: {t: digest(p) for t, p in archives.items()}
+                              for library, archives in changes.items() if archives}:
+        raise ValueError("Modified archives changed during relinking")
     proof = {"status": record["status"], "kitManifestSha256": digest(kit / MANIFEST),
-             "modified": bool(replacements), "architectures": results,
+             "modified": modified, "architectures": results,
              "binarySha256": digest(output / "cURL"),
-             "replacementArchives": {t: digest(p) for t, p in replacements.items()}}
+             "replacementArchives": replacement_hashes}
     write_json(output / "portable-replay-proof.json", proof)
     return proof
 
@@ -254,11 +266,15 @@ if __name__ == "__main__":
     run.add_argument("--output", type=Path, required=True)
     run.add_argument("--proxy-arm64", type=Path)
     run.add_argument("--proxy-x86-64", type=Path)
+    run.add_argument("--iconv-arm64", type=Path)
+    run.add_argument("--iconv-x86-64", type=Path)
     args = parser.parse_args()
     if args.command == "export":
         result = export(args.project.resolve(), args.output.resolve())
     else:
         replacements = {t: p.resolve() for t, p in (
             ("macos-arm64", args.proxy_arm64), ("macos-x86_64", args.proxy_x86_64)) if p}
-        result = replay(args.kit.resolve(), args.output.resolve(), replacements)
+        iconv_replacements = {t: p.resolve() for t, p in (
+            ("macos-arm64", args.iconv_arm64), ("macos-x86_64", args.iconv_x86_64)) if p}
+        result = replay(args.kit.resolve(), args.output.resolve(), replacements, iconv_replacements)
     print(json.dumps({"status": result["status"], "target": "macos-universal"}, indent=2))

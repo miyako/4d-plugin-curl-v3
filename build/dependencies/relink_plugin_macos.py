@@ -20,7 +20,7 @@ from relink_candidate import inspect_relink
 MARKER = "_proxy_user_relink_probe"
 
 
-def defines_marker(data):
+def defines_marker(data, marker=MARKER):
     count, size = unpack("<II", data, 16)
     region(data, 32, size)
     offset, tables = 32, []
@@ -42,7 +42,7 @@ def defines_marker(data):
     for index in range(count):
         string, kind, section, _, _ = unpack("<IBBHQ", data, raw + 16 * index)
         if not kind & 0xE0 and kind & 0x0E == 0x0E and section > 0:
-            found += cstring(names, string) == MARKER
+            found += cstring(names, string) == marker
     return found == 1
 
 

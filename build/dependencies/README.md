@@ -549,7 +549,7 @@ merge-tool identities remain explicit external prerequisites.
 python3 build/dependencies/portable_plugin_macos.py export \
   --project /original/isolated/project --output /fresh/mac-kit
 mv /fresh/mac-kit "/different/location/moved mac-kit"
-python3 "/different/location/moved mac-kit/tools/dependencies/portable_plugin_macos.py" replay \
+python3 "/different/location/moved mac-kit/tools/build/dependencies/portable_plugin_macos.py" replay \
   --kit "/different/location/moved mac-kit" --output /fresh/baseline-replay
 ```
 
@@ -564,12 +564,38 @@ Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy
 sources before linking their changes into both full-plugin slices. This closes
 the Mac object-link relocation issue, not the whole LGPL delivery gate.
-GNU iconv modification/relink verification, portable Windows materials,
+Portable Windows materials and Windows GNU modification/relink verification,
 complete notices and remaining-library distribution terms, maintainer-key-free
 install/trust and operator-run 4D checks remain open. Unselected search-path
 files are retained for link fidelity, not assigned source identities or
 declared safe to redistribute; these internal experimental kits are not
 release-ready compliance packages.
+
+The delivered `tools/build/dependencies/relink_iconv_macos.py` also rebuilds
+GNU iconv from each original delivered source archive with a dated benign
+`lib/iconv.c` modification. It preserves the measured configure options and
+static/deployment flags, records the actual compatible local toolchain, checks
+compiler-object/archive closure and runs all nine baseline conversion/rejection
+checks plus the ordered encoding aliases. Its executable probe calls the new
+function; `--inspect-only` rechecks the persisted source/recipe/output proof
+without running it. GNU configure/build output requires a fresh directory
+without whitespace; the source kit itself may be relocated to a spaced path.
+
+```sh
+python3 "$KIT/tools/build/dependencies/relink_iconv_macos.py" \
+  --candidate "$KIT/library-materials/macos-arm64/libiconv" \
+  --output /fresh/no-spaces/iconv-arm64
+```
+
+Repeat for `macos-x86_64`, then pass both resulting `build/lib/.libs/libiconv.a`
+paths as `--iconv-arm64` and `--iconv-x86-64` to portable `replay`. These may
+be combined with the modified proxy arguments. Both delivered GNU source
+rebuilds, conversion comparisons and combined full-plugin relinks have been
+executed successfully on Mac: both slices retain defined proxy **and** iconv
+probe code, with unchanged original product objects and library order.
+The experimental combined universal SHA-256 is
+`1edda70a20fcf5bb6bf6888eafd879cdea5717233a662efd45718e52a2ab2dce`.
+This does not establish modified Windows GNU delivery or 4D host behavior.
 
 ```sh
 python3 build/dependencies/build_curl.py build \

@@ -13,9 +13,21 @@ import sys
 import build_iconv
 import prepare_cygwin
 import trace_compiler
+import relink_iconv_macos
 
 
 class IconvTests(unittest.TestCase):
+    def test_user_source_modification_preserves_bytes_and_requires_a_real_date(self):
+        source = b"/* Original library notice */\nint original(void) { return 0; }\n"
+        changed = relink_iconv_macos.modified_source(source, "2026-11-12")
+        self.assertTrue(changed.startswith(source))
+        self.assertEqual(changed[len(source):],
+                         b"\n/* User-relink demonstration change on 2026-11-12 (UTC). */\n"
+                         b"int iconv_user_relink_probe(void) { return 1; }\n")
+        for date in ("2026-02-30", "2026-11-12\nextra"):
+            with self.assertRaises(ValueError):
+                relink_iconv_macos.modified_source(source, date)
+
     def test_acquisition_extraction_rejects_traversal_links_and_duplicate_members(self):
         cases = [
             [("libiconv-1.16/../../escape", tarfile.REGTYPE)],
