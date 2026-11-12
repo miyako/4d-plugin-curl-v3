@@ -52,9 +52,12 @@ class ProviderMaterialsTests(unittest.TestCase):
     def test_native_deployment_and_static_crt_are_measured_not_just_declared(self):
         call = {"inputs": [{"path": "/source/input.c"}], "arguments": ["-c", "-MT"]}
         provider_materials.compile_profile(call, "windows-x86_64")
-        call["arguments"] = ["-c", "-MD"]
-        with self.assertRaisesRegex(ValueError, "static CRT"):
-            provider_materials.compile_profile(call, "windows-x86_64")
+        call["arguments"] = ["-c", "/MT", "-MT"]
+        provider_materials.compile_profile(call, "windows-x86_64")
+        for flags in ([], ["-MD"], ["/MT", "/MD"], ["/MT", "-MTd"], ["/MT", "/MDd"]):
+            call["arguments"] = ["-c", *flags]
+            with self.subTest(flags=flags), self.assertRaisesRegex(ValueError, "static CRT"):
+                provider_materials.compile_profile(call, "windows-x86_64")
         for target, cpu, minimum in (("macos-arm64", 0x0100000C, 11 << 16),
                                      ("macos-x86_64", 0x01000007, (10 << 16) | (13 << 8))):
             call["arguments"] = ["-arch", target.removeprefix("macos-"),

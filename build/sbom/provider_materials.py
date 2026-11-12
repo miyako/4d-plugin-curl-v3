@@ -29,8 +29,8 @@ def compile_profile(call, target):
             if not any(a == "-f" and i + 1 < len(arguments) and arguments[i + 1] == "win64"
                        for i, a in enumerate(arguments)):
                 raise ValueError("Provider assembler changed the Windows x64 profile")
-        elif [a.lstrip("/-") for a in arguments
-              if a.lstrip("/-") in ("MT", "MTd", "MD", "MDd")] != ["MT"]:
+        elif {a.lstrip("/-") for a in arguments
+              if a.lstrip("/-") in ("MT", "MTd", "MD", "MDd")} != {"MT"}:
             raise ValueError("Provider compiler changed the release static CRT profile")
     elif target in ("macos-arm64", "macos-x86_64"):
         architectures = [arguments[i + 1] for i, a in enumerate(arguments[:-1]) if a == "-arch"]
