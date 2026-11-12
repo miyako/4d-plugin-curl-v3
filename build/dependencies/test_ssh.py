@@ -7,6 +7,13 @@ import build_ssh
 
 
 class SSHTests(unittest.TestCase):
+    def test_actual_msvc_commands_must_not_silently_use_dynamic_or_debug_crt(self):
+        build_ssh.verify_compile_settings([{"command": "cl /O2 /MT -c agent.c"}], "windows-x86_64")
+        for flags in ("/MD", "/MTd", "/MT /MD", "/MT /MTd", "/MT /MDd"):
+            with self.subTest(flags=flags), self.assertRaisesRegex(ValueError, "static MSVC CRT"):
+                build_ssh.verify_compile_settings(
+                    [{"command": "cl /O2 " + flags + " -c agent.c"}], "windows-x86_64")
+
     def test_algorithm_order_and_source_banner_must_match(self):
         candidate = {"version": "1.11.1_DEV", "sshAlgorithms": {"kex": ["first", "second"]}}
         baseline = copy.deepcopy(candidate)

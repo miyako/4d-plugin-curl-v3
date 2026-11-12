@@ -12,6 +12,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  iconv-prerequisites:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos-arm64
+          - os: macos-15-intel
+            target: macos-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: GNU source and conversion evidence guards
+        run: python -m unittest discover -s build/dependencies -p 'test_iconv.py'
+      - name: Acquire the reviewed release archive
+        shell: python
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          import json, os, urllib.request
+          from pathlib import Path
+          lock = json.loads(Path("build/dependencies/native-sources.json").read_text())
+          pin = next(p for p in lock["sourceArchives"]
+                     if p["library"] == "libiconv" and os.environ["TARGET"] in p["targets"])
+          urllib.request.urlretrieve(pin["url"], Path(os.environ["RUNNER_TEMP"]) / "libiconv.tar.gz")
+      - name: Build source iconv and compare exact selected baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/dependencies/build_iconv.py build \
+            --archive "$RUNNER_TEMP/libiconv.tar.gz" --target "${{ matrix.target }}" \
+            --output "$RUNNER_TEMP/native-libiconv"
+          python build/dependencies/build_iconv.py inspect "$RUNNER_TEMP/native-libiconv"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: native-libiconv-${{ matrix.target }}
+          path: ${{ runner.temp }}/native-libiconv/
+          if-no-files-found: error
+          include-hidden-files: true
+
   http-prerequisites:
     strategy:
       fail-fast: false

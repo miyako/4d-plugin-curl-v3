@@ -50,7 +50,8 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 ## Checklist and gates
 
 - [x] Preserve and independently inspect published containers and archive selections.
-- [ ] Recover curl feature/protocol baseline and original configuration where possible.
+- [x] Recover observable curl features/protocols on all targets; retain unknown
+  historical configure arguments as an explicit residual.
 - [ ] Resolve libproxy/libmodman replacement and static-distribution obligations.
 - [x] Build/test the proxy candidate against exact baseline archives on all three targets.
 - [x] Rebuild delivered library sources with a user modification and relink a
@@ -158,7 +159,10 @@ Its old single-backend validation assumption rejected that legitimate banner;
 the target-specific check now preserves the dual-backend requirement and the
 probe enumerates available TLS backends before initialization without selecting
 one. This measurement is not a successful TLS handshake or original configure
-argument recovery. A corrected persisted Windows record is still required.
+argument recovery. The corrected Windows record from
+[run 43262905033](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43262905033)
+was downloaded and independently inspected: its cold enumeration reports
+`openssl`, then `schannel`, with all 18 features and 21 protocols preserved.
 
 `build_http.py` adds version-matched nghttp2 1.70.0
 (`85e300c79fb6dbcfa9c1013215c8710c1c2cd3d2`) and macOS nghttp3 1.15.0
@@ -202,6 +206,14 @@ Both isolated local macOS builds pass upstream `test_simple` and exactly preserv
 all eight ordered supported-algorithm lists, including disabled SSH compression.
 Native CI runs the same gate on each target, reusing its fresh baseline/provider
 job rather than choosing an unobserved Windows configuration.
+The downloaded Intel record from run 43262905033 independently passes its
+26-object source/archive binding and algorithm checks. Windows reached and
+passed `test_simple` but correctly stopped at the CRT gate: CMake's old policy
+default generated `/MD` despite the requested runtime setting. The recipe now
+explicitly sets `CMAKE_POLICY_DEFAULT_CMP0091=NEW` before configuration; actual
+compiler commands must still prove `/MT`, without dynamic/debug CRT flags.
+This correction requires a fresh native Windows result, not a relabeling of
+the rejected output.
 
 The producer retains source kits, original provider records and installed headers,
 generated configuration, compiler objects, archive-member payload bindings,
@@ -225,13 +237,47 @@ SPDX comment. These original file notices are retained and explicitly inventorie
 public-domain fragments must not be relabeled MIT/CC0. Final normalized license
 assertions and redistribution materials still require consolidation.
 
-`native-sources.json` separately pins **acquisitions awaiting builds**, not
+`native-sources.json` separately pins **release-source acquisitions**, not
 selected-production archive identities. Official curl 8.21.0 release source
 and signature were verified against the fingerprint published in
 [curl's verification instructions](https://curl.se/docs/verify.html).
 Its release header reports `8.21.0`; the Git tag's `8.21.0-DEV` banner is a
 packaging distinction, not a reason to rewrite an unverified source banner.
 The signed release archive is available for the source producer.
+
+### GNU iconv source prerequisites
+
+`build_iconv.py` builds the SHA-pinned GNU 1.16 release archive for each macOS
+architecture without replacing production libraries or building the GPL CLI.
+Both local architectures preserve the exact ordered 111 encoding groups and
+pass nine old/new conversion/rejection checks: Japanese Shift-JIS roundtrip,
+ISO-2022-JP flushing, non-BMP UTF-16LE, CP1252, Latin1, invalid/truncated input
+and output-buffer exhaustion. This is bounded compatibility evidence, not all
+upstream tests or full-plugin validation.
+
+GNU 1.16's configure script enables extra encodings whenever its option is
+present, even as `--disable-extra-encodings`. The first experiment exposed
+33 extra groups. Omitting that option when the measured baseline lacks extras
+restores equality without changing upstream source or weakening the gate.
+The exact generated configuration and compiler commands remain in the record.
+
+```sh
+python3 build/dependencies/build_iconv.py build \
+  --archive /verified/libiconv-1.16.tar.gz --target macos-arm64 \
+  --output /fresh/iconv-evidence
+python3 build/dependencies/build_iconv.py inspect /downloaded/iconv-evidence
+```
+
+The source kit retains the original acquisition tar, exact recipe and source
+files, generated interface/configuration, toolchain identities, original
+compiler invocations and input/output hashes, all three object payloads,
+exact archive-member binding, actual old/new link selections and probe
+executables/results. Inspection checks the installed archive/interface/license,
+architecture and requested deployment setting. The source-only native matrix
+adds both macOS iconv targets; Windows 1.18 still requires its upstream-supported
+Cygwin/GNU-make/MSVC recipe with actual `/MT` proof, not an MSYS2/nmake substitute.
+Shared JSON probe helpers have explicit recipe contracts so earlier curl/SSH
+records remain inspectable with their original delivered recipes.
 
 Both original GNU libiconv source archives/signatures and the official GNU
 public keyring are preserved. Signature verification reports `VALIDSIG` with

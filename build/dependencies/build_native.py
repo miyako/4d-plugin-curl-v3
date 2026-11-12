@@ -145,6 +145,21 @@ def link_selections(output, target, original_build, baseline, archive):
     return result
 
 
+def probe_selections(output, target, inputs, *, map_name="probe.map", log_name="probe-build.log"):
+    windows = target.startswith("windows")
+    text = (output / map_name).read_text(encoding="utf-8-sig", errors="surrogateescape")
+    selected, _ = (parse_msvc((output / log_name).read_text(), text) if windows
+                   else parse_apple(text, target.removeprefix("macos-")))
+    normal = (lambda p: ntpath.normcase(ntpath.normpath(p))) if windows else posixpath.normpath
+    result = {}
+    for name, item in inputs.items():
+        matched = [s for s in selected if normal(s["archive"]) == normal(item["path"])]
+        if not matched:
+            raise ValueError("Native probe did not select the exact " + name + " archive")
+        result[name] = matched
+    return result
+
+
 def verify_tests(path, allow_failed=False):
     suite = ET.parse(path).getroot()
     tests = suite.findall("testcase")

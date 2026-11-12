@@ -15,6 +15,7 @@ sys.path.insert(0, str(HERE.parent / "sbom"))
 from provenance import archive_hashes, digest, read_record, write_json
 
 RECIPES = ["build/dependencies/observe_curl.py", "build/dependencies/native/curl-info.c",
+           "build/dependencies/native/probe-json.h",
            "build/dependencies/baseline-v4.9.10.json", "build/sbom/provenance.py"]
 SSH_METHODS = {"kex", "hostkey", "cipherClientToServer", "cipherServerToClient",
                "macClientToServer", "macServerToClient",
@@ -80,7 +81,13 @@ def inspect(output):
     validate_observations(info, selected, record["target"])
     if info != record["observations"]:
         raise ValueError("Stored curl observations differ from the original output")
-    if (set(a["path"] for a in record["recipeFiles"]) != set(RECIPES)
+    version = record.get("recipeContractVersion", 1)
+    expected_recipes = set(RECIPES)
+    if version == 1:
+        expected_recipes.remove("build/dependencies/native/probe-json.h")
+    elif version != 2:
+        raise ValueError("Unsupported curl observation recipe contract")
+    if (set(a["path"] for a in record["recipeFiles"]) != expected_recipes
             or record["recipeFiles"] != archive_hashes(
                 output / "recipe", [a["path"] for a in record["recipeFiles"]])
             or record["interfaceFiles"] != archive_hashes(
@@ -201,7 +208,7 @@ def observe(target, output, openssl_install, brotli_vendor):
             or recipes != archive_hashes(ROOT, RECIPES)):
         raise ValueError("Curl probe source/interface/provider inputs changed during observation")
     record = {
-        "schemaVersion": 1, "target": target,
+        "schemaVersion": 1, "recipeContractVersion": 2, "target": target,
         "evidenceType": "exact-baseline-curl-runtime-with-rebuilt-matching-providers",
         "baselineArchiveInputs": [{"path": a["path"], "sha256": a["sha256"]} for a in inputs],
         "rebuiltProviders": {"OpenSSL": openssl, "Brotli": brotli},

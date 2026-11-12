@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "isolated-source-prerequisites-not-production",
-  "sourceAcquisitionsAwaitingBuild": [
+  "sourceArchives": [
     {
       "library": "curl",
       "version": "8.21.0",

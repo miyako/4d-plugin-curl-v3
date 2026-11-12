@@ -3,10 +3,8 @@
 
 import argparse
 import json
-import ntpath
 from pathlib import Path
 import platform
-import posixpath
 import re
 import shutil
 import subprocess
@@ -14,16 +12,17 @@ import xml.etree.ElementTree as ET
 
 from build_http import snapshot
 from build_native import ROOT, RECIPES, run, stage, tree_files, toolchain, object_evidence
+from build_native import probe_selections as selections
 from inspect_proxy import verify_architecture, verify_tar
 from observe_curl import inspect as inspect_baseline
 from provenance import archive_hashes, digest, read_record, write_json
-from linker import parse_apple, parse_msvc
 
 COMMIT = "a312b43325e3383c865a87bb1d26cb52e3292641"
 LICENSE_SHA = "f7f9633cf9ff2f1333f3d7ce46973a8716a4d2a2815ad56f30d437d5fea7bafe"
 SSH_RECIPES = RECIPES + [
     "build/dependencies/build_ssh.py", "build/dependencies/build_http.py",
-    "build/dependencies/observe_curl.py", "build/dependencies/native/curl-info.c"]
+    "build/dependencies/observe_curl.py", "build/dependencies/native/curl-info.c",
+    "build/dependencies/native/probe-json.h"]
 NOTICES = ["COPYING", "src/bcrypt_pbkdf.c", "src/blowfish.c",
            "src/cipher-chachapoly.c", "src/cipher-chachapoly.h",
            "src/chacha.c", "src/chacha.h", "src/poly1305.c", "src/poly1305.h", "src/misc.c"]
@@ -37,21 +36,6 @@ def compare(candidate, baseline):
         raise ValueError("libssh2 algorithm order/configuration differs from the measured baseline")
 
 
-def selections(output, target, inputs):
-    windows = target.startswith("windows")
-    text = (output / "probe.map").read_text(encoding="utf-8-sig", errors="surrogateescape")
-    selected, _ = (parse_msvc((output / "probe-build.log").read_text(), text) if windows
-                   else parse_apple(text, target.removeprefix("macos-")))
-    normal = ntpath.normcase if windows else posixpath.normpath
-    result = {}
-    for name, item in inputs.items():
-        matched = [s for s in selected if normal(s["archive"]) == normal(item["path"])]
-        if not matched:
-            raise ValueError("SSH probe did not select the exact " + name + " archive")
-        result[name] = matched
-    return result
-
-
 def verify_tests(path):
     root = ET.parse(path).getroot()
     cases = root.findall("testcase")
@@ -60,6 +44,18 @@ def verify_tests(path):
             or len(cases) != 1 or cases[0].get("status") != "run"
             or any(c.tag in ("failure", "error", "skipped") for c in cases[0])):
         raise ValueError("libssh2 standalone test_simple did not pass completely")
+
+
+def verify_compile_settings(compiled, target):
+    for entry in compiled:
+        command = entry["command"]
+        if target.startswith("windows"):
+            if (not re.search(r"(?:^|[ /-])MT(?:\s|$)", command)
+                    or re.search(r"(?:^|[ /-])M[DT]d(?:\s|$)|(?:^|[ /-])MD(?:\s|$)", command)):
+                raise ValueError("libssh2 must retain the release static MSVC CRT")
+        elif ("-arch " + target.removeprefix("macos-") not in command
+              or "-mmacosx-version-min=10.13" not in command):
+            raise ValueError("libssh2 architecture/deployment settings changed")
 
 
 def inspect(output):
@@ -73,9 +69,15 @@ def inspect(output):
     }.items()):
         raise ValueError("libssh2 source identity or candidate status changed")
     verify_tar(output / "upstream-source.tar", record["sourceFiles"], directories=True)
+    recipe_version = record.get("recipeContractVersion", 1)
+    expected_recipes = set(SSH_RECIPES)
+    if recipe_version == 1:
+        expected_recipes.remove("build/dependencies/native/probe-json.h")
+    elif recipe_version != 2:
+        raise ValueError("Unsupported libssh2 recipe contract")
     if (record["sourceFiles"] != tree_files(output / "source")
             or digest(output / "source/COPYING") != LICENSE_SHA
-            or set(p["path"] for p in record["recipeFiles"]) != set(SSH_RECIPES)
+            or set(p["path"] for p in record["recipeFiles"]) != expected_recipes
             or record["recipeFiles"] != archive_hashes(
                 output / "recipe", [p["path"] for p in record["recipeFiles"]])
             or record["noticeFiles"] != archive_hashes(output / "source", NOTICES)):
@@ -106,6 +108,7 @@ def inspect(output):
                 in c["output"].replace("\\", "/")]
     if not compiled or compiled != record["compiledSources"]:
         raise ValueError("libssh2 actual compile inputs changed")
+    verify_compile_settings(compiled, record["target"])
     original_build = record["configure_arguments"][record["configure_arguments"].index("-B") + 1]
     proof = object_evidence(output, record["builtArchive"], compiled, original_build)
     if any(record.get(k) != v for k, v in proof.items()):
@@ -159,6 +162,7 @@ def build(source, output, target, openssl_install, baseline):
     arguments = ["cmake", "-S", str(staged), "-B", str(output / "build"), "-G", "Ninja",
                  "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
                  "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+                 "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW",
                  "-DCMAKE_POLICY_VERSION_MINIMUM=3.5", "-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY=ON",
                  "-DBUILD_STATIC_LIBS=ON", "-DBUILD_SHARED_LIBS=OFF", "-DBUILD_EXAMPLES=OFF",
                  "-DBUILD_TESTING=ON", "-DRUN_DOCKER_TESTS=OFF", "-DRUN_SSHD_TESTS=OFF",
@@ -185,12 +189,7 @@ def build(source, output, target, openssl_install, baseline):
         relative = Path(command["file"]).relative_to(staged).as_posix()
         if relative not in hashes or digest(staged / relative) != hashes[relative]:
             raise ValueError("libssh2 compilation input lacks original source evidence")
-        if windows and (not re.search(r"(?:^|[ /-])MT(?:\s|$)", command["command"])
-                        or re.search(r"(?:^|[ /-])MD(?:d)?(?:\s|$)", command["command"])):
-            raise ValueError("libssh2 must retain the release static MSVC CRT")
-        if not windows and ("-arch " + target.removeprefix("macos-") not in command["command"]
-                            or "-mmacosx-version-min=10.13" not in command["command"]):
-            raise ValueError("libssh2 architecture/deployment settings changed")
+    verify_compile_settings(compiled, target)
     name = "libssh2.lib" if windows else "libssh2.a"
     built = output / "build/src" / name
     install = output / "install"
@@ -238,7 +237,8 @@ def build(source, output, target, openssl_install, baseline):
                                 "sha256": digest(openssl_install / crypto)}}
     evidence += [p["path"] for p in proof["compiledObjects"]]
     record = {
-        "schema_version": 1, "evidence_type": "isolated-source-build-candidate",
+        "schema_version": 1, "recipeContractVersion": 2,
+        "evidence_type": "isolated-source-build-candidate",
         "status": "not-approved-for-production", "library": "libssh2", "target": target,
         "source_commit": COMMIT, "source_repository": "https://github.com/libssh2/libssh2",
         "version": "1.11.1_DEV", "sourceFiles": files, "checkoutFiles": checkout,
