@@ -228,6 +228,9 @@ def combine(records, vendor, target):
                 0x0100000C: installs["macos-arm64"] / "lib" / name,
                 0x01000007: installs["macos-x86_64"] / "lib" / name,
             })
+    if any("buildMaterials" in build for build in builds):
+        from provider_materials import compact_record
+        builds = [compact_record(path, build) for path, build in zip(records, builds)]
     result = {"schema_version": 1, **identity, "target": target,
               "archives": archives, "source_builds": sorted(builds, key=lambda b: b["target"])}
     write_json(vendor / "openssl-provenance.json", result)

@@ -100,7 +100,7 @@ def build(source, output, target, commit):
         source, install, record, calls,
         [(work / name, name) for name in ("CMakeCache.txt", "compile_commands.json", "build.ninja")],
         [(output / name, name) for name in ("configure.log", "build.log", "tests.log", "install.log")],
-        [(ROOT / name, name) for name in recipes], toolchain)
+        [(ROOT / name, name) for name in recipes], toolchain, target)
     record["buildMaterials"]["configureCommand"] = arguments
     provenance.write_json(path, record)
     provider_materials.inspect(install, record)

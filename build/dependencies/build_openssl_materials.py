@@ -69,10 +69,16 @@ def build(source, output, target, commit):
     trace = ROOT / "build/dependencies/trace_compiler.py"
     env = os.environ.copy()
     quote = subprocess.list2cmdline if windows else shlex.join
-    env["CC"] = quote([sys.executable, str(trace), str(calls),
+    traced_cc = quote([sys.executable, str(trace), str(calls),
                        toolchain["cl" if windows else "cc"]["path"]])
+    env["CC"] = "cl" if windows else traced_cc
+    make_variables = []
     if windows:
-        env["AS"] = quote([sys.executable, str(trace), str(calls), toolchain["nasm"]["path"]])
+        env["AS"] = "nasm"
+        make_variables = [
+            "CC=" + traced_cc,
+            "AS=" + quote([sys.executable, str(trace), str(calls), toolchain["nasm"]["path"]]),
+        ]
     arguments = [provenance.PLATFORMS[target], "no-shared", "no-tests"]
     arguments += (["-MT", "--release"] if windows else ["-mmacosx-version-min=10.13"])
     arguments.append("--prefix=" + str(output / "install"))
@@ -84,20 +90,30 @@ def build(source, output, target, commit):
             subprocess.run(command, cwd=source, env=env, stdout=stream,
                            stderr=subprocess.STDOUT, check=True)
 
-    run([toolchain["perl"]["path"], str(source / "Configure"), *arguments], "configure.log")
+    configure_command = [toolchain["perl"]["path"], str(source / "Configure"), *arguments]
+    build_command = ([toolchain["nmake"]["path"], *make_variables] if windows else
+                     [toolchain["make"]["path"], "-j3"])
+    install_command = [toolchain["nmake" if windows else "make"]["path"],
+                       *make_variables, "install_sw"]
+    provenance.write_json(output / "commands.json", {
+        "configure": configure_command, "build": build_command, "install": install_command})
+    run(configure_command, "configure.log")
     actual_cc = subprocess.check_output(
         ["perl", "-I", str(source), "-Mconfigdata", "-e", "print $configdata::config{CC}"],
         cwd=source, text=True)
-    if actual_cc != env["CC"]:
-        raise ValueError("OpenSSL Configure did not retain the exact compiler tracer")
+    configured = {"CC": actual_cc}
     if windows:
-        actual_as = subprocess.check_output(
+        configured["AS"] = subprocess.check_output(
             ["perl", "-I", str(source), "-Mconfigdata", "-e", "print $configdata::config{AS}"],
             cwd=source, text=True)
-        if actual_as != env["AS"]:
-            raise ValueError("OpenSSL Configure did not retain the exact NASM tracer")
-    run([toolchain["nmake"]["path"]] if windows else [toolchain["make"]["path"], "-j3"], "build.log")
-    run([toolchain["nmake" if windows else "make"]["path"], "install_sw"], "install.log")
+    provenance.write_json(output / "configured-tools.json", configured)
+    if actual_cc != env["CC"]:
+        raise ValueError("OpenSSL Configure did not retain the expected compiler configuration")
+    if windows:
+        if configured["AS"] != env["AS"]:
+            raise ValueError("OpenSSL Configure did not retain the native NASM configuration")
+    run(build_command, "build.log")
+    run(install_command, "install.log")
     if (tools(target) != toolchain or provenance.source_identity(source) != identity
             or provenance.archive_hashes(ROOT, recipes) != recipe_hashes):
         raise ValueError("OpenSSL source/toolchain changed during the fresh experiment")
@@ -108,8 +124,9 @@ def build(source, output, target, commit):
     provider_materials.capture(
         source, install, record, calls,
         [(source / name, name) for name in ("Makefile", "configdata.pm")],
-        [(output / name, name) for name in ("configure.log", "build.log", "install.log")],
-        [(ROOT / name, name) for name in recipes], toolchain)
+        [(output / name, name) for name in ("configure.log", "build.log", "install.log",
+                                          "commands.json", "configured-tools.json")],
+        [(ROOT / name, name) for name in recipes], toolchain, target)
     record["buildMaterials"]["compilerEnvironment"] = {
         key: env.get(key) for key in ("CC", "AS", "CFLAGS", "CPPFLAGS", "LDFLAGS", "SDKROOT",
                                      "MACOSX_DEPLOYMENT_TARGET", "DEVELOPER_DIR", "INCLUDE",

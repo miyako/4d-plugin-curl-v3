@@ -214,7 +214,9 @@ def collect(args):
     for provenance_path in [args.brotli_provenance, getattr(args, "openssl_provenance", None)]:
         if not provenance_path:
             continue
-        provenance = normalized_provenance(json.loads(provenance_path.read_text(encoding="utf-8")))
+        import provider_materials
+        provenance = normalized_provenance(provider_materials.inventory_record(
+            provenance_path, getattr(args, "provider_source_record", [])))
         declared = {item["path"]: item for item in inputs}
         for archive in provenance["archives"]:
             if declared.get(archive["path"], {}).get("sha256") != archive["sha256"]:
@@ -667,6 +669,8 @@ def main():
     inputs.add_argument("--binary", type=Path, required=True)
     inputs.add_argument("--output", type=Path, required=True)
     inputs.add_argument("--brotli-provenance", type=Path)
+    inputs.add_argument("--provider-source-record", type=Path, action="append", default=[],
+                        help="Original source-provider records required by compact material summaries")
     inputs.add_argument("--openssl-provenance", type=Path)
     inputs.add_argument("--native-source-kit", type=Path, action="append", default=[],
                         help="Inspect original native candidate kit and bind its installed archive")

@@ -695,6 +695,25 @@ before any library compilation. Native Python workflow steps preserve the
 Windows tool environment instead, and the builder explicitly requires native
 Windows Perl for `VC-WIN64A`. Original rejected output remains rejected.
 
+Run `43323497938` subsequently produced independently inspected Windows Brotli
+source/compiler materials: six common, six decoder and 23 encoder objects, all
+using release static CRT flags. OpenSSL configuration rejected the attempted
+assembler instrumentation before building: upstream ignores the `AS` environment
+override with the preserved `-MT` option and quotes its native command names.
+The experiment now preserves the original `cl`/`nasm` Configure settings and
+supplies tracer commands as explicit NMAKE macro overrides for build/install;
+both original commands and configured native tool names are retained.
+
+Fresh proofs check actual compiler deployment/static-CRT flags and every
+archive object's CPU and effective Mac minimum, not only requested settings.
+Read-only inspection of both persisted Mac kits confirms 1,105/1,114 OpenSSL
+objects and 35 Brotli objects per target satisfy those deployment profiles.
+For inventory ingestion, full material tables remain in original source kits.
+Bounded summaries reference exact original-record hashes; `collect` requires
+the corresponding `--provider-source-record` inputs and rechecks them before
+accepting aggregated material summaries. Missing originals, changed bytes or
+changed summary counts fail. Existing historical records remain unchanged.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \
