@@ -4,6 +4,7 @@
 import argparse
 from collections import Counter
 import json
+import ntpath
 import os
 from pathlib import Path, PurePosixPath
 import platform
@@ -115,7 +116,8 @@ def inspect(output):
     windows = record["target"].startswith("windows")
     core = core_sources(record["target"])
     built_archive = record.get("builtArchive", "build/lib/.libs/libiconv.a")
-    if built_archive not in ({"build/lib/.libs/libiconv.lib", "build/lib/.libs/libiconv.a"}
+    if built_archive not in ({"build/lib/.libs/libiconv.lib", "build/lib/.libs/iconv.lib",
+                              "build/lib/.libs/libiconv.a"}
                              if windows else {"build/lib/.libs/libiconv.a"}):
         raise ValueError("Unexpected GNU iconv static build output")
     installed_archive = "lib/libiconv.lib" if windows else "lib/libiconv.a"
@@ -148,7 +150,11 @@ def inspect(output):
                 "interface/iconv.h", "build/include/iconv.h", "build/config.log"}
     if windows:
         required.update({"tool-acquisition.json", "tool-installed.db", "tool-setup.log",
-                         "charset-header.log", "build/lib/localcharset.h"})
+                         "charset-header.log", "build/lib/localcharset.h", "archiver-resolution.json"})
+        resolved = json.loads((output / "archiver-resolution.json").read_text())
+        if (ntpath.normcase(resolved["path"]) != ntpath.normcase(record["toolchain"]["lib"]["path"])
+                or resolved["sha256"] != record["toolchain"]["lib"]["sha256"]):
+            raise ValueError("GNU iconv archiver resolution differs from the original MSVC tool")
         acquisition = json.loads((output / "tool-acquisition.json").read_text())
         tool_pin = json.loads((output / "recipe/build/dependencies/windows-build-tools.json").read_text())["cygwin"]
         if (acquisition["pin"] != tool_pin or acquisition["installerSha256"] != tool_pin["sha256"]
@@ -310,10 +316,18 @@ def build(archive, output, target, cygwin_root=None):
             "CC": shlex.join([posix(source / "build-aux/compile"), posix(wrapper / "cl"), "-nologo"]),
             "CFLAGS": "-O2 -MT", "CPPFLAGS": "", "LDFLAGS": "",
             "LD": "link", "NM": shlex.join([posix(Path(tool["dumpbin"]["path"])), "-symbols"]),
-            "STRIP": ":", "AR": shlex.join([posix(source / "build-aux/ar-lib"),
-                                           posix(Path(tool["lib"]["path"]))]),
+            "STRIP": ":", "AR": shlex.join([posix(source / "build-aux/ar-lib"), "lib.exe"]),
             "RANLIB": ":", "RC": posix(wrapper / "windres"), "CL": "", "_CL_": "",
             "CONFIG_SHELL": "/bin/bash", "SHELL": "/bin/bash"})
+        resolved = subprocess.check_output(
+            [tool["sh"]["path"], "--noprofile", "--norc", "-c", "command -v lib.exe"],
+            env=env, text=True).strip()
+        resolved = Path(subprocess.check_output(
+            [tool["cygpath"]["path"], "-w", resolved], text=True).strip())
+        if not resolved.samefile(Path(tool["lib"]["path"])):
+            raise ValueError("GNU ar-lib must resolve the exact original MSVC archiver")
+        write_json(output / "archiver-resolution.json",
+                   {"path": str(resolved), "sha256": digest(resolved)})
         for filename, name in (("acquisition.json", "tool-acquisition.json"),
                                ("installed.db", "tool-installed.db"), ("setup.log", "tool-setup.log")):
             shutil.copyfile(cygwin_root.parent / filename, output / name)
@@ -342,7 +356,8 @@ def build(archive, output, target, cygwin_root=None):
     execute([tool["make"]["path"], "-C", posix(work / "lib") if windows else str(work / "lib"), "-j3"],
             output / "build.log", env=env)
     archives = [p for p in (work / "lib/.libs").iterdir()
-                if p.name in ("libiconv.a", "libiconv.lib") and p.is_file() and not p.is_symlink()]
+                if p.name in ("libiconv.a", "libiconv.lib", "iconv.lib")
+                and p.is_file() and not p.is_symlink()]
     if len(archives) != 1:
         raise ValueError("GNU iconv build did not produce exactly one expected static archive")
     built = archives[0]
