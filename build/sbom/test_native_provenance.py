@@ -183,6 +183,29 @@ class NativeProvenanceTests(unittest.TestCase):
         self.assertEqual(native_provenance.collect(
             self.vendor, "windows-x86_64", [kit]), result["rebuiltArchiveEvidence"])
 
+    def test_windows_iconv_source_output_binds_the_actual_project_linker_name(self):
+        kit = self.kit("windows-x86_64")
+        installed = kit / "install/lib/libiconv.lib"
+        (kit / "install/lib/libcurl.a").rename(installed)
+        path = kit / "native-build-provenance.json"
+        record = json.loads(path.read_text())
+        record.update(library="libiconv", version="1.18",
+                      archives=[{"path": "lib/libiconv.lib", "sha256": provenance.digest(installed)}])
+        record["sourceArchive"].update(library="libiconv", version="1.18",
+                                      url="https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.18.tar.gz")
+        path.write_text(json.dumps(record))
+        staged = native_provenance.stage(self.vendor, "windows-x86_64", [kit])
+        selected = self.vendor / "lib/64/iconv.lib"
+        self.assertEqual(selected.read_bytes(), installed.read_bytes())
+        self.assertFalse((self.vendor / "lib/64/libiconv.lib").exists())
+        evidence = {"rebuiltArchiveEvidence": staged["rebuiltArchiveEvidence"],
+                    "linkEvidence": {"windows-x86_64": {"archives": [{
+                        "candidatePath": "lib/64/iconv.lib", "sha256": provenance.digest(selected)}]}}}
+        dependency = generate.build_dependencies(evidence, "windows-x86_64", [])[0]
+        self.assertEqual(dependency["name"], "libiconv")
+        self.assertEqual(dependency["archiveIdentities"][0]["identity"]["evidenceType"],
+                         "source-build-and-selected-archive")
+
     def test_project_staging_never_reuses_output_or_accepts_a_partial_candidate_stack(self):
         self.vendor.mkdir()
         with self.assertRaisesRegex(ValueError, "new output directory"):

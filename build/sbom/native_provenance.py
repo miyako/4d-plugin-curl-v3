@@ -19,7 +19,7 @@ LIBRARIES = {
     "nghttp2": ("build_http", "MIT", "a/libnghttp2.a", "lib/64/nghttp2.lib"),
     "nghttp3": ("build_http", "MIT", "a/libnghttp3.a", None),
     "libiconv": ("build_iconv", "LGPL-2.1-or-later AND LGPL-2.0-or-later",
-                 "a/libiconv.a", "lib/64/libiconv.lib"),
+                 "a/libiconv.a", "lib/64/iconv.lib"),
     "libssh2": ("build_ssh", None, "a/libssh2.a", "lib/64/libssh2.lib"),
     "libproxy": ("inspect_proxy", "LGPL-2.1-or-later", "a/libproxy.a", "lib/64/libproxy.lib"),
     "libmodman": ("inspect_proxy", "LGPL-2.1-or-later", "a/libmodman.a", "lib/64/modman.lib"),

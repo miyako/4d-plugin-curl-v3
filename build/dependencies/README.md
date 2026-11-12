@@ -466,10 +466,33 @@ without rebuilding/restamping the other providers.
 
 The source-plugin-only Windows route also attempts the actual original-object
 replay with the delivered modified proxy, retaining its probe as one additional
-DLL export. Its strict baseline comparison excludes only COFF/export timestamps
-and the PE checksum; unexplained differences fail rather than being waived.
+DLL export. Its strict baseline comparison excludes only COFF/export timestamps,
+clock-matched PGO/ILTCG debug timestamps and the PE checksum; unexplained
+differences fail rather than being waived.
 Raw baseline/modified outputs are retained even on failure. This experiment
 does not load the DLL, run 4D or provide portable corresponding-source delivery.
+
+Run `43299473050` at `63a2c19` built and ingested both real source-candidate
+plugins successfully, including Windows with the corrected v143 proxy inputs.
+Its Windows replay gate correctly rejected four additional differing bytes:
+the timestamp fields in the PGO (type 13) and ILTCG (type 14) debug directories.
+Independent inspection of the downloaded originals found equal binary sizes,
+equal exports and every other byte equal after the already documented header
+normalization. The comparator now accepts only those parsed timestamp fields
+when each matches its binary's COFF clock; debug payload bytes and all other
+binary bytes remain exact. The original rejected replay is preserved, not
+restamped as passing; fresh exact-head native CI remains required.
+
+Independent inspection also caught a Windows inventory destination error that
+the downstream source-only package gate would reject: GNU's fresh
+`libiconv.lib` was staged under that unused basename, while the actual project
+still selected the preserved historical `iconv.lib`. Counts and its supported
+1.18 identity were not proof of source selection. The adapter now copies the
+verified producer output to the actual `lib/64/iconv.lib` linker path, without
+changing declarations/search order or the producer record. A regression covers
+staging through actual selected-path promotion. The earlier Windows artifacts
+retain their original mixed evidence; they do not establish all-source-selected
+coverage. Fresh inventory and native validation must confirm the corrected copy.
 
 ```sh
 python3 build/dependencies/build_curl.py build \

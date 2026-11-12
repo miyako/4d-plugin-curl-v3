@@ -32,6 +32,9 @@ def pe_layout(data):
         raise ValueError("Missing PE export directory")
     optional = pe + 24
     region(data, optional, size + count * 40)
+    directory_count, = unpack("<I", data, optional + 108)
+    if directory_count < 1 or 112 + directory_count * 8 > size:
+        raise ValueError("Invalid PE data-directory count")
     sections = []
     for index in range(count):
         offset = optional + size + 40 * index
@@ -72,6 +75,20 @@ def pe_layout(data):
     normalized = bytearray(data)
     fields = {"coffTimeDateStamp": pe + 8, "optionalHeaderCheckSum": optional + 64,
               "exportTimeDateStamp": directory + 4}
+    if directory_count > 6:
+        debug_rva, debug_size = unpack("<II", data, optional + 112 + 6 * 8)
+        if debug_size:
+            if debug_size % 28:
+                raise ValueError("Invalid PE debug-directory size")
+            debug = location(debug_rva, debug_size)
+            for index in range(debug_size // 28):
+                offset = debug + 28 * index
+                stamp, = unpack("<I", data, offset + 4)
+                kind, = unpack("<I", data, offset + 12)
+                clock, = unpack("<I", data, pe + 8)
+                if kind not in (13, 14) or stamp != clock:
+                    raise ValueError("Unsupported PE debug timestamp/type in baseline comparison")
+                fields[f"debug{kind}TimeDateStamp[{index}]"] = offset + 4
     for offset in fields.values():
         normalized[offset:offset + 4] = b"\0" * 4
     return bytes(normalized), exports, fields
@@ -200,7 +217,7 @@ def relink(project, output, candidate, modified):
         "markerExport": MARKER,
         "limitations": [
             "Local original-object replay, not portable LGPL source/relink delivery.",
-            "Only COFF/export timestamps and PE checksum are excluded from baseline byte comparison.",
+            "Only COFF/export timestamps, clock-matched PGO/ILTCG debug timestamps and PE checksum are excluded from baseline byte comparison.",
             "No DLL/4D initialization, host trust/install check or transfer execution.",
         ],
     }

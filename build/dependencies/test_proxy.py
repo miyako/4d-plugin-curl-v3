@@ -352,6 +352,7 @@ class ProxyEvidenceTests(unittest.TestCase):
         struct.pack_into("<HH", data, 132, 0x8664, 1)
         struct.pack_into("<H", data, 148, 240)
         struct.pack_into("<H", data, 152, 0x20B)
+        struct.pack_into("<I", data, 260, 16)
         struct.pack_into("<II", data, 264, 4096, 128)
         struct.pack_into("<4I", data, 400, 1024, 4096, 1024, 512)
         struct.pack_into("<I", data, 428, 0x60000020)
@@ -364,8 +365,20 @@ class ProxyEvidenceTests(unittest.TestCase):
         for offset in fields.values():
             struct.pack_into("<I", data, offset, 12345)
         self.assertEqual(relink_plugin_windows.pe_layout(data)[0], normal)
+        struct.pack_into("<II", data, 312, 4224, 56)
+        for offset, kind in ((640, 13), (668, 14)):
+            struct.pack_into("<I", data, offset + 4, 12345)
+            struct.pack_into("<I", data, offset + 12, kind)
+        normalized = relink_plugin_windows.pe_layout(data)[0]
+        for offset in relink_plugin_windows.pe_layout(data)[2].values():
+            struct.pack_into("<I", data, offset, 54321)
+        self.assertEqual(relink_plugin_windows.pe_layout(data)[0], normalized)
+        struct.pack_into("<I", data, 644, 7)
+        with self.assertRaisesRegex(ValueError, "debug timestamp/type"):
+            relink_plugin_windows.pe_layout(data)
+        struct.pack_into("<I", data, 644, 54321)
         data[1024] = 1
-        self.assertNotEqual(relink_plugin_windows.pe_layout(data)[0], normal)
+        self.assertNotEqual(relink_plugin_windows.pe_layout(data)[0], normalized)
         struct.pack_into("<I", data, 560, 4100)
         with self.assertRaisesRegex(ValueError, "forwarder"):
             relink_plugin_windows.pe_layout(data)
