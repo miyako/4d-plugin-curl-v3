@@ -42,7 +42,6 @@
 		D155A50A26130E820015464C /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A4FE26130E820015464C /* libcrypto.a */; };
 		D155A50C26130E820015464C /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50026130E820015464C /* libz.a */; };
 		D155A50D26130E820015464C /* libidn2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50126130E820015464C /* libidn2.a */; };
-		D155A51026130E820015464C /* libjsoncpp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50426130E820015464C /* libjsoncpp.a */; };
 		D155A51126130E820015464C /* libnghttp2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50526130E820015464C /* libnghttp2.a */; };
 		D155A51226130E820015464C /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D155A50626130E820015464C /* libssl.a */; };
 		D155A51826130F900015464C /* C_TYPES.h in Headers */ = {isa = PBXBuildFile; fileRef = D155A51526130F900015464C /* C_TYPES.h */; };
@@ -118,7 +117,6 @@
 		D155A4FF26130E820015464C /* libproxy.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libproxy.a; path = a/libproxy.a; sourceTree = "<group>"; };
 		D155A50026130E820015464C /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = a/libz.a; sourceTree = "<group>"; };
 		D155A50126130E820015464C /* libidn2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libidn2.a; path = a/libidn2.a; sourceTree = "<group>"; };
-		D155A50426130E820015464C /* libjsoncpp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjsoncpp.a; path = a/libjsoncpp.a; sourceTree = "<group>"; };
 		D155A50526130E820015464C /* libnghttp2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libnghttp2.a; path = a/libnghttp2.a; sourceTree = "<group>"; };
 		D155A50626130E820015464C /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssl.a; path = a/libssl.a; sourceTree = "<group>"; };
 		D155A51526130F900015464C /* C_TYPES.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = C_TYPES.h; path = "4D Plugin API/Classes/C_TYPES.h"; sourceTree = "<group>"; };
@@ -177,7 +175,6 @@
 				D1B903A7279E6A60001792B4 /* librtmp.a in Frameworks */,
 				D155A50926130E820015464C /* libmodman.a in Frameworks */,
 				D155A50D26130E820015464C /* libidn2.a in Frameworks */,
-				D155A51026130E820015464C /* libjsoncpp.a in Frameworks */,
 				D155A50726130E820015464C /* libunistring.a in Frameworks */,
 				D155A50C26130E820015464C /* libz.a in Frameworks */,
 				D155A51226130E820015464C /* libssl.a in Frameworks */,
@@ -210,7 +207,6 @@
 				D155A4FE26130E820015464C /* libcrypto.a */,
 				D157E67D261461A600F340B7 /* libiconv.a */,
 				D155A50126130E820015464C /* libidn2.a */,
-				D155A50426130E820015464C /* libjsoncpp.a */,
 				D155A4FD26130E820015464C /* libmodman.a */,
 				D155A50526130E820015464C /* libnghttp2.a */,
 				D155A4FF26130E820015464C /* libproxy.a */,
@@ -495,7 +491,6 @@
 				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
 				HEADER_SEARCH_PATHS = (
-					include/json,
 					include/curl_mac,
 					include,
 				);
@@ -552,7 +547,6 @@
 				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
 				HEADER_SEARCH_PATHS = (
-					include/json,
 					include/curl_mac,
 					include,
 				);
@@ -607,7 +601,6 @@
 				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
 				HEADER_SEARCH_PATHS = (
-					include/json,
 					include/curl_mac,
 					include,
 				);
@@ -678,7 +671,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					include/json,
 					include/curl_mac,
 					include,
 				);
@@ -730,7 +722,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					include/json,
 					include/curl_mac,
 					include,
 				);
@@ -782,7 +773,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					include/json,
 					include/curl_mac,
 					include,
 				);
