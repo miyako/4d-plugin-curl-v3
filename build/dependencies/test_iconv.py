@@ -6,6 +6,9 @@ import tempfile
 import unittest
 from unittest import mock
 import json
+import os
+import subprocess
+import sys
 
 import build_iconv
 import prepare_cygwin
@@ -89,6 +92,46 @@ class IconvTests(unittest.TestCase):
                 trace_compiler.main(root, "cl", ["-c", str(source), "-Fo" + str(output)])
             record = json.loads(next(root.glob("*.json")).read_text())
             self.assertEqual(record["object"]["sha256"], trace_compiler.digest(output))
+
+    @unittest.skipIf(os.name == "nt", "The native Cygwin run covers the Windows shell boundary")
+    def test_resource_shell_preserves_quoting_status_and_original_object_record(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            source, output = root / "input file.rc", root / "resource.obj"
+            source.write_bytes(b"resource input")
+            output.write_bytes(b"old object")
+            compiler = root / "windres"
+            compiler.write_text(
+                "#!" + sys.executable + "\n"
+                "import json, os, pathlib, sys\n"
+                "pathlib.Path(os.environ['ARGUMENTS']).write_text(json.dumps(sys.argv[1:]))\n"
+                "code = int(os.environ['RESULT'])\n"
+                "if not code: pathlib.Path(sys.argv[sys.argv.index('-o') + 1]).write_bytes(b'new object')\n"
+                "sys.exit(code)\n")
+            compiler.chmod(0o755)
+            calls = root / "calls"
+            calls.mkdir()
+            arguments = ['-DPACKAGE_VERSION_STRING=\\"1.18\\"', "-i", str(source),
+                         "-o", str(output), "--output-format=coff"]
+            env = dict(os.environ, ICONV_TRACE_PYTHON=sys.executable,
+                       ICONV_TRACE_SCRIPT=str(Path(trace_compiler.__file__).resolve()),
+                       ICONV_TRACE_DIRECTORY=str(calls), ICONV_TRACE_WINDRES=str(compiler),
+                       ARGUMENTS=str(root / "arguments.json"))
+            for code in (0, 7):
+                result = subprocess.run(["/bin/sh", str(
+                    build_iconv.ROOT / "build/dependencies/native/msvc-trace/windres"),
+                    *arguments], env=dict(env, RESULT=str(code)))
+                self.assertEqual(result.returncode, code)
+                self.assertEqual(json.loads((root / "arguments.json").read_text()), arguments)
+            records = [json.loads(p.read_text()) for p in calls.glob("*.json")]
+            good = next(p for p in records if p["returnCode"] == 0)
+            self.assertEqual(good["arguments"], arguments)
+            self.assertEqual(good["object"]["sha256"], trace_compiler.digest(output))
+            self.assertNotIn("object", next(p for p in records if p["returnCode"] == 7))
+            path = next(p for p in calls.glob("*.json")
+                        if json.loads(p.read_text())["returnCode"] == 0)
+            with self.assertRaisesRegex(ValueError, "completed twice"):
+                trace_compiler.finish(path, 0)
 
     def test_changed_tool_installer_cannot_execute(self):
         with (

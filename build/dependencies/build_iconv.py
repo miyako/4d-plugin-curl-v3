@@ -383,7 +383,8 @@ def build(archive, output, target, cygwin_root=None):
     proof = object_evidence(output, built.relative_to(output).as_posix(),
                             [{"output": c["object"]["path"]} for c in compiled], work)
     build_paths = [p.relative_to(output).as_posix() for p in work.rglob("*")
-                   if p.is_file() and not p.is_symlink()]
+                   if not (p.parent.name == ".libs" and p.suffix == ".la")
+                   and not p.is_symlink() and p.is_file()]
     build_paths += [p.relative_to(output).as_posix() for p in output.iterdir()
                     if p.is_file() and p.name != "upstream-source.tar.gz"]
     build_paths += ["interface/iconv.h"] + [p["path"] for p in compiler_calls]
