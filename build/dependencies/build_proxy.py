@@ -105,11 +105,12 @@ def build(source, output, target, baseline):
     arguments = [
         "cmake", "-S", str(HERE / "proxy"), "-B", str(output / "build"),
         "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-        "-DPROXY_SOURCE=" + str(source),
+        "-DPROXY_SOURCE=" + source.as_posix(),
         "-DPROXY_MODULES=" + ";".join(lock["modules"][platform_key]),
         "-DPROXY_MODULE_DIRECTORY=" + lock["moduleDirectory"][platform_key],
-        "-DCMAKE_INSTALL_PREFIX=" + str(install),
-        "-DBASELINE_PROXY=" + old[0]["path"], "-DBASELINE_MODMAN=" + old[1]["path"],
+        "-DCMAKE_INSTALL_PREFIX=" + install.as_posix(),
+        "-DBASELINE_PROXY=" + Path(old[0]["path"]).as_posix(),
+        "-DBASELINE_MODMAN=" + Path(old[1]["path"]).as_posix(),
     ]
     if not windows:
         arguments += ["-DCMAKE_OSX_ARCHITECTURES=" + target.removeprefix("macos-"),
@@ -144,12 +145,12 @@ def build(source, output, target, baseline):
     compiler = re.search(r'set\(CMAKE_CXX_COMPILER "([^"]+)"\)', compiler_text)
     if not compiler:
         raise ValueError("Missing actual CMake compiler path")
-    tools = [Path(compiler[1])]
-    for tool in ("cmake", "ninja"):
-        path = shutil.which(tool)
-        if not path:
-            raise ValueError("Missing build tool: " + tool)
-        tools.append(Path(path))
+    cache = (output / "build/CMakeCache.txt").read_text()
+    ninja = re.search(r"^CMAKE_MAKE_PROGRAM:FILEPATH=(.+)$", cache, re.MULTILINE)
+    cmake = shutil.which("cmake")
+    if not ninja or not cmake:
+        raise ValueError("Missing actual CMake/Ninja toolchain path")
+    tools = [Path(compiler[1]), Path(cmake), Path(ninja[1])]
     record = {
         "schema_version": 1, "evidence_type": "isolated-source-build-candidate",
         "status": lock["status"], "source_repository": lock["repository"],
