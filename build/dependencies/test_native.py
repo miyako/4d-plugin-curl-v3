@@ -97,6 +97,21 @@ class NativePrerequisiteTests(unittest.TestCase):
             build_native.link_selections(
                 self.root, "windows-x86_64", "D:/build", "C:/vendor/zlib.lib", "zlib.lib")
 
+    def test_archive_payload_must_equal_actual_compiler_outputs(self):
+        (self.root / "build").mkdir()
+        object_file = self.root / "build/source.o"
+        object_file.write_bytes(b"compiled object")
+        (self.root / "library.a").write_bytes(b"mock archive")
+        with mock.patch.object(build_native, "members",
+                               return_value=[("source.o", 0, b"compiled object")]):
+            proof = build_native.object_evidence(
+                self.root, "library.a", [{"output": "source.o"}], "/original/build")
+            self.assertEqual(len(proof["compiledObjects"]), 1)
+            object_file.write_bytes(b"different compiler output")
+            with self.assertRaisesRegex(ValueError, "actual compiled object outputs"):
+                build_native.object_evidence(
+                    self.root, "library.a", [{"output": "source.o"}], "/original/build")
+
 
 if __name__ == "__main__":
     unittest.main()

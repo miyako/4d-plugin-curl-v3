@@ -98,6 +98,11 @@ indexer, linker, build-system identities, generated headers, source allowlist,
 commands, maps, probe executables and original test results are recorded.
 Independent inspection rechecks the exact archive selection from each map and,
 on Windows, its corresponding `/VERBOSE:LIB` output.
+The source producers also require exact multiset equality between compiled
+object payload hashes and archive member payload hashes. Windows CMake's
+`vs_link_exe` suppresses successful linker diagnostics unless `VERBOSE` is
+present in its environment; the recipe sets it for the bounded build command.
+Missing selection diagnostics remain a rejection, not a basename fallback.
 
 Five tests exchange raw-deflate, zlib and gzip streams in both directions
 between the candidate and the exact selected old archive, reject truncated
@@ -134,6 +139,35 @@ TLS-SRP and Unix sockets are among the enabled features. HTTP3, QUIC and zstd
 are not advertised; selecting an nghttp3 archive is not proof of enabled HTTP3.
 The original configure command is still unknown. Other targets require their
 own persisted observations, not extrapolation from arm64.
+
+`build_http.py` adds version-matched nghttp2 1.70.0
+(`85e300c79fb6dbcfa9c1013215c8710c1c2cd3d2`) and macOS nghttp3 1.15.0
+(`d326f4c1eb3f6a780d77793b30e16756c498f913`) source prerequisites under the
+same isolated native-record contract. It preserves MIT texts, exact source
+and compiled-object/archive bindings, recipes, toolchains and upstream test
+logs. Parent-pinned munit sources are test-only; nghttp3's required sfparse
+commit `ff7f230e7df2844afef7dc49631cda03a30455f3` is separately captured as
+compiled parser source. Its nested, unused munit pointer and nghttp2's unused
+application submodules do not become incorporated library dependencies.
+
+Both macOS architectures pass all 194 nghttp2 and all 56 nghttp3 upstream main
+cases without skips. These are **source self-tests**, not old/new
+interoperability or full-plugin compatibility proof. Allocator fault-injection
+tests are not enabled. The native matrix also builds nghttp2 on Windows;
+nghttp3 is deliberately absent from Windows because it is not selected there.
+
+```sh
+python3 build/dependencies/build_http.py build --library nghttp2 \
+  --target macos-arm64 --source /clean/pinned/nghttp2 --output /fresh/http-evidence
+python3 build/dependencies/build_http.py inspect /downloaded/http-evidence
+```
+
+Initialize only the parent-pinned `tests/munit` submodule for nghttp2;
+nghttp3 additionally requires `lib/sfparse`. Do not use floating submodule
+branches. Original acquisition tars, actual checkout bytes, canonical staged
+compile inputs and unused gitlink pointers remain distinct evidence.
+Windows nghttp2, old/new HTTP interoperability, libiconv, libssh2, curl rebuild,
+complete plugin materials and host validation are still open gates.
 
 ## Host-verification prerequisites
 

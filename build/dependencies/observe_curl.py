@@ -153,7 +153,7 @@ def observe(target, output, openssl_install, brotli_vendor):
         arguments += [str(p) for p in paths]
         arguments += ["/link", "/MAP:" + str(output / "curl-probe.map"),
                       "ws2_32.lib", "crypt32.lib", "bcrypt.lib", "secur32.lib",
-                      "wldap32.lib", "advapi32.lib", "normaliz.lib"]
+                      "wldap32.lib", "advapi32.lib", "normaliz.lib", "user32.lib", "iphlpapi.lib"]
     else:
         compiler = subprocess.check_output(["xcrun", "--find", "clang"], text=True).strip()
         sdk = subprocess.check_output(["xcrun", "--sdk", "macosx", "--show-sdk-path"], text=True).strip()

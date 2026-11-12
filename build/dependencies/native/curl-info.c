@@ -65,6 +65,9 @@ int main(void) {
     field("quicVersion", info->quic_version);
     field("brotliVersion", info->brotli_version);
     field("zstdVersion", info->zstd_version);
+    field("aresVersion", info->ares);
+    field("idnVersion", info->libidn);
+    field("rtmpVersion", info->librtmp_version);
     field("cainfo", info->cainfo);
     field("capath", info->capath);
     fputs("}\n", stdout);

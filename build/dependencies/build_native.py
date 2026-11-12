@@ -2,6 +2,8 @@
 """Build isolated version-matched native prerequisites; never replace vendor inputs."""
 
 import argparse
+from collections import Counter
+import hashlib
 import json
 import ntpath
 from pathlib import Path
@@ -20,6 +22,7 @@ sys.path.insert(0, str(HERE.parent / "sbom"))
 from provenance import archive_hashes, digest, git, write_json
 from inspect_proxy import verify_architecture, verify_tar
 from linker import parse_apple, parse_msvc
+from native_archive_objects import members
 
 TARGETS = ("macos-arm64", "macos-x86_64", "windows-x86_64")
 TESTS = {"zlib_candidate_write", "zlib_baseline_write", "zlib_candidate_read",
@@ -155,6 +158,43 @@ def verify_tests(path, allow_failed=False):
     return failed
 
 
+def toolchain(output, target):
+    compiler_files = list((output / "build/CMakeFiles").glob("*/CMakeCCompiler.cmake"))
+    if len(compiler_files) != 1:
+        raise ValueError("Expected one actual C compiler identity")
+    compiler = re.search(r'set\(CMAKE_C_COMPILER "([^"]+)"\)', compiler_files[0].read_text())
+    cache = (output / "build/CMakeCache.txt").read_text()
+    tools = {}
+    for name in ("CMAKE_MAKE_PROGRAM", "CMAKE_AR", "CMAKE_LINKER") + (
+            () if target.startswith("windows") else ("CMAKE_RANLIB",)):
+        value = re.search(r"^" + name + r":FILEPATH=(.+)$", cache, re.MULTILINE)
+        if not value:
+            raise ValueError("Missing native build tool: " + name)
+        tools[name] = Path(value[1])
+    cmake = shutil.which("cmake")
+    if not compiler or not cmake:
+        raise ValueError("Missing actual compiler/CMake executable")
+    tools.update({"CMAKE_C_COMPILER": Path(compiler[1]), "cmake": Path(cmake)})
+    return ({name: {"path": str(path), "sha256": digest(path)} for name, path in tools.items()},
+            compiler_files[0].relative_to(output).as_posix())
+
+
+def object_evidence(output, archive, commands, original_build):
+    prefix = str(original_build).replace("\\", "/").rstrip("/") + "/"
+    paths = []
+    for command in commands:
+        path = command["output"].replace("\\", "/")
+        if path.startswith(prefix):
+            path = path[len(prefix):]
+        paths.append("build/" + path)
+    compiled = archive_hashes(output, paths)
+    objects = [{"member": name, "sha256": hashlib.sha256(data).hexdigest()}
+               for name, _, data in members((output / archive).read_bytes())]
+    if Counter(a["sha256"] for a in compiled) != Counter(a["sha256"] for a in objects):
+        raise ValueError("Archive members do not equal the actual compiled object outputs")
+    return {"compiledObjects": compiled, "archiveObjects": objects}
+
+
 def inspect(output, allow_failed=False):
     record = json.loads((output / "native-build-provenance.json").read_text())
     library, pin = settings(record["library"], record["target"])
@@ -206,6 +246,11 @@ def inspect(output, allow_failed=False):
     original_build = arguments[arguments.index("-B") + 1]
     original_baseline = next(a.split("=", 1)[1] for a in arguments if a.startswith("-DBASELINE_ARCHIVE="))
     check_commands(output, original_source, record["target"], library["compiledSources"])
+    commands = [c for c in json.loads((output / "build/compile_commands.json").read_text())
+                if "CMakeFiles/zlibstatic.dir/" in c["output"].replace("\\", "/")]
+    proof = object_evidence(output, built_archive, commands, original_build)
+    if any(record.get(k) != v for k, v in proof.items()):
+        raise ValueError("Stored source-to-object-to-archive proof changed")
     if record["linkSelections"] != link_selections(
             output, record["target"], original_build, original_baseline, Path(pin["archive"]).name):
         raise ValueError("Stored archive selection disagrees with original linker diagnostics")
@@ -252,10 +297,12 @@ def build(source, output, library_name, target):
         arguments += ["-DCMAKE_OSX_ARCHITECTURES=" + target.removeprefix("macos-"),
                       "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13"]
     run(arguments, output / "configure.log")
+    tools, compiler_file = toolchain(output, target)
     configured = tree_files(staged)
     verify_layout(files, configured, pin["sourceRenames"])
     for kind in ("candidate", "baseline"):
-        run(["cmake", "--build", str(output / "build"), "--target",
+        run(["cmake", "-E", "env", "VERBOSE=1", "cmake",
+             "--build", str(output / "build"), "--target",
              "zlib_" + kind + "_probe", "--verbose"], output / (kind + "-build.log"))
     for kind in ("candidate", "baseline"):
         (output / "build" / (kind + "-streams")).mkdir()
@@ -281,23 +328,14 @@ def build(source, output, library_name, target):
     evidence += ["build/" + kind + ".map" for kind in ("candidate", "baseline")]
     evidence += [p.relative_to(output).as_posix() for kind in ("candidate", "baseline")
                  for p in sorted((output / "build" / (kind + "-streams")).iterdir())]
-    compiler_files = list((output / "build/CMakeFiles").glob("*/CMakeCCompiler.cmake"))
-    if len(compiler_files) != 1:
-        raise ValueError("Expected one actual C compiler identity")
-    evidence.append(compiler_files[0].relative_to(output).as_posix())
-    compiler = re.search(r'set\(CMAKE_C_COMPILER "([^"]+)"\)', compiler_files[0].read_text())
-    cache = (output / "build/CMakeCache.txt").read_text()
-    tools = {}
-    for name in ("CMAKE_MAKE_PROGRAM", "CMAKE_AR", "CMAKE_LINKER") + (
-            () if target.startswith("windows") else ("CMAKE_RANLIB",)):
-        value = re.search(r"^" + name + r":FILEPATH=(.+)$", cache, re.MULTILINE)
-        if not value:
-            raise ValueError("Missing native build tool: " + name)
-        tools[name] = Path(value[1])
-    cmake = shutil.which("cmake")
-    if not compiler or not cmake:
-        raise ValueError("Missing actual compiler/CMake executable")
-    tools.update({"CMAKE_C_COMPILER": Path(compiler[1]), "cmake": Path(cmake)})
+    if toolchain(output, target) != (tools, compiler_file):
+        raise ValueError("Native build toolchain changed during compilation")
+    evidence.append(compiler_file)
+    commands = [c for c in json.loads((output / "build/compile_commands.json").read_text())
+                if "CMakeFiles/zlibstatic.dir/" in c["output"].replace("\\", "/")]
+    proof = object_evidence(output, "build/upstream/" + Path(pin["archive"]).name,
+                            commands, output / "build")
+    evidence += [a["path"] for a in proof["compiledObjects"]]
     record = {"schema_version": 1, "evidence_type": "isolated-source-build-candidate",
               "status": "not-approved-for-production", "library": library_name,
               "version": pin["version"], "source_repository": library["repository"],
@@ -307,7 +345,8 @@ def build(source, output, library_name, target):
               "sourceRenames": pin["sourceRenames"], "checkoutFiles": before,
               "sourceFiles": files, "configuredSourceFiles": configured, "recipeFiles": recipe,
               "configure_arguments": arguments, "buildFiles": archive_hashes(output, evidence),
-              "toolchain": {name: {"path": str(path), "sha256": digest(path)} for name, path in tools.items()},
+              "toolchain": tools,
+              **proof,
               "archives": archive_hashes(output / "install", [pin["archive"]]),
               "baselineArchive": {"path": baseline["path"], "sha256": baseline["sha256"]},
               "linkSelections": link_selections(output, target, output / "build",

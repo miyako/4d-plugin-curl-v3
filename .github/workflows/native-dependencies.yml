@@ -12,6 +12,80 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  http-prerequisites:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos-arm64
+            library: nghttp2
+            repository: nghttp2/nghttp2
+            source: 85e300c79fb6dbcfa9c1013215c8710c1c2cd3d2
+          - os: macos-15-intel
+            target: macos-x86_64
+            library: nghttp2
+            repository: nghttp2/nghttp2
+            source: 85e300c79fb6dbcfa9c1013215c8710c1c2cd3d2
+          - os: windows-latest
+            target: windows-x86_64
+            library: nghttp2
+            repository: nghttp2/nghttp2
+            source: 85e300c79fb6dbcfa9c1013215c8710c1c2cd3d2
+          - os: macos-latest
+            target: macos-arm64
+            library: nghttp3
+            repository: ngtcp2/nghttp3
+            source: d326f4c1eb3f6a780d77793b30e16756c498f913
+          - os: macos-15-intel
+            target: macos-x86_64
+            library: nghttp3
+            repository: ngtcp2/nghttp3
+            source: d326f4c1eb3f6a780d77793b30e16756c498f913
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ matrix.repository }}
+          ref: ${{ matrix.source }}
+          path: http-source
+          persist-credentials: false
+      - name: Acquire only required parent-pinned test/parser submodules
+        shell: bash
+        env:
+          LIBRARY: ${{ matrix.library }}
+        run: |
+          set -euo pipefail
+          modules=(tests/munit)
+          if [ "$LIBRARY" = nghttp3 ]; then modules+=(lib/sfparse); fi
+          git -C http-source -c core.autocrlf=false -c core.eol=lf \
+            submodule update --init --depth 1 "${modules[@]}"
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Build source HTTP prerequisite and run upstream tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/dependencies/build_http.py build --source http-source \
+            --library "${{ matrix.library }}" --target "${{ matrix.target }}" \
+            --output "$RUNNER_TEMP/native-http"
+          python build/dependencies/build_http.py inspect "$RUNNER_TEMP/native-http"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: native-${{ matrix.library }}-${{ matrix.target }}
+          path: ${{ runner.temp }}/native-http/
+          if-no-files-found: error
+          include-hidden-files: true
+
   source-prerequisites:
     strategy:
       fail-fast: false
