@@ -12,6 +12,16 @@ from build_native import ROOT
 import provenance
 
 
+RECIPES = ["LICENSE", "build/dependencies/probe_provider_tls.py",
+           "build/dependencies/native/provider-tls-probe.c"]
+
+
+def provider_inputs(install, target):
+    return provenance.archive_hashes(install, [
+        provenance.RECORD, *provenance.expected_archives(target),
+        *[p.relative_to(install).as_posix() for p in (install / "include").rglob("*.h")]])
+
+
 def validate_results(lines):
     if len(lines) != 6:
         raise ValueError("TLS probe did not report all six independent cases")
@@ -31,12 +41,10 @@ def inspect_proof(install, output):
     binary = output / ("tls-probe.exe" if record["target"] == "windows-x86_64" else "tls-probe")
     if (receipt["schemaVersion"] != 1 or receipt["target"] != record["target"]
             or receipt["providerRecordSha256"] != provenance.digest(record_path)
-            or receipt["providerInputs"] != provenance.archive_hashes(
-                install, [p["path"] for p in receipt["providerInputs"]])
-            or receipt["recipeInputs"] != provenance.archive_hashes(
-                output / "recipes", [p["path"] for p in receipt["recipeInputs"]])
+            or receipt["providerInputs"] != provider_inputs(install, record["target"])
+            or receipt["recipeInputs"] != provenance.archive_hashes(output / "recipes", RECIPES)
             or receipt["files"] != provenance.archive_hashes(
-                output, [p["path"] for p in receipt["files"]])
+                output, ["compile.log", "stdout.txt", "stderr.txt"])
             or receipt["binarySha256"] != provenance.digest(binary)
             or receipt["results"] != (output / "stdout.txt").read_text().splitlines()):
         raise ValueError("Persisted TLS proof differs from its original provider or executed inputs")
@@ -59,11 +67,8 @@ def probe(install, output):
     source = ROOT / "build/dependencies/native/provider-tls-probe.c"
     binary = output / ("tls-probe.exe" if windows else "tls-probe")
     archives = [install / name for name in reversed(provenance.expected_archives(target))]
-    inputs = provenance.archive_hashes(install, [
-        provenance.RECORD, *provenance.expected_archives(target),
-        *[p.relative_to(install).as_posix() for p in (install / "include").rglob("*.h")]])
-    recipes = ["LICENSE", "build/dependencies/probe_provider_tls.py",
-               "build/dependencies/native/provider-tls-probe.c"]
+    inputs = provider_inputs(install, target)
+    recipes = RECIPES
     recipe_hashes = provenance.archive_hashes(ROOT, recipes)
     compiler_sha = provenance.digest(Path(compiler))
     if windows:

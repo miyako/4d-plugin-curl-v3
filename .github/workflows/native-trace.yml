@@ -308,6 +308,8 @@ jobs:
       - name: Prepare a fresh separate source-candidate plugin checkout
         if: ${{ inputs.native-candidate-plugin-only }}
         shell: python
+        env:
+          MATERIALS_RUN: ${{ inputs.native-materials-provider-run }}
         run: |
           import json, os, sys
           from pathlib import Path
@@ -327,7 +329,7 @@ jobs:
                   selected.append(kits / ("native-nghttp3-" + target))
           materials = root / "candidate-provider-materials"
           provider_kits = [materials / ("isolated-provider-materials-" + target)
-                           for target in targets] if materials.exists() else []
+                           for target in targets] if os.environ["MATERIALS_RUN"] else []
           stage_project(Path.cwd(), root / "plugin-candidate",
                         "macos-universal" if mac else "windows-x86_64", selected, provider_kits)
           with open(os.environ["GITHUB_ENV"], "a") as stream:
