@@ -51,16 +51,23 @@ def verify_producer_run(run, jobs, repository, branch, role):
         "libiconv": "native-prerequisites / iconv-prerequisites (",
         "nghttp3": "native-prerequisites / http-prerequisites (",
         "libproxy": "Isolated proxy candidate (",
+        "inventory": "curl-source / inventory",
     }[role]
     targets = {"macos-arm64", "macos-x86_64"}
-    if role != "nghttp3":
+    if role == "inventory":
+        targets = {"inventory"}
+    elif role != "nghttp3":
         targets.add("windows-x86_64")
     producers = []
     for target in sorted(targets):
-        suffix = (target + ")" if role == "libproxy" else
-                  ", " + target + (", nghttp3, " if role == "nghttp3" else ")"))
+        if role == "inventory":
+            suffix = ""
+        elif role == "libproxy":
+            suffix = target + ")"
+        else:
+            suffix = ", " + target + (", nghttp3, " if role == "nghttp3" else ")")
         matches = [j for j in jobs["jobs"] if
-                   (j["name"] == prefix + suffix if role == "libproxy" else
+                   (j["name"] == prefix + suffix if role in ("libproxy", "inventory") else
                     j["name"].startswith(prefix) and suffix in j["name"])]
         attempt = max((j["run_attempt"] for j in matches), default=0)
         matches = [j for j in matches if j["run_attempt"] == attempt]

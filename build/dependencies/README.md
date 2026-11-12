@@ -423,6 +423,17 @@ kits can cover such an undeclared candidate; final promotion still requires its
 actual hash-matched linker selection. Arbitrary legacy provenance files do not
 gain this exception, and no library search order or project declaration changed.
 
+The manual `native-candidate-plugin-only=true` route takes an explicit
+`native-candidate-inventory-run`. It rechecks that inventory producer and all
+four original source producer sets, downloads their original kits and uses the
+separate project staging mode above. Existing unsigned plugin/link-map and
+ZIP/DMG/SBOM jobs are reused, with candidate-specific source-selection counts.
+Pre-link archive hashes must remain unchanged across compilation. Legacy
+read-only/default analysis keeps its original expected unknown versions.
+This route does not run the Deployment signing branch, rebuild/restamp old
+providers, adopt candidates, load 4D or publish anything. It is not the eventual
+complete user-modified-library relink/host verification gate.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

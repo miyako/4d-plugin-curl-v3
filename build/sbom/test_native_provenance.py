@@ -301,3 +301,18 @@ class NativeProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Latest exact source producer"):
             native_provenance.verify_producer_run(
                 run, jobs, "owner/repo", "candidate", "libproxy")
+
+    def test_inventory_reuse_checks_its_own_latest_aggregation_job(self):
+        run = {"id": 1, "head_sha": "1" * 40, "head_repository": {"full_name": "owner/repo"},
+               "head_branch": "candidate", "path": ".github/workflows/native-trace.yml",
+               "event": "workflow_dispatch"}
+        job = {"id": 1, "name": "curl-source / inventory",
+               "run_attempt": 1, "conclusion": "success"}
+        jobs = {"total_count": 1, "jobs": [job]}
+        self.assertEqual(len(native_provenance.verify_producer_run(
+            run, jobs, "owner/repo", "candidate", "inventory")["producers"]), 1)
+        jobs["jobs"].append(dict(job, run_attempt=2, conclusion="failure"))
+        jobs["total_count"] += 1
+        with self.assertRaisesRegex(ValueError, "Latest exact source producer"):
+            native_provenance.verify_producer_run(
+                run, jobs, "owner/repo", "candidate", "inventory")

@@ -47,6 +47,14 @@ on:
         description: 'Optional original successful schema2 proxy run for inventory assembly'
         type: string
         default: ''
+      native-candidate-plugin-only:
+        description: 'Build/package isolated source-candidate plugins; no adoption, signing or release'
+        type: boolean
+        default: false
+      native-candidate-inventory-run:
+        description: 'Original successful complete source inventory run for isolated plugin validation'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -76,7 +84,7 @@ jobs:
       proxy-provider-run-id: ${{ inputs.native-proxy-provider-run }}
 
   proxy-candidate:
-    if: ${{ !inputs.native-prerequisites-only }}
+    if: ${{ !inputs.native-prerequisites-only && !inputs.native-candidate-plugin-only }}
     name: Isolated proxy candidate (${{ matrix.target }})
     strategy:
       fail-fast: false
@@ -135,11 +143,15 @@ jobs:
           include-hidden-files: true
 
   brotli:
-    if: ${{ !inputs.proxy-candidate-only && !inputs.native-prerequisites-only }}
+    if: ${{ !inputs.proxy-candidate-only && !inputs.native-prerequisites-only && !inputs.native-candidate-plugin-only }}
     uses: ./.github/workflows/build-brotli.yml
 
   native:
     needs: brotli
+    if: ${{ !cancelled() && (needs.brotli.result == 'success' || inputs.native-candidate-plugin-only) }}
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -147,6 +159,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       OPENSSL_TAG: openssl-3.5.8
+      PLUGIN_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -156,11 +169,141 @@ jobs:
           python-version: '3.12'
       - name: Parser regression tests
         run: python -m unittest discover -s build/sbom -p test_linker.py
+      - name: Verify the explicitly selected original candidate inventory producer
+        if: ${{ inputs.native-candidate-plugin-only }}
+        shell: python
+        env:
+          INVENTORY_RUN: ${{ inputs.native-candidate-inventory-run }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, os, sys, urllib.request
+          from pathlib import Path
+          sys.path.insert(0, "build/sbom")
+          from native_provenance import verify_producer_run
+          identifier = os.environ["INVENTORY_RUN"]
+          if not identifier.isascii() or not identifier.isdigit():
+              raise ValueError("An explicit numeric original source inventory run is required")
+          base = os.environ["GITHUB_API_URL"] + "/repos/" + os.environ["GITHUB_REPOSITORY"]
+          def get(path):
+              request = urllib.request.Request(base + path, headers={
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                  "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+          record = verify_producer_run(
+              get("/actions/runs/" + identifier),
+              get("/actions/runs/" + identifier + "/jobs?per_page=100&filter=all"),
+              os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_REF_NAME"], "inventory")
+          (Path(os.environ["RUNNER_TEMP"]) / "candidate-inventory-acquisition.json").write_text(
+              json.dumps(record, indent=2))
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only }}
+        with:
+          run-id: ${{ inputs.native-candidate-inventory-run }}
+          github-token: ${{ github.token }}
+          name: isolated-native-source-inventory
+          path: ${{ runner.temp }}/candidate-inventory
+      - name: Recheck all original source producers before acquiring their kits
+        if: ${{ inputs.native-candidate-plugin-only }}
+        id: candidate-providers
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, os, sys, urllib.request
+          from pathlib import Path
+          sys.path.insert(0, "build/sbom")
+          from native_provenance import verify_producer_run
+          root = Path(os.environ["RUNNER_TEMP"])
+          original = json.loads((root / "candidate-inventory/acquisition.json").read_text())
+          base = os.environ["GITHUB_API_URL"] + "/repos/" + os.environ["GITHUB_REPOSITORY"]
+          def get(path):
+              request = urllib.request.Request(base + path, headers={
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                  "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+          records = {}
+          for role, name in (("curl", "curl"), ("nghttp3", "http"),
+                             ("libiconv", "iconv"), ("libproxy", "proxy")):
+              identifier = str(original[role]["run"]["id"])
+              if not identifier.isascii() or not identifier.isdigit():
+                  raise ValueError("Original source producer IDs must be ASCII integers")
+              records[role] = verify_producer_run(
+                  get("/actions/runs/" + identifier),
+                  get("/actions/runs/" + identifier + "/jobs?per_page=100&filter=all"),
+                  os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_REF_NAME"], role)
+              if records[role] != original[role]:
+                  raise ValueError("Original source producer identity/attempt changed")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
+                  stream.write(name + "=" + identifier + "\n")
+          (root / "candidate-source-acquisition.json").write_text(json.dumps(records, indent=2))
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only }}
+        with:
+          run-id: ${{ steps.candidate-providers.outputs.curl }}
+          github-token: ${{ github.token }}
+          pattern: native-libcurl-*
+          path: ${{ runner.temp }}/candidate-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only && runner.os == 'macOS' }}
+        with:
+          run-id: ${{ steps.candidate-providers.outputs.http }}
+          github-token: ${{ github.token }}
+          pattern: native-nghttp3-*
+          path: ${{ runner.temp }}/candidate-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only }}
+        with:
+          run-id: ${{ steps.candidate-providers.outputs.iconv }}
+          github-token: ${{ github.token }}
+          pattern: native-libiconv-*
+          path: ${{ runner.temp }}/candidate-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only && runner.os == 'macOS' }}
+        with:
+          run-id: ${{ steps.candidate-providers.outputs.proxy }}
+          github-token: ${{ github.token }}
+          pattern: isolated-proxy-macos-*
+          path: ${{ runner.temp }}/candidate-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
+        with:
+          run-id: ${{ steps.candidate-providers.outputs.proxy }}
+          github-token: ${{ github.token }}
+          name: isolated-proxy-windows-x86_64
+          path: ${{ runner.temp }}/candidate-kits/isolated-proxy-windows-x86_64
+      - name: Prepare a fresh separate source-candidate plugin checkout
+        if: ${{ inputs.native-candidate-plugin-only }}
+        shell: python
+        run: |
+          import json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, "build/sbom")
+          from native_provenance import stage_project
+          root = Path(os.environ["RUNNER_TEMP"])
+          kits = root / "candidate-kits"
+          mac = os.environ["RUNNER_OS"] == "macOS"
+          targets = ("macos-arm64", "macos-x86_64") if mac else ("windows-x86_64",)
+          selected = []
+          for target in targets:
+              curl = kits / ("native-libcurl-" + target)
+              selected += [curl, *[curl / "providers" / n for n in ("ssh", "zlib", "http")],
+                           kits / ("native-libiconv-" + target),
+                           kits / ("isolated-proxy-" + target)]
+              if mac:
+                  selected.append(kits / ("native-nghttp3-" + target))
+          stage_project(Path.cwd(), root / "plugin-candidate",
+                        "macos-universal" if mac else "windows-x86_64", selected)
+          with open(os.environ["GITHUB_ENV"], "a") as stream:
+              stream.write("PLUGIN_ROOT=" + str(root / "plugin-candidate/project") + "\n")
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ !inputs.native-candidate-plugin-only }}
         with:
           name: brotli-${{ runner.os }}
           path: .
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: ${{ !inputs.native-candidate-plugin-only }}
         with:
           repository: openssl/openssl
           ref: ${{ env.OPENSSL_TAG }}
@@ -173,14 +316,14 @@ jobs:
         with:
           arch: x64
       - name: Install NASM
-        if: runner.os == 'Windows'
+        if: ${{ runner.os == 'Windows' && !inputs.native-candidate-plugin-only }}
         shell: pwsh
         run: |
           choco install nasm -y --no-progress
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build source OpenSSL Windows static MT
-        if: runner.os == 'Windows'
+        if: ${{ runner.os == 'Windows' && !inputs.native-candidate-plugin-only }}
         shell: cmd
         working-directory: openssl-src
         run: |
@@ -201,7 +344,7 @@ jobs:
           python ..\build\sbom\provenance.py combine --record out-win64\openssl-build-provenance.json --vendor .. --target windows-x86_64
           if errorlevel 1 exit /b 1
       - name: Build source OpenSSL macOS universal
-        if: runner.os == 'macOS'
+        if: ${{ runner.os == 'macOS' && !inputs.native-candidate-plugin-only }}
         shell: bash
         run: |
           set -euo pipefail
@@ -232,9 +375,12 @@ jobs:
             --record openssl-x86_64/out/openssl-build-provenance.json \
             --vendor . --target macos-universal
       - name: Snapshot repository candidate hashes before link
+        working-directory: ${{ env.PLUGIN_ROOT }}
         shell: python
+        env:
+          SOURCE_CANDIDATE: ${{ inputs.native-candidate-plugin-only }}
         run: |
-          import hashlib, json, os, subprocess, sys
+          import hashlib, json, os, shutil, subprocess, sys
           from pathlib import Path
           paths = sorted([*Path("a").rglob("*.a"), *Path("lib/64").rglob("*.lib")])
           Path("native-trace").mkdir(exist_ok=True)
@@ -244,8 +390,13 @@ jobs:
           subprocess.run([sys.executable, "build/sbom/generate.py", "sources",
               "--target", "macos-universal" if os.environ["RUNNER_OS"] == "macOS" else "windows-x86_64",
               "--output", "native-trace/embedded-sources.json"], check=True)
+          if os.environ["SOURCE_CANDIDATE"] == "true":
+              shutil.copyfile("../plugin-candidate-staging.json", "native-trace/plugin-candidate-staging.json")
+              for name in ("candidate-inventory-acquisition.json", "candidate-source-acquisition.json"):
+                  shutil.copyfile(Path(os.environ["RUNNER_TEMP"]) / name, Path("native-trace") / name)
       - name: Build actual plugin unsigned macOS and capture per-architecture maps
         if: runner.os == 'macOS'
+        working-directory: ${{ env.PLUGIN_ROOT }}
         shell: bash
         run: |
           set -euo pipefail
@@ -263,6 +414,7 @@ jobs:
           done
       - name: Build actual plugin Windows and capture MSVC map and verbose log
         if: runner.os == 'Windows'
+        working-directory: ${{ env.PLUGIN_ROOT }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -280,12 +432,16 @@ jobs:
             --candidates native-trace/candidates.json --output native-trace/link-x64.json
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Require actual archive selections and bind unsigned binary hash
+        working-directory: ${{ env.PLUGIN_ROOT }}
         shell: python
         run: |
           import hashlib, json, os
           from pathlib import Path
           binary = Path("test/Plugins/cURL.bundle/Contents") / (
               "MacOS/cURL" if os.environ["RUNNER_OS"] == "macOS" else "Windows64/cURL.4DX")
+          for candidate in json.loads(Path("native-trace/candidates.json").read_text()):
+              if hashlib.sha256(Path(candidate["path"]).read_bytes()).hexdigest() != candidate["sha256"]:
+                  raise RuntimeError("Pre-link repository archive changed during build: " + candidate["path"])
           for path in Path("native-trace").glob("link-*.json"):
               evidence = json.loads(path.read_text())
               if not evidence["selectedArchives"]:
@@ -293,7 +449,10 @@ jobs:
               evidence["binarySha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
               path.write_text(json.dumps(evidence, indent=2) + "\n")
       - name: Collect manifest, source-build and actual linker evidence for SBOM ingestion
+        working-directory: ${{ env.PLUGIN_ROOT }}
         shell: python
+        env:
+          SOURCE_CANDIDATE: ${{ inputs.native-candidate-plugin-only }}
         run: |
           import os, subprocess, sys
           mac = os.environ["RUNNER_OS"] == "macOS"
@@ -315,6 +474,12 @@ jobs:
           else:
               command.extend(["--link-map", "windows-x86_64=native-trace/cURL-x64.map",
                               "--link-log", "native-trace/msbuild.log"])
+          if os.environ["SOURCE_CANDIDATE"] == "true":
+              import json
+              from pathlib import Path
+              staging = json.loads(Path("../plugin-candidate-staging.json").read_text())
+              for kit in staging["nativeSourceKits"]:
+                  command.extend(["--native-source-kit", kit])
           subprocess.run(command, check=True)
       - name: Upload unsigned macOS build and ingestion evidence
         if: runner.os == 'macOS'
@@ -322,10 +487,10 @@ jobs:
         with:
           name: unsigned-native-build-macOS
           path: |
-            test/Plugins/cURL.bundle/
-            native-trace/build-evidence.json
-            brotli-provenance.json
-            openssl-provenance.json
+            ${{ env.PLUGIN_ROOT }}/test/Plugins/cURL.bundle/
+            ${{ env.PLUGIN_ROOT }}/native-trace/build-evidence.json
+            ${{ env.PLUGIN_ROOT }}/brotli-provenance.json
+            ${{ env.PLUGIN_ROOT }}/openssl-provenance.json
           if-no-files-found: error
       - name: Upload unsigned Windows build and ingestion evidence
         if: runner.os == 'Windows'
@@ -333,16 +498,16 @@ jobs:
         with:
           name: unsigned-native-build-Windows
           path: |
-            test/Plugins/cURL.bundle/Contents/Windows64/cURL.4DX
-            native-trace/build-evidence.json
-            brotli-provenance.json
-            openssl-provenance.json
+            ${{ env.PLUGIN_ROOT }}/test/Plugins/cURL.bundle/Contents/Windows64/cURL.4DX
+            ${{ env.PLUGIN_ROOT }}/native-trace/build-evidence.json
+            ${{ env.PLUGIN_ROOT }}/brotli-provenance.json
+            ${{ env.PLUGIN_ROOT }}/openssl-provenance.json
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: unsigned-native-trace-${{ runner.os }}
-          path: native-trace/
+          path: ${{ env.PLUGIN_ROOT }}/native-trace/
           if-no-files-found: error
 
   package-sbom:
@@ -390,9 +555,12 @@ jobs:
             --schema-dir "$RUNNER_TEMP/sbom-schemas" unsigned-native.zip unsigned-native.dmg
       - name: Require complete selected-package and embedded-source coverage
         shell: python
+        env:
+          SOURCE_CANDIDATE: ${{ inputs.native-candidate-plugin-only }}
         run: |
-          import json
+          import json, os
           from pathlib import Path
+          source_candidate = os.environ["SOURCE_CANDIDATE"] == "true"
           manifest = json.loads(Path("build/sbom/native-archives.json").read_text())
           zlib_archive = next(a for a in manifest["archives"] if a["path"] == "lib/64/zlib.lib")
           expected_zlib = zlib_archive["targets"]["windows-x86_64"]["identities"][0]["version"]
@@ -403,6 +571,8 @@ jobs:
                   if coverage["uncoveredArchives"] or coverage["namedPackageArchives"] != coverage["selectedRepositoryArchives"]:
                       raise RuntimeError(f"{target['id']}: selected archive/package coverage regressed")
                   expected_selected, expected_versioned = (11, 9) if target["id"].startswith("windows") else (12, 10)
+                  if source_candidate:
+                      expected_versioned += 1
                   if (coverage["selectedRepositoryArchives"], coverage["versionedPackageArchives"]) != (expected_selected, expected_versioned):
                       raise RuntimeError(f"{target['id']}: actual selected/versioned archive counts changed")
                   print(f"{path.name}: {target['id']}: {coverage}")
@@ -420,8 +590,17 @@ jobs:
                   for name, version in expected.items():
                       if packages[name].get("version") != version or not packages[name].get("selectedArchives"):
                           raise RuntimeError(f"{target['id']}: incorrect selected {name} identity")
-                  if coverage["unknownVersionPackages"] != ["libmodman", "libproxy"]:
+                  if coverage["unknownVersionPackages"] != (["libmodman"] if source_candidate else ["libmodman", "libproxy"]):
                       raise RuntimeError("Unknown-version selected packages changed; review evidence explicitly")
+                  if source_candidate:
+                      identities = [a["identity"] for p in packages.values()
+                                    for a in p.get("archiveIdentities", [])]
+                      if (len(identities) != expected_selected or
+                              any(i["evidenceType"] != "source-build-and-selected-archive"
+                                  for i in identities)):
+                          raise RuntimeError("Candidate plugin has an unexplained selected archive")
+                      if packages["libproxy"].get("version") != "0.4.17":
+                          raise RuntimeError("Candidate proxy identity changed")
                   expected_sources = {"ftpparse", "4D Plugin SDK"}
                   actual_sources = {p["name"] for p in target["dependencies"]
                                     if p.get("evidenceType") == "build-derived-embedded-source"}
