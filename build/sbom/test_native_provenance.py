@@ -44,6 +44,68 @@ class NativeProvenanceTests(unittest.TestCase):
         path.write_bytes((kit / "install/lib/libcurl.a").read_bytes())
         return path
 
+    def proxy_kit(self):
+        kit = self.root / "proxy"
+        (kit / "install/lib").mkdir(parents=True)
+        archives = []
+        for name in ("libproxy.lib", "modman.lib"):
+            path = kit / "install/lib" / name
+            path.write_bytes(("Synthetic " + name).encode())
+            archives.append({"path": "lib/" + name, "sha256": provenance.digest(path)})
+        record = {
+            "schema_version": 2, "target": "windows-x86_64",
+            "components": [{"name": "libproxy", "version": "0.4.17"},
+                           {"name": "libmodman"}],
+            "source_repository": "https://github.com/libproxy/libproxy",
+            "source_commit": "1" * 40, "licenseFileSha256": "b" * 64,
+            "status": "isolated-candidate-not-approved-for-production",
+            "archives": archives, "toolchainExecutables": [], "recipeFiles": [],
+            "configure_arguments": ["static"], "patches": [], "acceptedCandidateChanges": [],
+            "compilerArchiveEvidence": {"proxy": {"compiledObjects": ["proxy fixture"]},
+                                       "modman": {"compiledObjects": ["modman fixture"]}},
+            "limitations": ["Bundled libmodman has no independently established release version."],
+        }
+        (kit / "proxy-build-provenance.json").write_text(json.dumps(record))
+        return kit
+
+    def test_proxy_components_keep_distinct_source_scope_and_unknown_modman_version(self):
+        kit = self.proxy_kit()
+        result = native_provenance.stage(self.vendor, "windows-x86_64", [kit])
+        rows = {r["name"]: r for r in result["rebuiltArchiveEvidence"]}
+        self.assertEqual(set(rows), {"libproxy", "libmodman"})
+        self.assertEqual(rows["libproxy"]["version"], "0.4.17")
+        modman = rows["libmodman"]
+        self.assertNotIn("version", modman)
+        self.assertEqual(modman["sourceSubpath"], "libmodman")
+        self.assertTrue(modman["purl"].endswith("#libmodman"))
+        self.assertEqual(modman["originalBuildRecords"][0]["compilerArchiveEvidence"],
+                         {"compiledObjects": ["modman fixture"]})
+        self.assertEqual(modman["originalBuildRecords"][0]["sha256"],
+                         provenance.digest(kit / "proxy-build-provenance.json"))
+        record = {
+            "rebuiltArchiveEvidence": list(rows.values()),
+            "linkEvidence": {"windows-x86_64": {"archives": [
+                {"candidatePath": a["path"], "sha256": a["sha256"]}
+                for row in rows.values() for a in row["archives"]]}},
+        }
+        dependencies = generate.build_dependencies(record, "windows-x86_64", [])
+        self.assertEqual({d["name"]: d["version"] for d in dependencies},
+                         {"libproxy": "0.4.17", "libmodman": None})
+        self.assertIn("not compliance proof", modman["licenseScope"])
+
+    def test_proxy_schema1_is_not_promoted_and_ambiguous_records_fail(self):
+        kit = self.proxy_kit()
+        path = kit / "proxy-build-provenance.json"
+        record = json.loads(path.read_text())
+        record["schema_version"] = 1
+        path.write_text(json.dumps(record))
+        with self.assertRaisesRegex(ValueError, "fresh compiler-object/archive"):
+            native_provenance.collect(self.vendor, "windows-x86_64", [kit])
+        self.inspector.assert_not_called()
+        (kit / "native-build-provenance.json").write_text("{}")
+        with self.assertRaisesRegex(ValueError, "Ambiguous"):
+            native_provenance.collect(self.vendor, "windows-x86_64", [kit])
+
     def test_original_inspector_and_selected_hash_gate_are_retained(self):
         kit = self.kit("windows-x86_64")
         copied = self.copy_windows(kit)
@@ -172,3 +234,24 @@ class NativeProvenanceTests(unittest.TestCase):
         jobs["jobs"].pop()
         with self.assertRaisesRegex(ValueError, "complete bounded enumeration"):
             native_provenance.verify_producer_run(run, jobs, "owner/repo", "candidate", "curl")
+
+    def test_proxy_reuse_requires_all_exact_target_jobs_and_latest_success(self):
+        run = {"id": 1, "head_sha": "1" * 40, "head_repository": {"full_name": "owner/repo"},
+               "head_branch": "candidate", "path": ".github/workflows/native-trace.yml",
+               "event": "workflow_dispatch"}
+        jobs = {"total_count": 3, "jobs": [
+            {"id": i, "name": "Isolated proxy candidate (" + target + ")",
+             "run_attempt": 1, "conclusion": "success"}
+            for i, target in enumerate(("macos-arm64", "macos-x86_64", "windows-x86_64"))]}
+        self.assertEqual(len(native_provenance.verify_producer_run(
+            run, jobs, "owner/repo", "candidate", "libproxy")["producers"]), 3)
+        jobs["jobs"][0]["name"] = "Isolated proxy candidate (wrong, macos-arm64)"
+        with self.assertRaisesRegex(ValueError, "Latest exact source producer"):
+            native_provenance.verify_producer_run(
+                run, jobs, "owner/repo", "candidate", "libproxy")
+        jobs["jobs"][0]["name"] = "Isolated proxy candidate (macos-arm64)"
+        jobs["jobs"].append(dict(jobs["jobs"][0], run_attempt=2, conclusion="failure"))
+        jobs["total_count"] += 1
+        with self.assertRaisesRegex(ValueError, "Latest exact source producer"):
+            native_provenance.verify_producer_run(
+                run, jobs, "owner/repo", "candidate", "libproxy")

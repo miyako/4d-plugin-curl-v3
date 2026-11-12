@@ -32,7 +32,7 @@ on:
         options: [all, iconv, curl, inventory]
         default: all
       native-provider-run:
-        description: 'Original successful prerequisite producer run (only applies to scope curl)'
+        description: 'Original successful prerequisite producer run for curl/inventory assembly'
         type: string
         default: ''
       native-curl-provider-run:
@@ -41,6 +41,10 @@ on:
         default: ''
       native-iconv-provider-run:
         description: 'Optional original successful GNU source run for inventory assembly'
+        type: string
+        default: ''
+      native-proxy-provider-run:
+        description: 'Optional original successful schema2 proxy run for inventory assembly'
         type: string
         default: ''
 
@@ -69,6 +73,7 @@ jobs:
       inventory-only: ${{ inputs.native-prerequisite-scope == 'inventory' }}
       source-run-id: ${{ inputs.native-curl-provider-run }}
       iconv-provider-run-id: ${{ inputs.native-iconv-provider-run }}
+      proxy-provider-run-id: ${{ inputs.native-proxy-provider-run }}
 
   proxy-candidate:
     if: ${{ !inputs.native-prerequisites-only }}

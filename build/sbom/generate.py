@@ -394,7 +394,7 @@ def build_dependencies(record, target, observed):
             if selection["sha256"] != archive["sha256"]:
                 raise ValueError(f"{target}: selected archive disagrees with source provenance: {path}")
             identities = [{
-                "name": provenance["name"], "version": provenance["version"],
+                "name": provenance["name"], "version": provenance.get("version"),
                 "evidenceType": "source-build-and-selected-archive",
                 "origin": provenance["sourceRepository"],
                 **{key: provenance[key] for key in ("license", "licenseEvidence", "purl")

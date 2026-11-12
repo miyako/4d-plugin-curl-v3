@@ -346,6 +346,23 @@ exact archive hashes; any code/member/index-payload difference fails. Windows
 still requires byte-identical installation. Fresh three-target results remain
 required, followed by proxy inventory integration and full-plugin/host gates.
 
+The shared native adapter also accepts these fresh schema-2 proxy kits. It
+projects the two original archives separately, retaining the original record
+hash, component-specific object proof, project patch/change decision and
+toolchain evidence. `libproxy` has version `0.4.17`; bundled `libmodman` has no
+independently established release version and does not inherit that version.
+Its source identity is the pinned project's `libmodman` subdirectory. Schema-1
+kits remain readable by the historical inspector but cannot enter this stronger
+source inventory. Only actual hash-matched final selections can promote either
+component, and the LGPL/full-plugin/host gates remain open.
+
+For optional proxy aggregation, pass `native-proxy-provider-run` alongside the
+other explicit original producer IDs in inventory-only mode. This requires all
+three exact latest proxy producer jobs to succeed before acquiring their kits.
+The inventory then re-inspects the original source/patch/compiler/object
+materials and binds fresh isolated copies/universal slices; it does not rebuild,
+restamp, replace production archives or waive adoption gates.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

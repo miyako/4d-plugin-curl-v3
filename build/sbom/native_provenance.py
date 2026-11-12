@@ -21,6 +21,8 @@ LIBRARIES = {
     "libiconv": ("build_iconv", "LGPL-2.1-or-later AND LGPL-2.0-or-later",
                  "a/libiconv.a", "lib/64/libiconv.lib"),
     "libssh2": ("build_ssh", None, "a/libssh2.a", "lib/64/libssh2.lib"),
+    "libproxy": ("inspect_proxy", "LGPL-2.1-or-later", "a/libproxy.a", "lib/64/libproxy.lib"),
+    "libmodman": ("inspect_proxy", "LGPL-2.1-or-later", "a/libmodman.a", "lib/64/modman.lib"),
 }
 ARCHIVE_ORIGINS = {
     "curl": "https://github.com/curl/curl",
@@ -48,14 +50,18 @@ def verify_producer_run(run, jobs, repository, branch, role):
         "curl": "curl-source / curl-source (",
         "libiconv": "native-prerequisites / iconv-prerequisites (",
         "nghttp3": "native-prerequisites / http-prerequisites (",
+        "libproxy": "Isolated proxy candidate (",
     }[role]
     targets = {"macos-arm64", "macos-x86_64"}
     if role != "nghttp3":
         targets.add("windows-x86_64")
     producers = []
     for target in sorted(targets):
-        suffix = ", " + target + (", nghttp3, " if role == "nghttp3" else ")")
-        matches = [j for j in jobs["jobs"] if j["name"].startswith(prefix) and suffix in j["name"]]
+        suffix = (target + ")" if role == "libproxy" else
+                  ", " + target + (", nghttp3, " if role == "nghttp3" else ")"))
+        matches = [j for j in jobs["jobs"] if
+                   (j["name"] == prefix + suffix if role == "libproxy" else
+                    j["name"].startswith(prefix) and suffix in j["name"])]
         attempt = max((j["run_attempt"] for j in matches), default=0)
         matches = [j for j in matches if j["run_attempt"] == attempt]
         if len(matches) != 1 or matches[0]["conclusion"] != "success":
@@ -97,39 +103,77 @@ def _ssh_license(record, kit):
     }
 
 
+def _kit_records(kit):
+    native = kit / "native-build-provenance.json"
+    proxy = kit / "proxy-build-provenance.json"
+    if native.exists() and proxy.exists():
+        raise ValueError("Ambiguous native/proxy original build records")
+    if not proxy.exists():
+        return native, [json.loads(native.read_text(encoding="utf-8"))]
+    original = json.loads(proxy.read_text(encoding="utf-8"))
+    if original["schema_version"] != 2:
+        raise ValueError("Proxy inventory requires fresh compiler-object/archive evidence")
+    if (len(original["components"]) != 2 or
+            {c["name"] for c in original["components"]} != {"libproxy", "libmodman"}):
+        raise ValueError("Unexpected proxy source component set")
+    records = []
+    for component in original["components"]:
+        name = component["name"]
+        if name not in ("libproxy", "libmodman"):
+            raise ValueError("Unexpected proxy source component")
+        filename = ("libproxy.lib" if name == "libproxy" else "modman.lib") if original[
+            "target"] == "windows-x86_64" else name + ".a"
+        records.append({
+            **original, "library": name, "version": component.get("version"),
+            "sourceSubpath": name,
+            "status": "not-approved-for-production",
+            "originalStatus": original["status"],
+            "toolchain": {"recordedExecutables": original["toolchainExecutables"]},
+            "archives": [a for a in original["archives"] if a["path"] == "lib/" + filename],
+            "compilerArchiveEvidence": original["compilerArchiveEvidence"][
+                "proxy" if name == "libproxy" else "modman"],
+            "licenseScope": "LGPL static-redistribution/relink materials and actual-host "
+                            "verification remain open; source identification is not compliance proof.",
+        })
+    return proxy, records
+
+
 def _read_kits(target, kits):
     if target not in TARGETS:
         raise ValueError("Unsupported native inventory target")
     grouped = {}
     for path in kits:
         kit = Path(path).resolve()
-        record_path = kit / "native-build-provenance.json"
-        record = json.loads(record_path.read_text(encoding="utf-8"))
-        library = record.get("library")
-        if library not in LIBRARIES:
-            raise ValueError("Native inventory adapter does not cover this library")
-        module, license_id, mac_path, windows_path = LIBRARIES[library]
-        if record.get("target") not in TARGETS[target]:
-            raise ValueError("Native source kit target does not match final inventory")
-        if target == "windows-x86_64" and windows_path is None:
-            raise ValueError("Library is not selected for this target")
-        _inspect(module, kit)
-        if (len(record["archives"]) != 1
-                or record["status"] != "not-approved-for-production"):
-            raise ValueError("Unexpected native candidate archive/status")
-        archive = record["archives"][0]
-        relative = Path(archive["path"])
-        if (relative.is_absolute() or ".." in relative.parts
-                or "\\" in archive["path"] or ":" in archive["path"]
-                or not (kit / "install" / relative).resolve().is_relative_to(kit / "install")):
-            raise ValueError("Native installed archive escapes its source kit")
-        installed = kit / "install" / relative
-        if provenance.digest(installed) != archive["sha256"]:
-            raise ValueError("Native archive differs from original build record")
-        rows = grouped.setdefault(library, {})
-        if record["target"] in rows:
-            raise ValueError("Duplicate native source target")
-        rows[record["target"]] = (record, installed, provenance.digest(record_path), kit)
+        record_path, records = _kit_records(kit)
+        inspected = set()
+        for record in records:
+            library = record.get("library")
+            if library not in LIBRARIES:
+                raise ValueError("Native inventory adapter does not cover this library")
+            module, license_id, mac_path, windows_path = LIBRARIES[library]
+            if record.get("target") not in TARGETS[target]:
+                raise ValueError("Native source kit target does not match final inventory")
+            if target == "windows-x86_64" and windows_path is None:
+                raise ValueError("Library is not selected for this target")
+            if module not in inspected:
+                _inspect(module, kit)
+                inspected.add(module)
+            if (len(record["archives"]) != 1
+                    or record["status"] != "not-approved-for-production"):
+                raise ValueError("Unexpected native candidate archive/status")
+            archive = record["archives"][0]
+            relative = Path(archive["path"])
+            if (relative.is_absolute() or ".." in relative.parts
+                    or "\\" in archive["path"] or ":" in archive["path"]
+                    or not (kit / "install" / relative).resolve().is_relative_to(kit / "install")):
+                raise ValueError("Native installed archive escapes its source kit")
+            installed = kit / "install" / relative
+            if provenance.digest(installed) != archive["sha256"]:
+                raise ValueError("Native archive differs from original build record")
+            rows = grouped.setdefault(library, {})
+            if record["target"] in rows:
+                raise ValueError("Duplicate native source target")
+            rows[record["target"]] = (record, installed, provenance.digest(record_path), kit)
 
     for library, rows in sorted(grouped.items()):
         if set(rows) != TARGETS[target]:
@@ -177,9 +221,13 @@ def collect(root, target, kits):
             source = {"sourceCommit": first["source_commit"]}
             repository = origin.removeprefix("https://github.com/").removesuffix(".git")
             purl = "pkg:github/" + repository + "@" + first["source_commit"]
+            if "sourceSubpath" in first:
+                source["sourceSubpath"] = first["sourceSubpath"]
+                purl += "#" + first["sourceSubpath"]
             license_hash = first["licenseFileSha256"]
         rebuilt.append({
-            "name": library, "version": first["version"], "sourceRepository": origin,
+            "name": library, "sourceRepository": origin,
+            **({"version": first["version"]} if first.get("version") else {}),
             **source, **({"license": license_id} if license_id else {}),
             "licenseFileSha256": license_hash, "purl": purl,
             **({"licenseEvidence": _ssh_license(first, rows[sorted(rows)[0]][3]),
@@ -193,12 +241,16 @@ def collect(root, target, kits):
                 "configureArguments": rows[architecture][0]["configure_arguments"],
                 "toolchain": rows[architecture][0]["toolchain"],
                 "recipeFiles": rows[architecture][0]["recipeFiles"],
+                **({key: rows[architecture][0][key] for key in
+                    ("originalStatus", "patches", "acceptedCandidateChanges",
+                     "compilerArchiveEvidence")} if library in ("libproxy", "libmodman") else {}),
             } for architecture in sorted(rows)],
             **({"additionalNoticeFiles": [
                 item for item in first["sourceFiles"]
                 if item["path"] in ADDITIONAL_NOTICES[library]
             ]} if library in ADDITIONAL_NOTICES else {}),
             "limitations": [
+                *first.get("limitations", []),
                 "Original source/compiler/archive kits must accompany these record hashes.",
                 "Source inspection and archive binding do not approve production adoption, "
                 "prove transfers or establish full-plugin relinking/host compatibility.",

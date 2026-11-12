@@ -15,6 +15,9 @@ on:
       iconv-provider-run-id:
         type: string
         default: ''
+      proxy-provider-run-id:
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -169,6 +172,7 @@ jobs:
           SOURCE_RUN: ${{ inputs.source-run-id }}
           PROVIDER_RUN: ${{ inputs.provider-run-id }}
           ICONV_RUN: ${{ inputs.iconv-provider-run-id }}
+          PROXY_RUN: ${{ inputs.proxy-provider-run-id }}
           INVENTORY_ONLY: ${{ inputs.inventory-only }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -183,6 +187,8 @@ jobs:
                    ("nghttp3", os.environ["PROVIDER_RUN"])]
           if os.environ["ICONV_RUN"]:
               roles.append(("libiconv", os.environ["ICONV_RUN"]))
+          if os.environ["PROXY_RUN"]:
+              roles.append(("libproxy", os.environ["PROXY_RUN"]))
           base = os.environ["GITHUB_API_URL"] + "/repos/" + os.environ["GITHUB_REPOSITORY"]
           def get(path):
               request = urllib.request.Request(base + path, headers={
@@ -220,19 +226,40 @@ jobs:
           github-token: ${{ github.token }}
           pattern: native-libiconv-*
           path: ${{ runner.temp }}/native-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.proxy-provider-run-id != '' }}
+        with:
+          run-id: ${{ inputs.proxy-provider-run-id }}
+          github-token: ${{ github.token }}
+          pattern: isolated-proxy-macos-*
+          path: ${{ runner.temp }}/native-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.proxy-provider-run-id != '' }}
+        with:
+          run-id: ${{ inputs.proxy-provider-run-id }}
+          github-token: ${{ github.token }}
+          name: isolated-proxy-windows-x86_64
+          path: ${{ runner.temp }}/native-kits/isolated-proxy-windows-x86_64
       - name: Inspect original kits and bind isolated vendor-layout copies to the shared inventory
         shell: bash
         env:
           ICONV_RUN: ${{ inputs.iconv-provider-run-id }}
+          PROXY_RUN: ${{ inputs.proxy-provider-run-id }}
         run: |
           set -euo pipefail
           python -m unittest discover -s build/sbom -p test_native_provenance.py
           KITS="$RUNNER_TEMP/native-kits"
           MAC_ICONV=()
           WIN_ICONV=()
+          MAC_PROXY=()
+          WIN_PROXY=()
           if [ -n "$ICONV_RUN" ]; then
             MAC_ICONV=(--kit "$KITS/native-libiconv-macos-arm64" --kit "$KITS/native-libiconv-macos-x86_64")
             WIN_ICONV=(--kit "$KITS/native-libiconv-windows-x86_64")
+          fi
+          if [ -n "$PROXY_RUN" ]; then
+            MAC_PROXY=(--kit "$KITS/isolated-proxy-macos-arm64" --kit "$KITS/isolated-proxy-macos-x86_64")
+            WIN_PROXY=(--kit "$KITS/isolated-proxy-windows-x86_64")
           fi
           python build/sbom/native_provenance.py --target macos-universal \
             --kit "$KITS/native-libcurl-macos-arm64" \
@@ -244,13 +271,13 @@ jobs:
             --kit "$KITS/native-libcurl-macos-arm64/providers/ssh" \
             --kit "$KITS/native-libcurl-macos-x86_64/providers/ssh" \
             --kit "$KITS/native-nghttp3-macos-arm64" \
-            --kit "$KITS/native-nghttp3-macos-x86_64" "${MAC_ICONV[@]}" \
+            --kit "$KITS/native-nghttp3-macos-x86_64" "${MAC_ICONV[@]}" "${MAC_PROXY[@]}" \
             --output "$RUNNER_TEMP/native-source-inventory/macos"
           python build/sbom/native_provenance.py --target windows-x86_64 \
             --kit "$KITS/native-libcurl-windows-x86_64" \
             --kit "$KITS/native-libcurl-windows-x86_64/providers/zlib" \
             --kit "$KITS/native-libcurl-windows-x86_64/providers/http" \
-            --kit "$KITS/native-libcurl-windows-x86_64/providers/ssh" "${WIN_ICONV[@]}" \
+            --kit "$KITS/native-libcurl-windows-x86_64/providers/ssh" "${WIN_ICONV[@]}" "${WIN_PROXY[@]}" \
             --output "$RUNNER_TEMP/native-source-inventory/windows"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
