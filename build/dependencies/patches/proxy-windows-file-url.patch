@@ -1,8 +1,18 @@
 diff --git a/libproxy/url.cpp b/libproxy/url.cpp
-index 76ae47f..3cb5462 100644
+index 76ae47f..a3cdcbb 100644
 --- a/libproxy/url.cpp
 +++ b/libproxy/url.cpp
-@@ -363,6 +363,20 @@ string url::get_password() const {
+@@ -5,6 +5,9 @@
+  * Based on work found in GLib GIO:
+  * Copyright (C) 2006-2007 Red Hat, Inc.
+  *
++ * Modified by the cURL plugin project on 2026-11-12 (UTC):
++ * Windows file/PAC paths and local PAC read-count termination.
++ *
+  * This library is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU Lesser General Public
+  * License as published by the Free Software Foundation; either
+@@ -363,6 +366,20 @@ string url::get_password() const {
  }
  
  string url::get_path() const {
@@ -23,7 +33,7 @@ index 76ae47f..3cb5462 100644
  	return m_path;
  }
  
-@@ -416,16 +430,19 @@ char* url::get_pac() {
+@@ -416,16 +433,19 @@ char* url::get_pac() {
  	// In case of a file:// url we open the file and read it
  	if (m_scheme == "file" || m_scheme == "pac+file") {
  		struct stat st;

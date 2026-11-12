@@ -198,6 +198,8 @@ SBOM hash/object helpers, root recipe license, patch, test sources and these
 instructions. The source tar contains the actual patched compile inputs,
 including all original notices and license text; the base tar retains the
 canonical immutable upstream source.
+The patched file carries a dated change notice; the relink driver also dates
+its demonstration change in the modified source and original proof record.
 
 ```sh
 python3 build/dependencies/relink_candidate.py \
@@ -242,7 +244,8 @@ static plugin. The plugin's own MIT license does not relicense these libraries.
 Before any adoption/release, review an LGPL 2.1 section 6(a) delivery approach:
 
 1. Ship the complete corresponding pinned library source, all local patches,
-   license/notices and exact build/install recipes with each binary release,
+   license/notices, dated modified-file notices and exact build/install recipes
+   with each binary release,
    not a floating upstream link or an unsupported source offer.
 2. Provide the complete machine-readable material needed to relink the plugin
    with modified libraries: product and SDK sources or usable objects,

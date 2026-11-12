@@ -211,6 +211,36 @@ class ProxyEvidenceTests(unittest.TestCase):
         self.assertEqual(base, compiled)
         self.assertEqual(build_proxy.source_snapshot(self.source, lock), checkout)
 
+    def test_user_relink_proof_cannot_self_authorize_a_different_source_change(self):
+        candidate = self.root / "candidate"
+        candidate.mkdir()
+        data = b"// Synthetic library source\n"
+        source_hash = hashlib.sha256(data).hexdigest()
+        record = {"sourceFiles": [{"path": "libproxy/url.cpp", "sha256": source_hash}]}
+        (candidate / "proxy-build-provenance.json").write_text(json.dumps(record))
+        (candidate / "candidate-recipe.tar").write_bytes(b"synthetic recipe identity")
+        with tarfile.open(candidate / "upstream-source.tar", "w") as archive:
+            item = tarfile.TarInfo("libproxy/url.cpp")
+            item.size = len(data)
+            archive.addfile(item, io.BytesIO(data))
+        output = self.root / "relink"
+        modified = output / "source/libproxy/url.cpp"
+        modified.parent.mkdir(parents=True)
+        change = relink_candidate.MODIFICATION.format(date="2026-11-12").replace("417", "999")
+        modified.write_bytes(data + change.encode())
+        proof = {
+            "target": "macos-arm64",
+            "candidateRecordSha256": digest(candidate / "proxy-build-provenance.json"),
+            "deliveredSourceSha256": digest(candidate / "upstream-source.tar"),
+            "deliveredRecipeSha256": digest(candidate / "candidate-recipe.tar"),
+            "modification": {"dateUtc": "2026-11-12", "appendedSource": change,
+                             "beforeSha256": source_hash, "afterSha256": digest(modified)},
+        }
+        (output / "user-relink-proof.json").write_text(json.dumps(proof))
+        with mock.patch.object(relink_candidate, "inspect", return_value={"target": "macos-arm64"}):
+            with self.assertRaisesRegex(ValueError, "reviewed benign probe"):
+                relink_candidate.inspect_relink(candidate, output)
+
 
 if __name__ == "__main__":
     unittest.main()

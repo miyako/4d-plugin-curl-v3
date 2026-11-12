@@ -2,6 +2,7 @@
 """Rebuild delivered candidate sources with a benign user modification, not a plugin."""
 
 import argparse
+from datetime import date, datetime, timezone
 import json
 from pathlib import Path, PurePosixPath
 import platform
@@ -16,7 +17,8 @@ from inspect_proxy import inspect, verify_architecture
 from provenance import archive_hashes, digest, write_json
 
 
-MODIFICATION = '\nextern "C" int proxy_user_relink_probe() { return 417; }\n'
+MODIFICATION = ('\n// User-relink demonstration change on {date} (UTC).\n'
+                'extern "C" int proxy_user_relink_probe() {{ return 417; }}\n')
 
 
 def unpack(path, files, destination):
@@ -73,8 +75,10 @@ def relink(candidate, output):
     unpack(candidate / "candidate-recipe.tar", recipe, kit)
     path = source / "libproxy/url.cpp"
     before = digest(path)
+    modification_date = datetime.now(timezone.utc).date().isoformat()
+    modification = MODIFICATION.format(date=modification_date)
     with path.open("a", encoding="utf-8", newline="\n") as stream:
-        stream.write(MODIFICATION)
+        stream.write(modification)
     after = digest(path)
     windows = target.startswith("windows")
     config = json.loads((kit / "build/dependencies/proxy-source.json").read_text())
@@ -109,7 +113,8 @@ def relink(candidate, output):
         "deliveredSourceSha256": digest(candidate / "upstream-source.tar"),
         "deliveredRecipeSha256": digest(candidate / "candidate-recipe.tar"),
         "modification": {"path": "libproxy/url.cpp", "beforeSha256": before,
-                         "afterSha256": after, "appendedSource": MODIFICATION},
+                         "afterSha256": after, "dateUtc": modification_date,
+                         "appendedSource": modification},
         "modifiedArchiveSha256": digest(archive),
         "relinkedTestBinarySha256": digest(executable),
         "configureArguments": arguments,
@@ -137,7 +142,10 @@ def inspect_relink(candidate, output):
     with tarfile.open(candidate / "upstream-source.tar") as archive:
         data = archive.extractfile("libproxy/url.cpp").read()
     modified = output / "source/libproxy/url.cpp"
-    if (modified.read_bytes() != data + MODIFICATION.encode()
+    modification = MODIFICATION.format(
+        date=date.fromisoformat(proof["modification"]["dateUtc"]).isoformat())
+    if (proof["modification"]["appendedSource"] != modification
+            or modified.read_bytes() != data + modification.encode()
             or proof["modification"]["beforeSha256"] != changed["sha256"]
             or proof["modification"]["afterSha256"] != digest(modified)):
         raise ValueError("User-relink source modification was not the reviewed benign probe")
