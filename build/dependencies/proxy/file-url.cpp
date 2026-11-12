@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -13,6 +14,7 @@ int main(int argc, char** argv) {
     try {
         require(argc == 2, "expected local PAC fixture path");
         using libproxy::url;
+        require(url("file:///allo").get_path() == "/allo", "root-relative file path unchanged");
 #ifdef _WIN32
         require(url("file:///E:/dir/file.pac").get_path() == "E:\\dir\\file.pac", "drive-letter path");
         require(url("file://server/share/file.pac").get_path() == "\\\\server\\share\\file.pac", "UNC path");
@@ -34,6 +36,11 @@ int main(int argc, char** argv) {
             require(pac != NULL, "read local PAC through source library");
             const std::string actual(pac);
             delete[] pac;
+            if (actual != expected)
+                std::cerr << "PAC contents: library=" << actual.size() << " bytes, "
+                    << std::count(actual.begin(), actual.end(), '\r') << " CR; stream="
+                    << expected.size() << " bytes, "
+                    << std::count(expected.begin(), expected.end(), '\r') << " CR" << std::endl;
             require(actual == expected, "local PAC contents");
         }
         std::cout << "file/PAC paths and local file contents verified" << std::endl;

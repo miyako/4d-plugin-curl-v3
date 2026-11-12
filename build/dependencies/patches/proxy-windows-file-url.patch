@@ -1,7 +1,7 @@
 diff --git a/libproxy/url.cpp b/libproxy/url.cpp
 --- a/libproxy/url.cpp
 +++ b/libproxy/url.cpp
-@@ -363,6 +363,18 @@ string url::get_password() const {
+@@ -363,6 +363,20 @@ string url::get_password() const {
  }
  
  string url::get_path() const {
@@ -13,6 +13,8 @@ diff --git a/libproxy/url.cpp b/libproxy/url.cpp
 +		else if (path.size() >= 3 && path[0] == '/' &&
 +		         isalpha((unsigned char) path[1]) && path[2] == ':')
 +			path.erase(0, 1);
++		else
++			return path;
 +		replace(path.begin(), path.end(), '/', '\\');
 +		return path;
 +	}
@@ -20,7 +22,7 @@ diff --git a/libproxy/url.cpp b/libproxy/url.cpp
  	return m_path;
  }
  
-@@ -416,7 +428,7 @@ char* url::get_pac() {
+@@ -416,7 +430,7 @@ char* url::get_pac() {
  	// In case of a file:// url we open the file and read it
  	if (m_scheme == "file" || m_scheme == "pac+file") {
  		struct stat st;

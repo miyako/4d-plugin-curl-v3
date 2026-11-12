@@ -113,7 +113,7 @@ expectations remain intact.
 paths for `file:`/`pac+file:` and uses the converted path for actual PAC reads.
 The source delta is allowlisted by exact before/after hashes. A separate
 candidate-source test covers drive letters, UNC, localhost, both file schemes,
-actual local PAC contents, unchanged HTTP paths and unchanged macOS paths.
+actual local PAC contents, unchanged root-relative/HTTP paths and unchanged macOS paths.
 This does not add a Windows PAC interpreter, percent decoding or remote-PAC
 changes.
 The scoped `.gitattributes` keeps reviewed patch bytes LF on Windows too;
