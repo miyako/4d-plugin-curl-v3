@@ -685,6 +685,16 @@ Physical build/install prefixes and compiler-tracer paths are recorded as
 fresh-build configuration, not represented as historical prefix equivalence
 or byte-identical reproduction.
 
+Run `43321720349` passed both macOS source-provider builds and their TLS cases.
+Its Windows Brotli compilation/tests passed but material inspection correctly
+rejected CMake's forward-slash versus compiler-argument backslash spelling.
+Windows compiler comparison now normalizes only separators on drive-qualified
+paths; it does not conflate different compilers or change source/object bytes.
+The same run's OpenSSL configuration selected Git-Bash's incomplete MSYS Perl
+before any library compilation. Native Python workflow steps preserve the
+Windows tool environment instead, and the builder explicitly requires native
+Windows Perl for `VC-WIN64A`. Original rejected output remains rejected.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

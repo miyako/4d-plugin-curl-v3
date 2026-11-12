@@ -18,6 +18,10 @@ def source_commit(record):
     return values.pop()
 
 
+def compiler_path(path):
+    return path.replace("\\", "/") if ntpath.splitdrive(path)[0] else path
+
+
 def inspect(install, record):
     proof = record["buildMaterials"]
     root = install / "build-materials"
@@ -30,6 +34,12 @@ def inspect(install, record):
         raise ValueError("Duplicate provider source snapshot path")
     if proof["sources"] != archive_hashes(root / "source", sorted(sources)):
         raise ValueError("Provider source snapshot changed")
+    for path_key, hash_key in (("version_file", "version_file_sha256"),
+                               ("versionFile", "versionFileSha256"),
+                               ("licenseFile", "licenseFileSha256")):
+        if path_key in record or hash_key in record:
+            if not record.get(path_key) or sources.get(record[path_key]) != record.get(hash_key):
+                raise ValueError("Provider identity source differs from delivered snapshot")
     for link in proof.get("sourceLinks", []):
         archive_hashes(root, [link["textFile"]])
         raw = (root / link["textFile"]).read_bytes()
@@ -50,7 +60,8 @@ def inspect(install, record):
             archive_hashes(root, [item["compilerRecord"], item["objectFile"]])
             call = json.loads((root / item["compilerRecord"]).read_text())
             if (call["returnCode"] != 0 or not call["inputs"]
-                    or call["compiler"] not in {p["path"] for p in proof["toolchain"].values()}
+                    or compiler_path(call["compiler"]) not in {
+                        compiler_path(p["path"]) for p in proof["toolchain"].values()}
                     or call["object"]["sha256"] != item["sha256"]
                     or digest(root / item["objectFile"]) != item["sha256"]
                     or ntpath.basename(call["object"]["path"]) != ntpath.basename(item["member"])):

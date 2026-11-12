@@ -57,27 +57,36 @@ jobs:
             "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
       - name: Fresh matching OpenSSL material build
-        shell: bash
+        shell: python
         run: |
-          set -euo pipefail
-          python build/dependencies/build_openssl_materials.py \
-            --source openssl-source --output "$RUNNER_TEMP/provider-openssl" \
-            --target "${{ matrix.target }}" --commit f4dc4d58b48d346a8270183f89acf826d459b0ca
+          import os, subprocess, sys
+          from pathlib import Path
+          subprocess.run([sys.executable, "build/dependencies/build_openssl_materials.py",
+            "--source", "openssl-source",
+            "--output", str(Path(os.environ["RUNNER_TEMP"]) / "provider-openssl"),
+            "--target", "${{ matrix.target }}",
+            "--commit", "f4dc4d58b48d346a8270183f89acf826d459b0ca"], check=True)
       - name: Fresh matching Brotli material build
         if: ${{ !cancelled() }}
-        shell: bash
+        shell: python
         run: |
-          set -euo pipefail
-          python build/dependencies/build_brotli_materials.py \
-            --source brotli-source --output "$RUNNER_TEMP/provider-brotli" \
-            --target "${{ matrix.target }}" --commit db24a98aed38a16de78cc05ca15cdd8dc2a0d92d
+          import os, subprocess, sys
+          from pathlib import Path
+          subprocess.run([sys.executable, "build/dependencies/build_brotli_materials.py",
+            "--source", "brotli-source",
+            "--output", str(Path(os.environ["RUNNER_TEMP"]) / "provider-brotli"),
+            "--target", "${{ matrix.target }}",
+            "--commit", "db24a98aed38a16de78cc05ca15cdd8dc2a0d92d"], check=True)
       - name: Standalone provider TLS authentication and rejection checks
         if: ${{ !cancelled() }}
-        shell: bash
+        shell: python
         run: |
-          set -euo pipefail
-          python build/dependencies/probe_provider_tls.py \
-            --openssl "$RUNNER_TEMP/provider-openssl/install" --output "$RUNNER_TEMP/provider-tls"
+          import os, subprocess, sys
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          subprocess.run([sys.executable, "build/dependencies/probe_provider_tls.py",
+            "--openssl", str(root / "provider-openssl/install"),
+            "--output", str(root / "provider-tls")], check=True)
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

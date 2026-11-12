@@ -17,6 +17,7 @@ class ProviderMaterialsTests(unittest.TestCase):
             for name in ("source", "objects", "compiler-calls"):
                 (root / name).mkdir(parents=True, exist_ok=True)
             (root / "source/input.S").write_bytes(b"generated assembly")
+            (root / "source/LICENSE").write_bytes(b"Synthetic license fixture")
             object_file = root / "objects/object"
             object_file.write_bytes(b"compiled object")
             data = object_file.read_bytes()
@@ -24,23 +25,28 @@ class ProviderMaterialsTests(unittest.TestCase):
             (install / "lib.a").write_bytes(b"!<arch>\n" + header + data + b"\n" * (len(data) % 2))
             sha = hashlib.sha256(data).hexdigest()
             call_path = root / "compiler-calls/call.json"
-            call = {"returnCode": 0, "compiler": "/actual/cc", "inputs": [
+            call = {"returnCode": 0, "compiler": "C:\\actual\\cc.exe", "inputs": [
                 {"path": "/original/input.S", "sha256": digest(root / "source/input.S")}],
                 "object": {"path": "/original/input.o", "sha256": sha}}
             call_path.write_text(json.dumps(call))
             proof = {
                 "schemaVersion": 1, "sourceCommit": "a" * 40, "originalSource": "/original",
-                "toolchain": {"cc": {"path": "/actual/cc"}},
-                "sources": archive_hashes(root / "source", ["input.S"]),
+                "toolchain": {"cc": {"path": "C:/actual/cc.exe"}},
+                "sources": archive_hashes(root / "source", ["LICENSE", "input.S"]),
                 "archives": [{"archive": "lib.a", "objects": [
                     {"member": "input.o", "sha256": sha, "objectFile": "objects/object",
                      "compilerRecord": "compiler-calls/call.json"}]}],
             }
             record = {"source_commit": "a" * 40, "archives": [{"path": "lib.a"}],
+                      "licenseFile": "LICENSE", "licenseFileSha256": digest(root / "source/LICENSE"),
                       "buildMaterials": proof}
             paths = [p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()]
             proof["files"] = archive_hashes(root, paths)
             provider_materials.inspect(install, record)
+            changed = copy.deepcopy(record)
+            changed["licenseFileSha256"] = "0" * 64
+            with self.assertRaisesRegex(ValueError, "identity source"):
+                provider_materials.inspect(install, changed)
             raw = b"../source/input.S"
             link = root / "link-text"
             link.write_bytes(raw)

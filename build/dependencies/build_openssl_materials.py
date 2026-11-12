@@ -23,6 +23,8 @@ def tools(target):
         paths["python"] = sys.executable
         if any(not path for path in paths.values()):
             raise FileNotFoundError("OpenSSL needs the native MSVC, Perl and NASM tools")
+        if subprocess.check_output([paths["perl"], "-e", "print $^O"], text=True) != "MSWin32":
+            raise ValueError("OpenSSL VC-WIN64A needs native Windows Perl, not Git-Bash/MSYS Perl")
         return {name: {"path": path, "sha256": provenance.digest(Path(path))}
                 for name, path in paths.items()}
     paths = {name: subprocess.check_output(
