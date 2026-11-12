@@ -513,6 +513,49 @@ modules. Such consumers require matching rebuilds or explicit verification
 before adoption. No old source revision is inferred from this observation, and
 the candidate is not patched to imitate the old C++ ABI.
 
+Downloaded originals from `43303431095` independently establish actual
+source-record-bound selection for all thirty-five repository archives:
+twelve per Mac architecture (eleven versioned) and eleven on Windows (ten
+versioned). Twenty-three have the newer compiler/object/archive closure;
+the twelve OpenSSL/Brotli bindings still retain their original weaker records.
+Windows' full original-object replay and modified-library link both pass.
+This result is not portable Windows delivery, container validation or host proof.
+
+`portable_plugin_macos.py` exports a separate Mac source/object-link kit from
+the actual isolated project. It includes the unchanged product/SDK source
+snapshot, resources, original objects and search-path files, delivered proxy/
+modman/iconv source kits and their original records, and the executable helper
+code. Each LGPL kit is independently inspected and matched to the actual
+selected build record before copying. The generated recipe preserves argument,
+object and library order but relocates project inputs; SDK and compiler/linker/
+merge-tool identities remain explicit external prerequisites.
+
+```sh
+python3 build/dependencies/portable_plugin_macos.py export \
+  --project /original/isolated/project --output /fresh/mac-kit
+mv /fresh/mac-kit "/different/location/moved mac-kit"
+python3 "/different/location/moved mac-kit/tools/dependencies/portable_plugin_macos.py" replay \
+  --kit "/different/location/moved mac-kit" --output /fresh/baseline-replay
+```
+
+Rebuild the delivered proxy source with the kit's `relink_candidate.py` for
+each architecture, then repeat `replay` with both `--proxy-arm64` and
+`--proxy-x86-64` pointing to the modified `build/libproxy.a` outputs.
+Baseline replay requires exact original thin-plugin bytes; modified replay
+requires actual defined probe code in both slices and a changed binary.
+The helper never initializes the plugin, signs it or installs it in 4D.
+
+Actual relocated-path execution, including a path containing spaces, has
+reproduced the original universal plugin and rebuilt both delivered proxy
+sources before linking their changes into both full-plugin slices. This closes
+the Mac object-link relocation issue, not the whole LGPL delivery gate.
+GNU iconv modification/relink verification, portable Windows materials,
+complete notices and remaining-library distribution terms, maintainer-key-free
+install/trust and operator-run 4D checks remain open. Unselected search-path
+files are retained for link fidelity, not assigned source identities or
+declared safe to redistribute; these internal experimental kits are not
+release-ready compliance packages.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

@@ -15,6 +15,7 @@ import inspect_proxy
 import relink_candidate
 import relink_plugin_macos
 import relink_plugin_windows
+import portable_plugin_macos
 from provenance import digest
 
 
@@ -37,6 +38,38 @@ class ProxyEvidenceTests(unittest.TestCase):
         self.git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
                  "commit", "--quiet", "-m", "Synthetic source")
         return {"commit": self.git("rev-parse", "HEAD")}
+
+    def test_portable_mac_relocation_preserves_order_and_rejects_external_inputs(self):
+        project, sdk, driver = Path("/old/project"), Path("/sdk"), Path("/tools/clang++")
+        command = [str(driver), "-isysroot", str(sdk), "-L/old/project/a", "-F/old/project",
+                   "-filelist", "/old/project/objects", "-lssl", "-lproxy", "-lcrypto",
+                   "/sdk/usr/lib/ssh-keychain.tbd", "-o", "/old/output",
+                   "-Xlinker", "-map", "-Xlinker", "/old/map",
+                   "-Xlinker", "-dependency_info", "-Xlinker", "/old/deps"]
+        result = portable_plugin_macos.relocate(command, project, sdk, driver, "macos-arm64")
+        self.assertEqual(result[:6], ["${DRIVER}", "-isysroot", "${SDK}",
+                                     "-L${KIT}/project/a", "-F${KIT}/project", "-filelist"])
+        self.assertEqual(result[7:11], ["-lssl", "-lproxy", "-lcrypto",
+                                       "${SDK}/usr/lib/ssh-keychain.tbd"])
+        self.assertIn("${OUTPUT}/macos-arm64/cURL", result)
+        self.assertEqual(command[0], str(driver))
+        with self.assertRaisesRegex(ValueError, "Unaccounted absolute"):
+            portable_plugin_macos.relocate(command + ["/external/input.a"],
+                                           project, sdk, driver, "macos-arm64")
+
+    def test_portable_mac_materials_reject_path_escape_and_byte_change(self):
+        for path in ("../escape", "/absolute", "a\\escape", "C:escape"):
+            with self.assertRaisesRegex(ValueError, "escapes"):
+                portable_plugin_macos.relative_path(self.root, path)
+        (self.root / "object.o").write_bytes(b"changed")
+        (self.root / portable_plugin_macos.MANIFEST).write_text(json.dumps({
+            "schemaVersion": 1, "target": "macos-universal",
+            "status": "not-approved-for-production",
+            "files": [{"path": "object.o", "sha256": "0" * 64}],
+        }))
+        with mock.patch.object(portable_plugin_macos.platform, "system", return_value="Darwin"):
+            with self.assertRaisesRegex(ValueError, "materials changed"):
+                portable_plugin_macos.replay(self.root, self.root.parent / "unused-output", {})
 
     def test_pinned_source_rejects_wrong_revision_and_modified_or_extra_source(self):
         lock = self.checkout()
