@@ -99,6 +99,9 @@ def validate_documents(inv, cdx, spdx, path, version, schemas, registry):
                     [{"algorithm": "SHA256", "checksumValue": row["sha256"]}],
                     f"Binary/slice hash mismatch: {row['id']}")
     expected_cdx, expected_spdx = generate.cyclonedx(inv), generate.spdx(inv)
+    require(cdx["metadata"].get("tools") == expected_cdx["metadata"]["tools"]
+            and spdx["creationInfo"] == expected_spdx["creationInfo"],
+            "SBOM generator identity mismatch")
     require(cdx["components"] == expected_cdx["components"],
             "CycloneDX package identity/license/origin evidence mismatch")
     require(cdx.get("dependencies") == expected_cdx.get("dependencies"),

@@ -135,17 +135,20 @@ class PublicationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             asset = Path(temp) / "artifact.zip"
             asset.write_bytes(b"already validated container")
+            notes = Path(temp) / "notes.md"
+            notes.write_text("Dependency and security context")
             for existing in (None, {"object": {"sha": "a" * 40}}):
                 with self.subTest(existing=existing):
                     with patch.object(release, "run", return_value="a" * 40) as run, patch.object(
                             release, "source_version", return_value="1.2.3"), patch.object(
                             release, "publication_check", return_value=existing):
-                        release.publish("a" * 40, "owner/repo", "1.2.3", [asset])
+                        release.publish("a" * 40, "owner/repo", "1.2.3", [asset], notes)
                         calls = [call.args for call in run.call_args_list]
                         self.assertEqual(len([c for c in calls if "--method" in c]),
                                          1 if existing is None else 0)
                         self.assertEqual(calls[-1][:4], ("gh", "release", "create", "v1.2.3"))
                         self.assertIn("--verify-tag", calls[-1])
+                        self.assertIn("--notes-file", calls[-1])
                         self.assertFalse(any("--clobber" in c for c in calls))
 
     def test_missing_asset_or_changed_version_blocks_publication(self):
@@ -155,8 +158,19 @@ class PublicationTests(unittest.TestCase):
             for version, assets in (("1.2.3", []), ("1.2.4", [Path("missing")])):
                 with self.subTest(version=version):
                     with self.assertRaises(ValueError):
-                        release.publish("a" * 40, "owner/repo", version, assets)
+                        release.publish("a" * 40, "owner/repo", version, assets, Path("missing-notes"))
                     network.assert_not_called()
+
+    def test_missing_notes_blocks_tag_creation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            asset = Path(temp) / "artifact.zip"
+            asset.write_bytes(b"container")
+            with patch.object(release, "run", return_value="a" * 40), patch.object(
+                    release, "source_version", return_value="1.2.3"), patch.object(
+                    release, "publication_check") as network:
+                with self.assertRaisesRegex(ValueError, "release notes"):
+                    release.publish("a" * 40, "owner/repo", "1.2.3", [asset], Path(temp) / "missing")
+                network.assert_not_called()
 
 
 class BranchBumpTests(unittest.TestCase):
@@ -223,7 +237,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn("  push:", build)
         self.assertNotIn("inputs:", build)
         self.assertIn('preflight --sha "$GITHUB_SHA" --ref "$GITHUB_REF"', build)
-        self.assertEqual(build.count("ref: ${{ github.sha }}"), 3)
+        self.assertEqual(build.count("ref: ${{ github.sha }}"), 4)
         self.assertIn("needs: version\n    uses:", build)
         self.assertIn("release_version.py publish", build)
         self.assertNotIn("softprops/action-gh-release", build)
@@ -232,6 +246,34 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn("workflow_run", build)
         self.assertIn("--schema-dir", build)
         self.assertIn("notarytool submit", build)
+
+    def test_final_artifacts_only_attested_after_mutation_in_separate_job(self):
+        root = Path(__file__).resolve().parents[2]
+        build = (root / ".github/workflows/release.yml").read_text()
+        native, publish = build.split("\n  publish:\n")
+        self.assertIn("permissions:\n  contents: read", native)
+        self.assertNotIn("id-token: write", native)
+        self.assertNotIn("attestations: write", native)
+        self.assertLess(native.index("xcrun stapler staple"), native.index("generate and validate"))
+        self.assertLess(native.index("generate and validate"), native.index("name: finalized-release"))
+        self.assertIn("needs: [version, build-macos]", publish)
+        self.assertIn("id-token: write", publish)
+        self.assertIn("attestations: write", publish)
+        self.assertLess(publish.index("name: finalized-release"), publish.index("actions/attest-build-provenance@"))
+        self.assertLess(publish.rindex("actions/attest-sbom@"), publish.index("name: create GitHub Release"))
+        for container in ("zip", "dmg"):
+            for document in ("cdx", "spdx"):
+                self.assertIn(f".{container}.{document}.json", publish)
+        self.assertNotIn("notarytool", publish)
+        self.assertNotIn("secrets.", publish)
+
+    def test_external_actions_are_immutable(self):
+        import re
+        root = Path(__file__).resolve().parents[2]
+        for workflow in (root / ".github/workflows").glob("*.yml"):
+            for action in re.findall(r"uses:\s+([^\s#]+)", workflow.read_text()):
+                if not action.startswith("./"):
+                    self.assertRegex(action, r"^[^@]+@[a-f0-9]{40}$", str(workflow))
 
 
 if __name__ == "__main__":

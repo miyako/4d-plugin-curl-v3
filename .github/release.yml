@@ -1,0 +1,9 @@
+changelog:
+  categories:
+    - title: Security and dependencies
+      labels:
+        - security
+        - dependencies
+    - title: Other changes
+      labels:
+        - '*'

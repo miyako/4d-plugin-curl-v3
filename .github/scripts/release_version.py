@@ -146,11 +146,13 @@ def bump_branch(sha, ref, mode):
     return version
 
 
-def publish(sha, repository, version, paths):
+def publish(sha, repository, version, paths, notes_file):
     if run("git", "rev-parse", "HEAD") != sha or source_version() != version:
         raise ValueError("Publication source/version differs from the selected build")
     if not paths or any(not path.is_file() for path in paths):
         raise ValueError("Missing release files; publication stopped")
+    if not notes_file.is_file() or not notes_file.read_text(encoding="utf-8").strip():
+        raise ValueError("Missing dependency/security release notes; publication stopped")
     tag = "v" + version
     existing = publication_check(repository, tag, sha)
     if existing is None:
@@ -158,7 +160,7 @@ def publish(sha, repository, version, paths):
             "-f", f"ref=refs/tags/{tag}", "-f", f"sha={sha}")
     # create, never upload --clobber: an existing release is an explicit failure.
     run("gh", "release", "create", tag, "--repo", repository, "--verify-tag",
-        "--title", tag, "--generate-notes", *map(str, paths))
+        "--title", tag, "--generate-notes", "--notes-file", str(notes_file), *map(str, paths))
 
 
 def main(argv=None):
@@ -173,10 +175,11 @@ def main(argv=None):
     publication = commands.add_parser("publish")
     publication.add_argument("--sha", required=True)
     publication.add_argument("--version", required=True)
+    publication.add_argument("--notes-file", required=True, type=Path)
     publication.add_argument("files", nargs="+", type=Path)
     args = parser.parse_args(argv)
     if args.command == "publish":
-        publish(args.sha, os.environ["GITHUB_REPOSITORY"], args.version, args.files)
+        publish(args.sha, os.environ["GITHUB_REPOSITORY"], args.version, args.files, args.notes_file)
         return
     if args.command == "bump":
         version = bump_branch(args.sha, args.ref, args.mode)

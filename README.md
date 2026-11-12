@@ -38,7 +38,8 @@ only the source version change. It does **not** create a tag or start a build.
 Then run **Build** on that branch. There is no tag or version input: the workflow
 reads the checked-in version and builds the exact commit selected at dispatch.
 It signs, notarizes and packages the cross-platform plugin, validates the final
-ZIP/DMG SBOM sidecars, then creates the matching `vX.Y.Z` tag and GitHub release.
+ZIP/DMG SBOM sidecars, then attests the finalized files in a separate publication
+job before creating the matching `vX.Y.Z` tag and GitHub release.
 Tag pushes no longer start a release automatically.
 
 Build rejects inconsistent source versions, a tag pointing to another commit,
@@ -61,6 +62,12 @@ The **Unsigned native linker trace** workflow checks current builds without
 signing or publishing.
 The read-only **Release SBOM proof of concept** workflow can analyze an existing
 release without republishing it. See [usage, evidence and coverage limits](build/sbom/README.md).
+Future releases include GitHub build provenance and separate ZIP/DMG SBOM
+attestations, with per-platform dependency versions in the release notes.
+Existing releases do not gain retroactive build provenance.
+See [security policy](SECURITY.md) and
+[dependency/security follow-up](build/sbom/SECURITY-REVIEW.md) for remaining
+metadata, version-review and repository-control decisions.
 
 ### Brotli security update
 
