@@ -525,22 +525,22 @@ jobs:
             final/*.dmg
             final/sbom/*.json
       - name: attest ZIP CycloneDX SBOM
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-path: final/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.zip
           sbom-path: final/sbom/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.zip.cdx.json
       - name: attest ZIP SPDX SBOM
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-path: final/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.zip
           sbom-path: final/sbom/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.zip.spdx.json
       - name: attest DMG CycloneDX SBOM
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-path: final/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.dmg
           sbom-path: final/sbom/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.dmg.cdx.json
       - name: attest DMG SPDX SBOM
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
           subject-path: final/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.dmg
           sbom-path: final/sbom/${{ env.PRODUCT_NAME }}-${{ env.RELEASE_VERSION }}.dmg.spdx.json
