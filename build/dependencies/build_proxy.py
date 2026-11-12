@@ -30,7 +30,7 @@ def source_snapshot(source, lock):
 
 
 def recipe_snapshot():
-    return archive_hashes(HERE, ["build_proxy.py", "inspect_proxy.py", "proxy-source.json",
+    return archive_hashes(HERE, [".gitattributes", "build_proxy.py", "inspect_proxy.py", "proxy-source.json",
         "baseline-v4.9.10.json", "proxy/CMakeLists.txt", "proxy/behavior.cpp",
         "proxy/file-url.cpp", "proxy/relink-probe.cpp", "proxy/test.pac",
         "patches/proxy-windows-file-url.patch", "relink_candidate.py", "README.md"])

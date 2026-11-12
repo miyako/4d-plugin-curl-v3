@@ -116,6 +116,8 @@ candidate-source test covers drive letters, UNC, localhost, both file schemes,
 actual local PAC contents, unchanged HTTP paths and unchanged macOS paths.
 This does not add a Windows PAC interpreter, percent decoding or remote-PAC
 changes.
+The scoped `.gitattributes` keeps reviewed patch bytes LF on Windows too;
+checkout line-ending conversion must not change the locked patch digest.
 
 ## Isolated proxy candidate
 
