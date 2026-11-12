@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 import build_proxy
 import inspect_proxy
 import relink_candidate
+import relink_plugin_macos
 from provenance import digest
 
 
@@ -296,6 +297,37 @@ class ProxyEvidenceTests(unittest.TestCase):
         with mock.patch.object(relink_candidate, "inspect", return_value={"target": "macos-arm64"}):
             with self.assertRaisesRegex(ValueError, "reviewed benign probe"):
                 relink_candidate.inspect_relink(candidate, output)
+
+    def test_full_plugin_replay_preserves_objects_and_search_order_and_redirects_all_outputs(self):
+        original = ["clang++", "-bundle", "-filelist", "/original/objects.txt",
+                    "-L/original/a", "-lcurl", "-liconv", "-lproxy", "-lssl",
+                    "-Xlinker", "-map", "-Xlinker", "/original/link.map",
+                    "-Xlinker", "-dependency_info", "-Xlinker", "/original/dependencies.dat",
+                    "-o", "/original/cURL"]
+        replay = relink_plugin_macos.link_arguments(original, self.root, self.root / "modified.a")
+        self.assertEqual(replay[2:10], ["-filelist", "/original/objects.txt",
+                                       "-L/original/a", "-lcurl", "-liconv",
+                                       str(self.root / "modified.a"), "-lssl", "-Xlinker"])
+        self.assertEqual(replay[12], str(self.root / "link.map"))
+        self.assertEqual(replay[16], str(self.root / "dependencies.dat"))
+        self.assertEqual(replay[18], str(self.root / "cURL"))
+        self.assertEqual(replay[-1], "-Wl,-u,_proxy_user_relink_probe")
+        self.assertEqual(original[-1], "/original/cURL")
+        with self.assertRaisesRegex(ValueError, "one original plugin"):
+            relink_plugin_macos.link_arguments(original + ["-lproxy"], self.root)
+        with self.assertRaisesRegex(ValueError, "diagnostic output"):
+            relink_plugin_macos.link_arguments(
+                [a for a in original if a != "-map"], self.root)
+
+    def test_full_plugin_marker_must_be_a_defined_symbol_not_an_import_or_plain_text(self):
+        names = b"\0" + relink_plugin_macos.MARKER.encode() + b"\0"
+        header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 8, 1, 24, 0, 0)
+        table = struct.pack("<6I", 2, 24, 56, 1, 72, len(names))
+        def image(kind, section):
+            return header + table + struct.pack("<IBBHQ", 1, kind, section, 0, 4096) + names
+        self.assertTrue(relink_plugin_macos.defines_marker(image(0x0F, 1)))
+        self.assertFalse(relink_plugin_macos.defines_marker(image(0x01, 0)))
+        self.assertFalse(relink_plugin_macos.defines_marker(image(0xEF, 1)))
 
 
 if __name__ == "__main__":

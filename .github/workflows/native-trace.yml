@@ -116,6 +116,7 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
+          toolset: '14.4'
       - name: Build candidate and compare exact historical proxy archives
         shell: bash
         run: |
@@ -315,6 +316,7 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
+          toolset: ${{ inputs.native-candidate-plugin-only && '14.4' || '' }}
       - name: Install NASM
         if: ${{ runner.os == 'Windows' && !inputs.native-candidate-plugin-only }}
         shell: pwsh

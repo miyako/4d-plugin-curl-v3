@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 cmake_policy(SET CMP0091 NEW)
 project(proxy_provenance_candidate LANGUAGES CXX)
 
+if(WIN32 AND (NOT MSVC OR MSVC_VERSION LESS 1930 OR MSVC_VERSION GREATER_EQUAL 1950))
+  message(FATAL_ERROR "Use the plugin's MSVC v143 toolset (vcvars_ver=14.4); newer STL archives cannot link against its older static runtime")
+endif()
+
 if(NOT IS_DIRECTORY "${PROXY_SOURCE}/libmodman")
   message(FATAL_ERROR "PROXY_SOURCE must be the verified upstream checkout")
 endif()

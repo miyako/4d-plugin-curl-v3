@@ -434,6 +434,29 @@ This route does not run the Deployment signing branch, rebuild/restamp old
 providers, adopt candidates, load 4D or publish anything. It is not the eventual
 complete user-modified-library relink/host verification gate.
 
+The local full Mac plugin was subsequently relinked from its unchanged original
+objects using each architecture's reviewed user-modified proxy archive.
+Both unchanged baseline link replays reproduced the original slice bytes;
+both modified full-plugin slices retained the defined probe symbol and differed
+from the originals. The merged modified binary SHA-256 is
+`d5950062d39d79a25b70b6bca0023318dc1776697e3047cb4e9a13db641d1bcb`.
+`relink_plugin_macos.py` captures the actual commands, object/library hashes and
+original source-kit bindings; `--inspect-only` rechecks the persisted proof
+without compiling or loading the plugin. This is a local object-relink
+demonstration, not portable LGPL delivery or an actual 4D host check.
+
+The first cross-platform source-plugin run, `43295977632` at `0e6a14f`,
+exposed a concrete Windows toolchain incompatibility: the proxy producer used
+MSVC 14.51, but the unchanged plugin's v143 link used 14.44. Its static STL could
+not resolve `__std_find_first_not_of_trivial_pos_1` and
+`__std_find_last_not_of_trivial_pos_1` from `proxy.cpp.obj`.
+The isolated proxy producer now explicitly selects the v143 14.4 family,
+and its delivered CMake recipe rejects newer MSVC STL inputs. The source-plugin
+experiment uses the matching developer environment; default historical builds
+and the product's toolset/CRT/search order are unchanged. Fresh source and
+full-plugin CI are required before treating this correction as verified.
+The original producer kits and failed native diagnostics remain preserved.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \
