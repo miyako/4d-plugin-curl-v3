@@ -12,13 +12,13 @@
   "patches": [
     {
       "path": "patches/proxy-windows-file-url.patch",
-      "sha256": "fc1a8c831d9d619e9a96331933e001aaf7d917492116c19cad5d82fa5e072cfa",
-      "purpose": "Convert Windows file/PAC drive-letter and UNC paths and use them for actual local PAC reads; root-relative, non-file and macOS paths are unchanged.",
+      "sha256": "75ec7055b3ec22c2f92bc5d3ac4cca89ee6330bd5bac846c17dabe84bd76cf93",
+      "purpose": "Convert Windows file/PAC drive-letter and UNC paths, use them for local PAC reads, and terminate local read buffers at the returned byte count; root-relative, non-file and macOS paths are unchanged.",
       "files": [
         {
           "path": "libproxy/url.cpp",
           "beforeSha256": "0d20c9e12246891af1e735e4bdd2103feb32ee733e11a9bcc760e98410e51945",
-          "afterSha256": "98dd75092e83f1f8d83c925dd2e8abed32eba0ac0797cf2d30057c869d8fb8d5"
+          "afterSha256": "567a7f63977ea2a8ab4f79bb8ec0a6f3d4798882dadb1d5cb38b83cf56497fbb"
         }
       ]
     }

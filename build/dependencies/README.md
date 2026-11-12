@@ -116,6 +116,16 @@ candidate-source test covers drive letters, UNC, localhost, both file schemes,
 actual local PAC contents, unchanged root-relative/HTTP paths and unchanged macOS paths.
 This does not add a Windows PAC interpreter, percent decoding or remote-PAC
 changes.
+The [bounded Windows run 43242932768](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43242932768)
+passed the upstream URL parsing/encoding and public-API comparisons, but isolated
+a local PAC read defect: the library returned 168 bytes with a trailing CR
+instead of the stream's 164 translated bytes. Windows `_read` can translate
+CRLF in place and leave residual bytes beyond its returned count; pre-zeroing
+the allocation does not terminate the translated result. The patch now
+terminates at the actual read count and rejects failed reads. Both LF and CRLF
+fixtures are checked through both file schemes on every target. No remote PAC
+fetching or text-mode policy is changed. These private-class source tests do
+not identify or assume the C++ layout of the opaque old archives.
 The scoped `.gitattributes` keeps reviewed patch bytes LF on Windows too;
 checkout line-ending conversion must not change the locked patch digest.
 

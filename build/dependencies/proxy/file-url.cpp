@@ -12,7 +12,7 @@ static void require(bool condition, const char* message) {
 
 int main(int argc, char** argv) {
     try {
-        require(argc == 2, "expected local PAC fixture path");
+        require(argc == 3, "expected LF and CRLF PAC fixture paths");
         using libproxy::url;
         require(url("file:///allo").get_path() == "/allo", "root-relative file path unchanged");
 #ifdef _WIN32
@@ -20,28 +20,34 @@ int main(int argc, char** argv) {
         require(url("file://server/share/file.pac").get_path() == "\\\\server\\share\\file.pac", "UNC path");
         require(url("pac+file:///E:/dir/file.pac").get_path() == "E:\\dir\\file.pac", "PAC file scheme");
         require(url("file://localhost/E:/dir/file.pac").get_path() == "E:\\dir\\file.pac", "localhost path");
-        const std::string local_url = std::string("file:///") + argv[1];
 #else
         require(url("file:///E:/dir/file.pac").get_path() == "/E:/dir/file.pac", "unchanged POSIX path");
-        const std::string local_url = std::string("file://") + argv[1];
 #endif
         require(url("https://server/dir/file.pac").get_path() == "/dir/file.pac", "HTTP path unchanged");
-        std::ifstream input(argv[1]);
-        require(input.is_open(), "open PAC fixture");
-        const std::string expected((std::istreambuf_iterator<char>(input)),
-            std::istreambuf_iterator<char>());
-        for (const auto& prefix : {std::string(""), std::string("pac+")}) {
-            url source(prefix + local_url);
-            char* pac = source.get_pac();
-            require(pac != NULL, "read local PAC through source library");
-            const std::string actual(pac);
-            delete[] pac;
-            if (actual != expected)
-                std::cerr << "PAC contents: library=" << actual.size() << " bytes, "
-                    << std::count(actual.begin(), actual.end(), '\r') << " CR; stream="
-                    << expected.size() << " bytes, "
-                    << std::count(expected.begin(), expected.end(), '\r') << " CR" << std::endl;
-            require(actual == expected, "local PAC contents");
+        for (int i = 1; i < argc; ++i) {
+#ifdef _WIN32
+            const std::string local_url = std::string("file:///") + argv[i];
+#else
+            const std::string local_url = std::string("file://") + argv[i];
+#endif
+            std::ifstream input(argv[i]);
+            require(input.is_open(), "open PAC fixture");
+            const std::string expected((std::istreambuf_iterator<char>(input)),
+                std::istreambuf_iterator<char>());
+            for (const auto& prefix : {std::string(""), std::string("pac+")}) {
+                url source(prefix + local_url);
+                char* pac = source.get_pac();
+                require(pac != NULL, "read local PAC through source library");
+                const std::string actual(pac);
+                delete[] pac;
+                if (actual != expected)
+                    std::cerr << "PAC contents: library=" << actual.size() << " bytes, "
+                        << std::count(actual.begin(), actual.end(), '\r') << " CR; stream="
+                        << expected.size() << " bytes, "
+                        << std::count(expected.begin(), expected.end(), '\r') << " CR" << std::endl;
+                require(actual == expected, "local PAC contents");
+                std::cout << argv[i] << ": " << actual.size() << " PAC bytes verified" << std::endl;
+            }
         }
         std::cout << "file/PAC paths and local file contents verified" << std::endl;
         return 0;

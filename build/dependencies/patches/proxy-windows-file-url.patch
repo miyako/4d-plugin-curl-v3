@@ -1,4 +1,5 @@
 diff --git a/libproxy/url.cpp b/libproxy/url.cpp
+index 76ae47f..3cb5462 100644
 --- a/libproxy/url.cpp
 +++ b/libproxy/url.cpp
 @@ -363,6 +363,20 @@ string url::get_password() const {
@@ -22,7 +23,7 @@ diff --git a/libproxy/url.cpp b/libproxy/url.cpp
  	return m_path;
  }
  
-@@ -416,7 +430,7 @@ char* url::get_pac() {
+@@ -416,16 +430,19 @@ char* url::get_pac() {
  	// In case of a file:// url we open the file and read it
  	if (m_scheme == "file" || m_scheme == "pac+file") {
  		struct stat st;
@@ -31,3 +32,16 @@ diff --git a/libproxy/url.cpp b/libproxy/url.cpp
  			return NULL;
  
  		if (!fstat(sock, &st) && st.st_size < PAC_MAX_SIZE) {
+ 			buffer = new char[st.st_size+1];
+ 			memset(buffer, 0, st.st_size+1);
+-			if (read(sock, buffer, st.st_size) == 0) {
++			const auto received = read(sock, buffer, st.st_size);
++			if (received <= 0) {
+ 				delete[] buffer;
+ 				buffer = NULL;
+ 			}
++			else
++				buffer[received] = '\0';
+ 		}
+ 		close(sock);
+ 		return buffer;
