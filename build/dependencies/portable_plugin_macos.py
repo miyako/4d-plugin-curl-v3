@@ -3,7 +3,7 @@
 
 import argparse
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
 import shlex
 import shutil
@@ -35,7 +35,7 @@ def toolchain(driver, sdk):
 
 
 def relocate(arguments, project, sdk, driver, target):
-    arguments = local.link_arguments(arguments, Path("${OUTPUT}") / target)
+    arguments = local.link_arguments(arguments, PurePosixPath("${OUTPUT}") / target)
     if arguments[0] != str(driver) or arguments.count("-isysroot") != 1:
         raise ValueError("Unexpected original Mac driver/SDK arguments")
     arguments[0] = "${DRIVER}"

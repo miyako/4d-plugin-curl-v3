@@ -513,6 +513,21 @@ modules. Such consumers require matching rebuilds or explicit verification
 before adoption. No old source revision is inferred from this observation, and
 the candidate is not patched to imitate the old C++ ABI.
 
+Run `43305595053` at `ce958b2` subsequently passed both native jobs, Windows'
+full modified-library replay and the actual unsigned ZIP/DMG package job.
+Every original artifact was downloaded and independently inspected. Both
+containers contain the same seven complete bundle files, including the universal
+Mac executable and Windows x64 `.4DX`; packaged version metadata is 4.9.10.
+All six persisted documents pass official-schema, artifact/binary/slice binding
+and cross-format identity/license checks. Independent raw map/log parsing and
+the separate selected-package checker confirm 35 named source-record-bound
+selections, 32 with supported versions. The ZIP SHA-256 is
+`1491b6cca7b3d2a68ec1fdb8d322517699bce0d1ff8d869dddafb66c8ecc878c`;
+the DMG SHA-256 is
+`4db4af2b74caecc5677c07575f4e559b4cab8acc10dbb77d14fe4202a8436bb3`.
+These are representative unsigned validation artifacts, not published release
+assets, production adoption, completed license delivery or 4D host proof.
+
 Downloaded originals from `43303431095` independently establish actual
 source-record-bound selection for all thirty-five repository archives:
 twelve per Mac architecture (eleven versioned) and eleven on Windows (ten

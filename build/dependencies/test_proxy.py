@@ -1,7 +1,7 @@
 import hashlib
 import json
 import io
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import struct
 import subprocess
 import tarfile
@@ -40,7 +40,8 @@ class ProxyEvidenceTests(unittest.TestCase):
         return {"commit": self.git("rev-parse", "HEAD")}
 
     def test_portable_mac_relocation_preserves_order_and_rejects_external_inputs(self):
-        project, sdk, driver = Path("/old/project"), Path("/sdk"), Path("/tools/clang++")
+        project, sdk, driver = (PurePosixPath("/old/project"), PurePosixPath("/sdk"),
+                                PurePosixPath("/tools/clang++"))
         command = [str(driver), "-isysroot", str(sdk), "-L/old/project/a", "-F/old/project",
                    "-filelist", "/old/project/objects", "-lssl", "-lproxy", "-lcrypto",
                    "/sdk/usr/lib/ssh-keychain.tbd", "-o", "/old/output",
