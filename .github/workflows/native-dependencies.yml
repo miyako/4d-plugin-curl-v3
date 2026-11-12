@@ -21,6 +21,8 @@ jobs:
             target: macos-arm64
           - os: macos-15-intel
             target: macos-x86_64
+          - os: windows-latest
+            target: windows-x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -31,6 +33,16 @@ jobs:
           python-version: '3.12'
       - name: GNU source and conversion evidence guards
         run: python -m unittest discover -s build/dependencies -p 'test_iconv.py'
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Prepare isolated upstream-supported Windows GNU tools
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python build/dependencies/prepare_cygwin.py --output "$env:RUNNER_TEMP\iconv-cygwin"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Acquire the reviewed release archive
         shell: python
         env:
@@ -46,9 +58,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          arguments=()
+          if [ "$RUNNER_OS" = Windows ]; then
+            arguments+=(--cygwin-root "$RUNNER_TEMP/iconv-cygwin/root")
+          fi
           python build/dependencies/build_iconv.py build \
             --archive "$RUNNER_TEMP/libiconv.tar.gz" --target "${{ matrix.target }}" \
-            --output "$RUNNER_TEMP/native-libiconv"
+            --output "$RUNNER_TEMP/native-libiconv" "${arguments[@]}"
           python build/dependencies/build_iconv.py inspect "$RUNNER_TEMP/native-libiconv"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -57,6 +73,17 @@ jobs:
           path: ${{ runner.temp }}/native-libiconv/
           if-no-files-found: error
           include-hidden-files: true
+      - name: Preserve Windows tool acquisition diagnostics without distributing tool binaries
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: iconv-windows-tool-records
+          path: |
+            ${{ runner.temp }}/iconv-cygwin/acquisition.json
+            ${{ runner.temp }}/iconv-cygwin/installed.db
+            ${{ runner.temp }}/iconv-cygwin/setup.log
+            ${{ runner.temp }}/iconv-cygwin/root/var/log/setup.log*
+          if-no-files-found: warn
 
   http-prerequisites:
     strategy:

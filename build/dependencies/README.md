@@ -212,8 +212,12 @@ passed `test_simple` but correctly stopped at the CRT gate: CMake's old policy
 default generated `/MD` despite the requested runtime setting. The recipe now
 explicitly sets `CMAKE_POLICY_DEFAULT_CMP0091=NEW` before configuration; actual
 compiler commands must still prove `/MT`, without dynamic/debug CRT flags.
-This correction requires a fresh native Windows result, not a relabeling of
-the rejected output.
+The next run exposed a second issue: CMake's Windows OpenSSL finder selected
+its legacy `LIB_EAY_RELEASE` system installation despite explicit generic
+provider paths. The recipe confines those imported configurations to the
+delivered provider and requires actual `/VERBOSE:LIB`/map selections from the
+upstream unit executable as well as the separate API probe. Both corrections
+require fresh native Windows results, not relabeling rejected outputs.
 
 The producer retains source kits, original provider records and installed headers,
 generated configuration, compiler objects, archive-member payload bindings,
@@ -273,11 +277,32 @@ files, generated interface/configuration, toolchain identities, original
 compiler invocations and input/output hashes, all three object payloads,
 exact archive-member binding, actual old/new link selections and probe
 executables/results. Inspection checks the installed archive/interface/license,
-architecture and requested deployment setting. The source-only native matrix
-adds both macOS iconv targets; Windows 1.18 still requires its upstream-supported
-Cygwin/GNU-make/MSVC recipe with actual `/MT` proof, not an MSYS2/nmake substitute.
+architecture and requested deployment setting. Both downloaded native macOS
+outputs from
+[run 43267179287](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43267179287)
+were independently inspected without executing downloaded binaries.
+The source-only matrix also implements the Windows 1.18 Cygwin/GNU-make/MSVC
+recipe, pending its first native result. It deliberately requests `/MT`, not
+the upstream example's `/MD`; actual compiler settings must prove that choice.
+GNU 1.18's compile closure uses `compat.c` and a Windows resource object,
+not an assumed copy of the 1.16 macOS source list.
 Shared JSON probe helpers have explicit recipe contracts so earlier curl/SSH
 records remain inspectable with their original delivered recipes.
+
+```sh
+python build/dependencies/prepare_cygwin.py --output /fresh/cygwin-tools
+python build/dependencies/build_iconv.py build \
+  --archive /verified/libiconv-1.18.tar.gz --target windows-x86_64 \
+  --cygwin-root /fresh/cygwin-tools/root --output /fresh/iconv-evidence
+```
+
+Preparation is Windows-only and job-local. The installer hash matches the
+official SHA-512 listing and its preserved signature was verified against
+the key published by Cygwin; a changed installer is rejected before execution.
+Repository signature checking is not disabled. Resolved package versions,
+setup records and individual compiler/resource/tool identities are retained.
+The Cygwin environment is a build prerequisite, not a linked plugin dependency
+or an MSYS2 substitute. Tool binaries are not bundled into the source kit.
 
 Both original GNU libiconv source archives/signatures and the official GNU
 public keyring are preserved. Signature verification reports `VALIDSIG` with

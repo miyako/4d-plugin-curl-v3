@@ -87,9 +87,15 @@ def inspect(output):
                 "build/CMakeCache.txt", "build/compile_commands.json", "build/build.ninja",
                 "candidate.json", "candidate.stderr", "probe-build.log", "probe.map",
                 "build/src/libssh2_config.h", record["builtArchive"],
+                "build/tests/test_simple" + (".exe" if record["target"].startswith("windows") else ""),
                 "probe.exe" if record["target"].startswith("windows") else "probe"}
     if not required.issubset(paths) or record["buildFiles"] != archive_hashes(output, paths):
         raise ValueError("libssh2 original build/validation outputs changed")
+    if record["target"].startswith("windows"):
+        if ("unit.map" not in paths or record.get("unitLinkSelections") != selections(
+                output, record["target"], record["probeInputs"],
+                map_name="unit.map", log_name="build.log")):
+            raise ValueError("libssh2 upstream unit test did not select the exact delivered providers")
     installed = output / "install"
     if (record["installFiles"] != tree_files(installed)
             or digest(installed / record["archives"][0]["path"]) != digest(output / record["builtArchive"])):
@@ -175,9 +181,17 @@ def build(source, output, target, openssl_install, baseline):
     if not windows:
         arguments += ["-DCMAKE_OSX_ARCHITECTURES=" + target.removeprefix("macos-"),
                       "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13"]
+    else:
+        arguments += ["-DOPENSSL_ROOT_DIR=" + str(openssl_install),
+                      "-DOPENSSL_MSVC_STATIC_RT=TRUE",
+                      '-DCMAKE_EXE_LINKER_FLAGS=/VERBOSE:LIB /MAP:"' + str(output / "unit.map") + '"']
+        for config in ("RELEASE", "DEBUG"):
+            arguments += ["-DLIB_EAY_" + config + "=" + str(openssl_install / crypto),
+                          "-DSSL_EAY_" + config + "=" + str(openssl_install / ssl)]
     run(arguments, output / "configure.log")
     tools, compiler_file = toolchain(output, target)
-    run(["cmake", "--build", str(output / "build"), "--target", "test_simple", "--verbose"],
+    run(["cmake", "-E", "env", "VERBOSE=1", "cmake", "--build",
+         str(output / "build"), "--target", "test_simple", "--verbose"],
         output / "build.log")
     run(["ctest", "--test-dir", str(output / "build"), "-R", "^test_simple$", "--verbose",
          "--no-tests=error", "--output-junit", str(output / "test-results.xml")], output / "tests.log")
@@ -236,6 +250,10 @@ def build(source, output, target, openssl_install, baseline):
                     "OpenSSL": {"path": str(openssl_install / crypto),
                                 "sha256": digest(openssl_install / crypto)}}
     evidence += [p["path"] for p in proof["compiledObjects"]]
+    unit_selections = {}
+    if windows:
+        evidence.append("unit.map")
+        unit_selections = selections(output, target, probe_inputs, map_name="unit.map", log_name="build.log")
     record = {
         "schema_version": 1, "recipeContractVersion": 2,
         "evidence_type": "isolated-source-build-candidate",
@@ -246,6 +264,7 @@ def build(source, output, target, openssl_install, baseline):
         "toolchain": tools, "compiledSources": compiled, **proof,
         "probeCompiler": probe_compiler, "probeInputs": probe_inputs,
         "linkSelections": selections(output, target, probe_inputs), "providerFiles": provider_files,
+        "unitLinkSelections": unit_selections,
         "builtArchive": built.relative_to(output).as_posix(),
         "archives": archive_hashes(install, ["lib/" + name]), "installFiles": tree_files(install),
         "buildFiles": archive_hashes(output, evidence), "licenseFileSha256": LICENSE_SHA,

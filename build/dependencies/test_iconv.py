@@ -8,6 +8,7 @@ from unittest import mock
 import json
 
 import build_iconv
+import prepare_cygwin
 import trace_compiler
 
 
@@ -59,9 +60,46 @@ class IconvTests(unittest.TestCase):
             records = [json.loads(p.read_text()) for p in root.glob("*.json")]
             good = next(p for p in records if p["returnCode"] == 0)
             self.assertEqual(good["inputs"], [
-                {"path": str(source), "sha256": trace_compiler.digest(source)}])
+                {"path": source.as_posix(), "sha256": trace_compiler.digest(source)}])
             self.assertEqual(good["object"]["sha256"], trace_compiler.digest(output))
             self.assertNotIn("object", next(p for p in records if p["returnCode"] == 1))
+
+    def test_resource_object_is_recorded_without_a_c_compiler_flag(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            source, output = root / "version.rc", root / "version.o"
+            source.write_bytes(b"resource input")
+            output.write_bytes(b"COFF resource")
+            with mock.patch("trace_compiler.subprocess.run") as compiler:
+                compiler.return_value.returncode = 0
+                trace_compiler.main(root, "windres", [
+                    "-i", str(source), "-o", str(output), "--output-format=coff"])
+            record = json.loads(next(root.glob("*.json")).read_text())
+            self.assertEqual(record["object"]["sha256"], trace_compiler.digest(output))
+            self.assertEqual(record["inputs"][0]["sha256"], trace_compiler.digest(source))
+
+    def test_upstream_compile_wrapper_dash_fo_output_is_recorded(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            source, output = root / "input.c", root / "input.o"
+            source.write_bytes(b"int value;")
+            output.write_bytes(b"MSVC object")
+            with mock.patch("trace_compiler.subprocess.run") as compiler:
+                compiler.return_value.returncode = 0
+                trace_compiler.main(root, "cl", ["-c", str(source), "-Fo" + str(output)])
+            record = json.loads(next(root.glob("*.json")).read_text())
+            self.assertEqual(record["object"]["sha256"], trace_compiler.digest(output))
+
+    def test_changed_tool_installer_cannot_execute(self):
+        with (
+                tempfile.TemporaryDirectory() as temporary,
+                mock.patch("prepare_cygwin.platform.system", return_value="Windows"),
+                mock.patch("prepare_cygwin.urllib.request.urlretrieve",
+                           side_effect=lambda url, path: path.write_bytes(b"changed")),
+                mock.patch("prepare_cygwin.subprocess.run") as execute):
+            with self.assertRaisesRegex(ValueError, "reviewed signed acquisition"):
+                prepare_cygwin.prepare(Path(temporary) / "fresh")
+            execute.assert_not_called()
 
 
 if __name__ == "__main__":

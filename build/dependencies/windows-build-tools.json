@@ -1,0 +1,15 @@
+{
+  "scope": "Isolated GNU source build tools, not incorporated plugin libraries",
+  "cygwin": {
+    "url": "https://cygwin.com/setup-x86_64.exe",
+    "sha256": "9d31ffc08b14eaaf5ddf15799a934f6bc1be3d87ed986736cb1980c508ed9502",
+    "sha512": "9bbbd4de497842446af58af875590ace5d8fa3c557cd7e27328569dfa68e58213da1cc1a6fb7102d4f0f01be38e0b92c6fa74f61b6eb7351a0481ca4bd9e8781",
+    "signatureUrl": "https://cygwin.com/setup-x86_64.exe.sig",
+    "signerFingerprint": "56405CF6FCC81574682A5D561A698DE9E2E56300",
+    "verificationReference": "https://cygwin.com/install.html",
+    "checksumReference": "https://cygwin.com/sha512.sum",
+    "mirror": "https://mirrors.kernel.org/sourceware/cygwin/",
+    "packages": ["make", "file", "diffutils", "mingw64-x86_64-binutils", "mingw64-x86_64-gcc-core"],
+    "packageScope": "Installer verifies signed repository metadata; resolved package versions and actual tool identities are recorded, not claimed immutable or incorporated."
+  }
+}
