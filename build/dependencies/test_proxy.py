@@ -110,10 +110,15 @@ class ProxyEvidenceTests(unittest.TestCase):
                 output, "windows-x86_64", ["ignore_domain"], str(self.source), "/original/build")
             self.assertEqual(len(proof["proxy"]["compiledSources"]), 6)
             self.assertEqual(len(proof["modman"]["compiledSources"]), 1)
-            commands[0]["command"] = "cl /MD"
+            commands[0]["command"] = "cl -MT"
             self.save_commands(output, commands)
-            with self.assertRaisesRegex(ValueError, "static release CRT"):
-                inspect_proxy.compiler_archive_evidence(
+            inspect_proxy.compiler_archive_evidence(
+                output, "windows-x86_64", ["ignore_domain"], str(self.source), "/original/build")
+            for flag in ("/MD", "-MD", "/MTd"):
+                commands[0]["command"] = "cl " + flag
+                self.save_commands(output, commands)
+                with self.assertRaisesRegex(ValueError, "static release CRT"):
+                    inspect_proxy.compiler_archive_evidence(
                     output, "windows-x86_64", ["ignore_domain"], str(self.source), "/original/build")
             commands[0]["command"] = "cl /MT"
             commands[1]["directory"] = "/wrong/build"

@@ -116,8 +116,8 @@ def compiler_archive_evidence(output, target, modules, original_source, original
                 or any(c["directory"].replace("\\", "/").rstrip("/") != build for c in compiled)):
             raise ValueError("Proxy compiler source closure or original working directory differs")
         if target.startswith("windows") and any(
-                not re.search(r"(?:^|\s)/MT(?:\s|$)", c["command"])
-                or re.search(r"(?:^|\s)/MDd?(?:\s|$)", c["command"]) for c in compiled):
+                not re.search(r"(?:^|\s)[/-]MT(?:\s|$)", c["command"])
+                or re.search(r"(?:^|\s)[/-]MDd?(?:\s|$)", c["command"]) for c in compiled):
             raise ValueError("Proxy compiler must preserve static release CRT")
         filename = ("libproxy.lib" if name == "proxy" else "modman.lib") if target.startswith(
             "windows") else "lib" + name + ".a"
