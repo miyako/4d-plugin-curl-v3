@@ -343,8 +343,15 @@ relink passed. macOS CMake install ran `ranlib`, changing only one byte in the
 first symbol-table timestamp field for each archive. The verifier permits only
 that bounded macOS header-field delta, records it explicitly and preserves both
 exact archive hashes; any code/member/index-payload difference fails. Windows
-still requires byte-identical installation. Fresh three-target results remain
-required, followed by proxy inventory integration and full-plugin/host gates.
+still requires byte-identical installation. Run `43290332315` at `69215c3`
+passed all three fresh native builds/comparisons and delivered-source modified
+standalone relinks. Downloaded originals were independently inspected:
+libmodman has one compiler-bound object per target, and libproxy has eleven on
+each Mac architecture and ten on Windows. The Windows installation is
+byte-identical. Original schema-1 run `43245630276` was also re-inspected without
+claiming compiler-object closure. Earlier rejected attempts are preserved;
+their Windows failures were a path-separator test fixture and rejection of
+CMake's valid `-MT` spelling, not dynamic-CRT builds or product behavior changes.
 
 The shared native adapter also accepts these fresh schema-2 proxy kits. It
 projects the two original archives separately, retaining the original record
@@ -362,6 +369,23 @@ three exact latest proxy producer jobs to succeed before acquiring their kits.
 The inventory then re-inspects the original source/patch/compiler/object
 materials and binds fresh isolated copies/universal slices; it does not rebuild,
 restamp, replace production archives or waive adoption gates.
+
+Run `43290901171` at `14e0ca5` passed this complete candidate aggregation.
+The downloaded inventory was independently recomputed against every original
+kit: sixteen architecture/archive bindings on macOS and seven on Windows,
+covering all twenty-three previously opaque input positions with new isolated
+source candidates. Twenty have independently supported versions; bundled
+libmodman's three bindings remain deliberately unversioned, with pinned source
+identity and LGPL text instead. These counts do not retroactively identify or
+replace the twenty-three opaque production bindings.
+
+The original native outputs, source inventory and historical/rejected proxy
+evidence have verified independent backups outside both worktree and session
+storage. Remaining migration work includes stronger consolidation of existing
+OpenSSL/Brotli build materials, actual full-plugin source-candidate selection,
+complete LGPL corresponding-source/user-relink delivery, operator-run 4D
+installation/trust/behavior checks and representative cross-platform packaging.
+No production archive, signing setting, tag or release was changed.
 
 ```sh
 python3 build/dependencies/build_curl.py build \
