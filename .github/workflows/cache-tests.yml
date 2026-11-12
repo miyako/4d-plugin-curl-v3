@@ -1,0 +1,63 @@
+name: Cache Action round-trip
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cache-tests.yml'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  save:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Save isolated test cache after successful job
+        id: cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: cache-test-payload
+          key: cache-action-smoke-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.os }}
+      - name: Require miss and write deterministic payload
+        shell: python
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          import os
+          from pathlib import Path
+          if os.environ["CACHE_HIT"] == "true":
+              raise RuntimeError("Run-specific test cache unexpectedly existed")
+          directory = Path("cache-test-payload")
+          directory.mkdir()
+          (directory / "payload.bin").write_bytes(b"cache-action-round-trip\x00\r\n")
+
+  restore:
+    needs: save
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Restore exact cache on a fresh runner
+        id: cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: cache-test-payload
+          key: cache-action-smoke-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.os }}
+          fail-on-cache-miss: true
+      - name: Require exact hit and unchanged bytes
+        shell: python
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          import os
+          from pathlib import Path
+          if os.environ["CACHE_HIT"] != "true":
+              raise RuntimeError("Exact test cache was not restored")
+          if Path("cache-test-payload/payload.bin").read_bytes() != b"cache-action-round-trip\x00\r\n":
+              raise RuntimeError("Cache payload bytes changed during save/restore")
