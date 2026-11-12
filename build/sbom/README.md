@@ -216,7 +216,7 @@ gh attestation verify cURL-VERSION.dmg --repo miyako/4d-plugin-curl-v3
 gh attestation verify cURL-VERSION.zip --repo miyako/4d-plugin-curl-v3 \
   --predicate-type https://cyclonedx.org/bom
 gh attestation verify cURL-VERSION.dmg --repo miyako/4d-plugin-curl-v3 \
-  --predicate-type https://spdx.dev/Document
+  --predicate-type https://spdx.dev/Document/v2.3
 ```
 
 Both SBOM predicates are available for both containers; inspect the verified

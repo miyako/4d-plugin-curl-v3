@@ -40,6 +40,7 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertIn("1.11.1_DEV", notes)
         self.assertIn("Version not verified", notes)
         self.assertIn("not a vulnerability assessment", notes)
+        self.assertIn("--predicate-type https://spdx.dev/Document/v2.3", notes)
 
     def test_mismatch_and_duplicate_target_rejected(self):
         for mutation in (

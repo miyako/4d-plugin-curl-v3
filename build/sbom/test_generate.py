@@ -323,6 +323,8 @@ class BuildEvidenceTests(unittest.TestCase):
                 record = json.loads(output.read_text())
                 self.assertEqual(record["binarySha256"], generate.sha256(pe()))
                 self.assertEqual(record["rebuiltArchiveEvidence"][0]["version"], "1.2.1")
+                self.assertEqual(record["rebuiltArchiveEvidence"][0]["purl"],
+                                 "pkg:github/google/brotli@" + "a" * 40)
                 missing = [i for i in record["declaredInputs"] if i["status"] == "unresolved-declaration"]
                 self.assertEqual(missing, [{"path": "lib/64/kernel32.lib", "status": "unresolved-declaration"}])
                 snapshot = root / "sources.json"

@@ -79,7 +79,7 @@ def render(paths, version):
         "attestations bind each container separately to its CycloneDX and SPDX documents.",
         "Verify with `gh attestation verify FILE --repo miyako/4d-plugin-curl-v3`.",
         "For SBOM predicates, add `--predicate-type https://cyclonedx.org/bom` or",
-        "`--predicate-type https://spdx.dev/Document`.",
+        "`--predicate-type https://spdx.dev/Document/v2.3`.",
         "",
         "This is not a vulnerability assessment or a vulnerability-free claim.",
         "See [security policy](https://github.com/miyako/4d-plugin-curl-v3/blob/v"
