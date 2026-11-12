@@ -197,6 +197,20 @@ class ProxyEvidenceTests(unittest.TestCase):
             relink_candidate.unpack(path, [{"path": "../escape.cpp", "sha256": "a" * 64}],
                                     self.root / "relink")
 
+    def test_canonical_staging_ignores_git_archive_eol_conversion(self):
+        lock = self.checkout()
+        lock["patches"] = []
+        canonical = digest(self.source / "COPYING")
+        self.git("config", "core.autocrlf", "true")
+        checkout = build_proxy.source_snapshot(self.source, lock)
+        output = self.root / "staging"
+        output.mkdir()
+        staged, base, compiled = build_proxy.stage_source(self.source, output, lock, checkout)
+        self.assertEqual(base[0]["sha256"], canonical)
+        self.assertEqual(base, checkout)
+        self.assertEqual(base, compiled)
+        self.assertEqual(build_proxy.source_snapshot(self.source, lock), checkout)
+
 
 if __name__ == "__main__":
     unittest.main()

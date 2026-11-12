@@ -164,6 +164,8 @@ commands, toolchain executable hashes, CMake compiler metadata, logs, original
 baseline hashes, installed archives and source/recipe tarballs. Checkout bytes
 are recorded separately from canonical `git archive` source and the actual
 patched compile inputs; line-ending conversions do not erase either record.
+Archive creation and patch application explicitly disable Git's working-tree
+line-ending conversion without changing the source checkout or Git settings.
 Only the exact reviewed source delta is accepted, and additional staged headers
 or other files fail verification. Existing output
 directories are rejected, not assigned fresh provenance. Verification checks

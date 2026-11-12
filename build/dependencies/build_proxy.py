@@ -80,7 +80,8 @@ def expected_archives(target):
 
 def stage_source(source, output, lock, checkout_files):
     base_tar = output / "upstream-base.tar"
-    subprocess.run(["git", "-C", str(source), "archive", "--format=tar",
+    canonical_git = ["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf"]
+    subprocess.run(canonical_git + ["-C", str(source), "archive", "--format=tar",
                     "--output=" + str(base_tar), lock["commit"]], check=True)
     staged = output / "source"
     with tarfile.open(base_tar) as archive:
@@ -98,8 +99,9 @@ def stage_source(source, output, lock, checkout_files):
         path = (HERE / patch["path"]).resolve()
         if digest(path) != patch["sha256"]:
             raise ValueError("Reviewed proxy patch hash mismatch")
-        subprocess.run(["git", "apply", "--no-index", "--check", str(path)], cwd=staged, check=True)
-        subprocess.run(["git", "apply", "--no-index", str(path)], cwd=staged, check=True)
+        subprocess.run(canonical_git + ["apply", "--no-index", "--check", str(path)],
+                       cwd=staged, check=True)
+        subprocess.run(canonical_git + ["apply", "--no-index", str(path)], cwd=staged, check=True)
     files = staged_snapshot(staged, checkout_files)
     verify_source_delta(base_files, files, lock["patches"])
     return staged, base_files, files
