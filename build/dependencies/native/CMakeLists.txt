@@ -20,6 +20,10 @@ set(ZLIB_INSTALL OFF CACHE BOOL "" FORCE)
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
 add_subdirectory("${NATIVE_SOURCE}" upstream EXCLUDE_FROM_ALL)
 if(WIN32)
+  if(TARGET zlib)
+    # zlib 1.3.1 also configures an unused DLL import archive named zlib.lib.
+    set_target_properties(zlib PROPERTIES ARCHIVE_OUTPUT_NAME zlib_unused_import)
+  endif()
   set_target_properties(zlibstatic PROPERTIES OUTPUT_NAME zlib)
 endif()
 
