@@ -205,10 +205,12 @@ def collect(args):
         if json.loads(snapshot.read_text(encoding="utf-8")) != record["embeddedSourceEvidence"]:
             raise ValueError("Embedded source inputs changed since the pre-build snapshot")
     rebuilt = []
+    inspected_native_paths = set()
     native_kits = getattr(args, "native_source_kit", [])
     if native_kits:
         import native_provenance
         rebuilt.extend(native_provenance.collect(root, args.target, native_kits))
+        inspected_native_paths = {a["path"] for p in rebuilt for a in p["archives"]}
     for provenance_path in [args.brotli_provenance, getattr(args, "openssl_provenance", None)]:
         if not provenance_path:
             continue
@@ -224,8 +226,10 @@ def collect(args):
     declared = {item["path"]: item for item in inputs}
     for provenance in rebuilt:
         for archive in provenance["archives"]:
+            if archive["path"] not in declared and archive["path"] in inspected_native_paths:
+                continue
             if declared.get(archive["path"], {}).get("sha256") != archive["sha256"]:
-                raise ValueError("Native source provenance differs from declared archive")
+                raise ValueError("Native source provenance differs from declared archive: " + archive["path"])
     if rebuilt:
         record["rebuiltArchiveEvidence"] = rebuilt
     manifest_path = getattr(args, "manifest", None)

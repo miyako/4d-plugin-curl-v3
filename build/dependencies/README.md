@@ -405,6 +405,24 @@ materials, corresponding license obligations and actual host checks remain
 separate gates. The caller's checkout and production archives are never staging
 destinations.
 
+The first local isolated universal Mac plugin built successfully at project
+commit `edd7dcf`, using the actual Xcode target, Default configuration and
+`CODE_SIGNING_ALLOWED=NO`; the Deployment signing/notarization branch was not
+run and no application was loaded. Both real link maps were ingested and
+independently checked against pre-link candidate hashes: twelve repository
+archives per architecture have source-record bindings, eleven versioned.
+The additional selected Clang runtime archive is a system/toolchain exclusion.
+The binary SHA-256 is
+`1078df8ac0bfb0e7c26e6a193f7e5b28b8c2e1f83f5904ca3cd7eadb15749b99`.
+This includes the original weaker OpenSSL/Brotli records and is not modified-
+library full-plugin relink or host/protocol verification.
+
+Actual ingestion exposed libiconv's selection through linker flags rather than
+the explicit Xcode frameworks phase. Only independently inspected native source
+kits can cover such an undeclared candidate; final promotion still requires its
+actual hash-matched linker selection. Arbitrary legacy provenance files do not
+gain this exception, and no library search order or project declaration changed.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

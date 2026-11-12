@@ -1,4 +1,5 @@
 import copy
+import argparse
 import json
 from pathlib import Path
 import struct
@@ -129,6 +130,41 @@ class NativeProvenanceTests(unittest.TestCase):
         copied.write_bytes(b"other archive")
         with self.assertRaisesRegex(ValueError, "Copied native archive"):
             native_provenance.collect(self.vendor, "windows-x86_64", [kit])
+
+    def test_inspected_source_candidates_need_not_be_explicit_project_declarations(self):
+        kit = self.kit("windows-x86_64")
+        copied = self.copy_windows(kit)
+        (self.vendor / "cURL.vcxproj").write_text(
+            '<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">'
+            '<ItemDefinitionGroup Condition="\'$(Configuration)|$(Platform)\'==\'Release|x64\'">'
+            '<Link><AdditionalDependencies>system.lib;</AdditionalDependencies></Link>'
+            '</ItemDefinitionGroup></Project>')
+        workflows = self.vendor / ".github/workflows"
+        workflows.mkdir(parents=True)
+        for name in ("release.yml", "build-brotli.yml"):
+            (workflows / name).write_text("Synthetic configuration fixture")
+        binary = self.root / "binary"
+        binary.write_bytes(b"Synthetic binary fixture")
+        args = argparse.Namespace(
+            root=self.vendor, target="windows-x86_64", binary=binary,
+            native_source_kit=[kit], brotli_provenance=None, openssl_provenance=None,
+            output=self.root / "evidence.json", manifest=None, link_map=[])
+        with patch.object(generate, "git", return_value="1" * 40):
+            generate.collect(args)
+            record = json.loads(args.output.read_text())
+            self.assertEqual(len(record["rebuiltArchiveEvidence"]), 1)
+            self.assertEqual(generate.build_dependencies(record, "windows-x86_64", []), [])
+            original = self.root / "legacy-provenance.json"
+            original.write_text(json.dumps(record["rebuiltArchiveEvidence"][0]))
+            args.native_source_kit = []
+            args.brotli_provenance = original
+            with self.assertRaisesRegex(ValueError, "does not match declared archive"):
+                generate.collect(args)
+            args.brotli_provenance = None
+            args.native_source_kit = [kit]
+            copied.write_bytes(b"Unrelated replacement")
+            with self.assertRaisesRegex(ValueError, "Copied native archive"):
+                generate.collect(args)
 
     def test_failed_original_inspection_cannot_be_promoted(self):
         kit = self.kit("windows-x86_64")
