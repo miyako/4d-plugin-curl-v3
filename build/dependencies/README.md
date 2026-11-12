@@ -275,8 +275,17 @@ source, CRT or archive-binding checks. Its next link exposed nghttp2 DLL imports
 despite the explicit static archive. The recipe now requests upstream's documented
 `NGHTTP2_USE_STATIC_LIBS=ON` and verifies `NGHTTP2_STATICLIB` in actual Windows
 compiler commands; it does not invent an import shim or disable HTTP2.
-A fresh complete Windows result is still required, as are transfer behavior,
-full-plugin relinking and host loading.
+The rejected outputs remain preserved; no success record was written over them.
+
+The corrected three-target run `43280340259` at `141de19` passed. All three
+persisted kits were downloaded and independently inspected without executing
+downloaded probes: each binds 192 actual compiler objects to archive members,
+the original prerequisite records and exact selected provider bytes, and the
+complete measured baseline configuration. Windows retains OpenSSL+Schannel,
+SSPI/Unicode, static CRT and static nghttp2 rather than DLL imports. This closes
+the isolated curl source/configuration gate, not network-transfer compatibility
+or production adoption. The original curl and GNU kits also have separately
+verified archive backups outside both worktree and session storage.
 
 ```sh
 python3 build/dependencies/build_curl.py build \
