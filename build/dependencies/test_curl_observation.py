@@ -98,7 +98,7 @@ class CurlObservationTests(unittest.TestCase):
     def test_source_compiler_closure_supports_the_actual_windows_object_target(self):
         command = {"file": "D:/source/lib/transfer.c",
                    "output": "D:/build/lib/CMakeFiles/libcurl_object.dir/transfer.c.obj",
-                   "command": "cl /MT -c D:/source/lib/transfer.c"}
+                   "command": "cl /MT -DNGHTTP2_STATICLIB -c D:/source/lib/transfer.c"}
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "build").mkdir()
@@ -110,7 +110,8 @@ class CurlObservationTests(unittest.TestCase):
                 [dict(command, file="D:/outside/transfer.c")],
                 [command, dict(command, output=command["output"].replace(
                     "libcurl_object", "libcurl_static"))],
-                [dict(command, command="cl /MD -c D:/source/lib/transfer.c")],
+                [dict(command, command="cl /MD -DNGHTTP2_STATICLIB -c D:/source/lib/transfer.c")],
+                [dict(command, command="cl /MT -c D:/source/lib/transfer.c")],
             ]
             for commands in variants:
                 path.write_text(json.dumps(commands))

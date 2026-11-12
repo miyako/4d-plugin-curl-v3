@@ -271,8 +271,12 @@ the measured configuration. Windows built its archive but exposed the actual
 `libcurl_object` CMake target rather than the direct `libcurl_static` compilation
 target. Its preserved 192 compiler objects exactly match the archive payloads;
 the selector now accepts that original object-library route without dropping
-source, CRT or archive-binding checks. A fresh complete Windows result is still
-required, as are transfer behavior, full-plugin relinking and host loading.
+source, CRT or archive-binding checks. Its next link exposed nghttp2 DLL imports
+despite the explicit static archive. The recipe now requests upstream's documented
+`NGHTTP2_USE_STATIC_LIBS=ON` and verifies `NGHTTP2_STATICLIB` in actual Windows
+compiler commands; it does not invent an import shim or disable HTTP2.
+A fresh complete Windows result is still required, as are transfer behavior,
+full-plugin relinking and host loading.
 
 ```sh
 python3 build/dependencies/build_curl.py build \

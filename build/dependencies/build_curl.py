@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
 
@@ -96,7 +97,8 @@ def configure(output, target, archives, headers):
         "CURL_ZLIB=ON", "CURL_BROTLI=ON", "BROTLI_INCLUDE_DIR=" + str(headers["brotli"]),
         "BROTLIDEC_LIBRARY=" + str(archives["Brotli-dec"]),
         "BROTLICOMMON_LIBRARY=" + str(archives["Brotli-common"]),
-        "USE_NGHTTP2=ON", "NGHTTP2_INCLUDE_DIR=" + str(headers["http"]),
+        "USE_NGHTTP2=ON", "NGHTTP2_USE_STATIC_LIBS=ON",
+        "NGHTTP2_INCLUDE_DIR=" + str(headers["http"]),
         "NGHTTP2_LIBRARY=" + str(archives["nghttp2"]), "CURL_USE_LIBSSH2=ON",
         "LIBSSH2_INCLUDE_DIR=" + str(headers["ssh"]),
         "LIBSSH2_LIBRARY=" + str(archives["libssh2"]),
@@ -129,6 +131,9 @@ def compiled_sources(output, target, original_source):
             or len({c["file"] for c in compiled}) != len(compiled)):
         raise ValueError("Curl compilation inputs are missing, duplicated or outside the pinned source")
     build_ssh.verify_compile_settings(compiled, target)
+    if target.startswith("windows") and any(not re.search(
+            r"(?:^|\s)[/-]DNGHTTP2_STATICLIB(?:=1)?(?:\s|$)", c["command"]) for c in compiled):
+        raise ValueError("Curl must compile against the static nghttp2 interface, not DLL imports")
     return compiled
 
 
