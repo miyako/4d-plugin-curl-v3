@@ -545,6 +545,7 @@ jobs:
   package-sbom:
     name: Validate unsigned ZIP and DMG native SBOMs
     needs: native
+    if: ${{ !cancelled() && needs.native.result == 'success' }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

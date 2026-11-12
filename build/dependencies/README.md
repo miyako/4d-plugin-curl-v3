@@ -494,6 +494,25 @@ staging through actual selected-path promotion. The earlier Windows artifacts
 retain their original mixed evidence; they do not establish all-source-selected
 coverage. Fresh inventory and native validation must confirm the corrected copy.
 
+Corrected inventory `43302769645` was independently recomputed against the
+original kits, including GNU's exact output copied to `iconv.lib`.
+Run `43303431095` at `4c5fc81` then passed both actual native builds and the full
+Windows modified-library object replay. Its overall green status did not prove
+packaging: GitHub skipped the downstream package job through the intentionally
+skipped provider ancestors. That job now explicitly evaluates the successful
+native result even when those ancestors are skipped. Fresh native/package CI is
+required; the earlier run is not container validation.
+
+An independent exported-name comparison against the actual frozen v4.9.10 ZIP
+also keeps a compatibility limit explicit. `FourDPackex` (the sole SDK `.def`
+entry) and every public C proxy-factory export remain present. Six incidental
+libproxy/libmodman C++ names change from by-value to const-reference string
+signatures. The plugin itself calls the C factory API; this does not establish
+binary compatibility for external C++ callers or separately installed proxy
+modules. Such consumers require matching rebuilds or explicit verification
+before adoption. No old source revision is inferred from this observation, and
+the candidate is not patched to imitate the old C++ ABI.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \
