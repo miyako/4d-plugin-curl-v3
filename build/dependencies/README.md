@@ -220,7 +220,7 @@ its legacy `LIB_EAY_RELEASE` system installation despite explicit generic
 provider paths. The recipe confines those imported configurations to the
 delivered provider and requires actual `/VERBOSE:LIB`/map selections from the
 upstream unit executable as well as the separate API probe. Both corrections
-require fresh native Windows results, not relabeling rejected outputs.
+required fresh native Windows results, not relabeling rejected outputs.
 Run 43269868412 passed the unit/API checks with the delivered provider but
 stopped at record verification because Ninja's `src\libssh2.lib` diagnostic
 was relative. The resolver now requires its explicit original build directory;
@@ -264,10 +264,15 @@ Only the descriptive host string may differ; both values are explicitly recorded
 Original configure arguments remain unknown: this is a matching reconstruction,
 not retroactive provenance for the old archives.
 
-Local source experiments on both macOS architectures each built 192 objects
-with matching measured configuration. The reusable producer has also passed
-the arm64 original-record inspector. Native three-target validation is a
-separate gate, as are transfer behavior, full-plugin relinking and host loading.
+Both native macOS outputs from
+[run 43277451082](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43277451082)
+were downloaded and independently inspected: each binds 192 objects and matches
+the measured configuration. Windows built its archive but exposed the actual
+`libcurl_object` CMake target rather than the direct `libcurl_static` compilation
+target. Its preserved 192 compiler objects exactly match the archive payloads;
+the selector now accepts that original object-library route without dropping
+source, CRT or archive-binding checks. A fresh complete Windows result is still
+required, as are transfer behavior, full-plugin relinking and host loading.
 
 ```sh
 python3 build/dependencies/build_curl.py build \
@@ -335,7 +340,7 @@ outputs from
 [run 43267179287](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43267179287)
 were independently inspected without executing downloaded binaries.
 The source-only matrix also implements the Windows 1.18 Cygwin/GNU-make/MSVC
-recipe, pending its first native result. It deliberately requests `/MT`, not
+recipe. It deliberately requests `/MT`, not
 the upstream example's `/MD`; actual compiler settings must prove that choice.
 GNU 1.18's compile closure uses `compat.c` and a Windows resource object,
 not an assumed copy of the 1.16 macOS source list.
@@ -348,6 +353,16 @@ GNU 1.18's required `lib/localcharset.h` bootstrap target. The recipe runs that
 upstream target before the library-only build and distinguishes its unused
 helper archive from the four incorporated compiler objects. macOS retains
 its separately observed default-off configuration.
+All three outputs from
+[run 43277456722](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43277456722)
+were downloaded and independently inspected. Windows matches all 198 groups/670
+aliases and nine checks with four source/resource-bound archive objects.
+Upstream's archiver wrapper resolves the exact recorded MSVC `lib.exe` through
+the controlled PATH, avoiding its unquoted handling of a spaced executable path.
+Resource execution stays inside Cygwin while native Python records the original
+invocation before and after it; command arguments and exit status are preserved.
+Inaccessible, unused `.libs/*.la` convenience aliases are omitted from the upload
+view, with their names, direct metadata and original build logs retained.
 Shared JSON probe helpers have explicit recipe contracts so earlier curl/SSH
 records remain inspectable with their original delivered recipes.
 

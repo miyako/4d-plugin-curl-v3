@@ -95,6 +95,28 @@ class CurlObservationTests(unittest.TestCase):
             with self.subTest(info=changed), self.assertRaises(ValueError):
                 build_curl.compare(changed, baseline, "macos-arm64")
 
+    def test_source_compiler_closure_supports_the_actual_windows_object_target(self):
+        command = {"file": "D:/source/lib/transfer.c",
+                   "output": "D:/build/lib/CMakeFiles/libcurl_object.dir/transfer.c.obj",
+                   "command": "cl /MT -c D:/source/lib/transfer.c"}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "build").mkdir()
+            path = root / "build/compile_commands.json"
+            path.write_text(json.dumps([command]))
+            self.assertEqual(build_curl.compiled_sources(
+                root, "windows-x86_64", "D:/source"), [command])
+            variants = [
+                [dict(command, file="D:/outside/transfer.c")],
+                [command, dict(command, output=command["output"].replace(
+                    "libcurl_object", "libcurl_static"))],
+                [dict(command, command="cl /MD -c D:/source/lib/transfer.c")],
+            ]
+            for commands in variants:
+                path.write_text(json.dumps(commands))
+                with self.subTest(commands=commands), self.assertRaises(ValueError):
+                    build_curl.compiled_sources(root, "windows-x86_64", "D:/source")
+
 
 if __name__ == "__main__":
     unittest.main()

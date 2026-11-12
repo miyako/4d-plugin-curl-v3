@@ -121,8 +121,9 @@ def configure(output, target, archives, headers):
 
 def compiled_sources(output, target, original_source):
     commands = json.loads((output / "build/compile_commands.json").read_text())
-    compiled = [c for c in commands
-                if "CMakeFiles/libcurl_static.dir/" in c["output"].replace("\\", "/")]
+    compiled = [c for c in commands if any(
+        "CMakeFiles/" + name + ".dir/" in c["output"].replace("\\", "/")
+        for name in ("libcurl_static", "libcurl_object"))]
     prefix = original_source.replace("\\", "/") + "/"
     if (not compiled or any(not c["file"].replace("\\", "/").startswith(prefix) for c in compiled)
             or len({c["file"] for c in compiled}) != len(compiled)):
