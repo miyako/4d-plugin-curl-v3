@@ -274,6 +274,13 @@ jobs:
           github-token: ${{ github.token }}
           name: isolated-proxy-windows-x86_64
           path: ${{ runner.temp }}/candidate-kits/isolated-proxy-windows-x86_64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
+        with:
+          run-id: ${{ steps.candidate-providers.outputs.proxy }}
+          github-token: ${{ github.token }}
+          name: isolated-proxy-relink-windows-x86_64
+          path: ${{ runner.temp }}/candidate-kits/isolated-proxy-relink-windows-x86_64
       - name: Prepare a fresh separate source-candidate plugin checkout
         if: ${{ inputs.native-candidate-plugin-only }}
         shell: python
@@ -504,6 +511,29 @@ jobs:
             ${{ env.PLUGIN_ROOT }}/native-trace/build-evidence.json
             ${{ env.PLUGIN_ROOT }}/brotli-provenance.json
             ${{ env.PLUGIN_ROOT }}/openssl-provenance.json
+          if-no-files-found: error
+      - name: Replay actual Windows plugin objects with the delivered modified proxy
+        if: ${{ inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        shell: python
+        run: |
+          import json, os, subprocess, sys
+          from pathlib import Path
+          stage = json.loads(Path("../plugin-candidate-staging.json").read_text())
+          proxy = [Path(p) for p in stage["nativeSourceKits"]
+                   if (Path(p) / "proxy-build-provenance.json").is_file()]
+          if len(proxy) != 1:
+              raise RuntimeError("Expected one original Windows proxy source kit")
+          subprocess.run([sys.executable, "build/dependencies/relink_plugin_windows.py",
+              "--project", str(Path.cwd()), "--output", str(Path(os.environ["RUNNER_TEMP"]) / "plugin-user-relink"),
+              "--proxy-candidate", str(proxy[0]),
+              "--proxy-relink", str(proxy[0].parent / "isolated-proxy-relink-windows-x86_64")],
+              check=True)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
+        with:
+          name: isolated-full-plugin-relink-Windows
+          path: ${{ runner.temp }}/plugin-user-relink/
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

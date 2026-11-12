@@ -457,6 +457,20 @@ and the product's toolset/CRT/search order are unchanged. Fresh source and
 full-plugin CI are required before treating this correction as verified.
 The original producer kits and failed native diagnostics remain preserved.
 
+Fresh proxy run `43297884035` at `749a99d` passed all three native comparisons
+and delivered-source modified-library standalone relinks. Downloaded originals
+were independently re-inspected; Windows actually used MSVC 19.44.35229.0 from
+toolset 14.44.35207, with static release CRT and exact compiler-object/archive
+closure. Complete inventory run `43298364687` incorporates these original kits
+without rebuilding/restamping the other providers.
+
+The source-plugin-only Windows route also attempts the actual original-object
+replay with the delivered modified proxy, retaining its probe as one additional
+DLL export. Its strict baseline comparison excludes only COFF/export timestamps
+and the PE checksum; unexplained differences fail rather than being waived.
+Raw baseline/modified outputs are retained even on failure. This experiment
+does not load the DLL, run 4D or provide portable corresponding-source delivery.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

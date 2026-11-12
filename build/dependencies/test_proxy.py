@@ -14,6 +14,7 @@ import build_proxy
 import inspect_proxy
 import relink_candidate
 import relink_plugin_macos
+import relink_plugin_windows
 from provenance import digest
 
 
@@ -328,6 +329,46 @@ class ProxyEvidenceTests(unittest.TestCase):
         self.assertTrue(relink_plugin_macos.defines_marker(image(0x0F, 1)))
         self.assertFalse(relink_plugin_macos.defines_marker(image(0x01, 0)))
         self.assertFalse(relink_plugin_macos.defines_marker(image(0xEF, 1)))
+
+    def test_windows_full_plugin_replay_redirects_outputs_without_changing_search_order(self):
+        original = ["link.exe", "/OUT:old.4DX", "/PDB:old.pdb", "/MAP:old.map",
+                    "/IMPLIB:old.lib", "/LTCGOUT:old.iobj", "/LIBPATH:original",
+                    "libcurl.lib", "libproxy.lib", "libssl.lib", "original.obj"]
+        result = relink_plugin_windows.link_arguments(original, self.root, self.root / "modified.lib")
+        self.assertEqual(result[6:], ["/LIBPATH:original", "libcurl.lib",
+                                     str(self.root / "modified.lib"), "libssl.lib",
+                                     "original.obj", "/EXPORT:proxy_user_relink_probe"])
+        self.assertEqual(result[1], "/OUT:" + str(self.root / "cURL.4DX"))
+        with self.assertRaisesRegex(ValueError, "one original proxy"):
+            relink_plugin_windows.link_arguments(original + ["libproxy.lib"], self.root)
+        with self.assertRaisesRegex(ValueError, "additional Windows"):
+            relink_plugin_windows.link_arguments(original + ["/DEBUG"], self.root)
+
+    def test_windows_marker_must_export_own_executable_code_and_baseline_mask_is_narrow(self):
+        data = bytearray(2048)
+        data[:2] = b"MZ"
+        struct.pack_into("<I", data, 60, 128)
+        data[128:132] = b"PE\0\0"
+        struct.pack_into("<HH", data, 132, 0x8664, 1)
+        struct.pack_into("<H", data, 148, 240)
+        struct.pack_into("<H", data, 152, 0x20B)
+        struct.pack_into("<II", data, 264, 4096, 128)
+        struct.pack_into("<4I", data, 400, 1024, 4096, 1024, 512)
+        struct.pack_into("<I", data, 428, 0x60000020)
+        struct.pack_into("<5I", data, 532, 1, 1, 4144, 4148, 4152)
+        struct.pack_into("<III", data, 560, 4608, 4160, 0)
+        name = b"proxy_user_relink_probe\0"
+        data[576:576 + len(name)] = name
+        normal, exports, fields = relink_plugin_windows.pe_layout(data)
+        self.assertIn("proxy_user_relink_probe", exports)
+        for offset in fields.values():
+            struct.pack_into("<I", data, offset, 12345)
+        self.assertEqual(relink_plugin_windows.pe_layout(data)[0], normal)
+        data[1024] = 1
+        self.assertNotEqual(relink_plugin_windows.pe_layout(data)[0], normal)
+        struct.pack_into("<I", data, 560, 4100)
+        with self.assertRaisesRegex(ValueError, "forwarder"):
+            relink_plugin_windows.pe_layout(data)
 
 
 if __name__ == "__main__":
