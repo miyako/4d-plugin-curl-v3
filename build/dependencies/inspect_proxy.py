@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import struct
 import sys
 import tarfile
@@ -12,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "sbom"))
-from native_archive_objects import members
+from native_archive_objects import members, object_evidence
 from provenance import archive_hashes, digest
 
 
@@ -81,6 +82,56 @@ def verify_tests(path, allow_failed=False):
     return failed
 
 
+def install_transformation(built, installed, target):
+    before, after = built.read_bytes(), installed.read_bytes()
+    if before == after:
+        return "byte-identical"
+    first_name = before[8:24].strip()
+    symbol_table = (first_name.startswith(b"__.SYMDEF") or
+                    (first_name.startswith(b"#1/") and before[68:80].startswith(b"__.SYMDEF")))
+    if (target.startswith("macos") and before.startswith(b"!<arch>\n")
+            and symbol_table and len(before) == len(after)
+            and before[:24] == after[:24] and before[36:] == after[36:]
+            and before[24:36].strip().isdigit() and after[24:36].strip().isdigit()):
+        return "darwin-ranlib-symbol-table-timestamp-only"
+    raise ValueError("Installed proxy archive differs from the actual build output")
+
+
+def compiler_archive_evidence(output, target, modules, original_source, original_build):
+    commands = json.loads((output / "build/compile_commands.json").read_text())
+    base = original_source.replace("\\", "/").rstrip("/") + "/"
+    build = original_build.replace("\\", "/").rstrip("/")
+    sources = {
+        "modman": {"libmodman/module_manager.cpp"},
+        "proxy": {"libproxy/" + name + ".cpp" for name in
+                  ("extension_config", "extension_pacrunner", "extension_wpad", "proxy", "url")}
+                 | {"libproxy/modules/" + module + ".cpp" for module in modules},
+    }
+    result = {}
+    for name, expected in sources.items():
+        compiled = [c for c in commands
+                    if "CMakeFiles/" + name + ".dir/" in c["output"].replace("\\", "/")]
+        if (len(compiled) != len(expected)
+                or {c["file"].replace("\\", "/") for c in compiled} != {base + p for p in expected}
+                or any(c["directory"].replace("\\", "/").rstrip("/") != build for c in compiled)):
+            raise ValueError("Proxy compiler source closure or original working directory differs")
+        if target.startswith("windows") and any(
+                not re.search(r"(?:^|\s)/MT(?:\s|$)", c["command"])
+                or re.search(r"(?:^|\s)/MDd?(?:\s|$)", c["command"]) for c in compiled):
+            raise ValueError("Proxy compiler must preserve static release CRT")
+        filename = ("libproxy.lib" if name == "proxy" else "modman.lib") if target.startswith(
+            "windows") else "lib" + name + ".a"
+        built = "build/" + filename
+        installed = "lib/" + filename
+        transformation = install_transformation(output / built, output / "install" / installed, target)
+        result[name] = {
+            "builtArchive": built, "installedArchive": installed, "compiledSources": compiled,
+            "installTransformation": transformation,
+            **object_evidence(output, built, compiled, original_build),
+        }
+    return result
+
+
 def inspect(output, allow_failed_tests=False):
     record = json.loads((output / "proxy-build-provenance.json").read_text())
     lock = json.loads((HERE / "proxy-source.json").read_text())
@@ -88,7 +139,7 @@ def inspect(output, allow_failed_tests=False):
     expected_archives = (["lib/libproxy.lib", "lib/modman.lib"] if target == "windows-x86_64"
                          else ["lib/libmodman.a", "lib/libproxy.a"])
     if (target not in ("macos-arm64", "macos-x86_64", "windows-x86_64")
-            or record["schema_version"] != 1
+            or record["schema_version"] not in (1, 2)
             or record["evidence_type"] != "isolated-source-build-candidate"
             or record["source_commit"] != lock["commit"]
             or record["source_repository"] != lock["repository"]
@@ -109,6 +160,17 @@ def inspect(output, allow_failed_tests=False):
         raise ValueError("Missing original build evidence")
     if record["buildFiles"] != archive_hashes(output, paths):
         raise ValueError("Persisted original build evidence mismatch")
+    if record["schema_version"] == 2:
+        if "build/cmake_install.cmake" not in paths:
+            raise ValueError("Missing original proxy install/ranlib recipe")
+        proof = compiler_archive_evidence(output, target, record["modules"],
+                                         record["originalSource"], record["originalBuild"])
+        if proof != record["compilerArchiveEvidence"]:
+            raise ValueError("Proxy compiler-object/archive payload binding changed")
+        required_objects = {p["path"] for value in proof.values() for p in value["compiledObjects"]}
+        required_objects.update(p["builtArchive"] for p in proof.values())
+        if not required_objects.issubset(paths):
+            raise ValueError("Original proxy object/archive outputs are missing from build evidence")
     verify_tar(output / "upstream-base.tar", record["baseSourceFiles"], directories=True)
     verify_tar(output / "upstream-source.tar", record["sourceFiles"])
     recipe_files = [{"path": "build/dependencies/" + a["path"], "sha256": a["sha256"]}
@@ -140,6 +202,7 @@ def inspect(output, allow_failed_tests=False):
             or record["validationStatus"] != ("failed" if failed else "passed")):
         raise ValueError("Native test status disagrees with original build record")
     return {"target": target, "sourceCommit": record["source_commit"],
+            "compilerArchiveBinding": record["schema_version"] == 2,
             "validationStatus": record["validationStatus"], "failedTests": failed,
             "acceptedCandidateChanges": [c["id"] for c in record["acceptedCandidateChanges"]],
             "archives": [

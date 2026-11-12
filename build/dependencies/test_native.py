@@ -118,7 +118,7 @@ class NativePrerequisiteTests(unittest.TestCase):
         object_file = self.root / "build/source.o"
         object_file.write_bytes(b"compiled object")
         (self.root / "library.a").write_bytes(b"mock archive")
-        with mock.patch.object(build_native, "members",
+        with mock.patch("native_archive_objects.members",
                                return_value=[("source.o", 0, b"compiled object")]):
             proof = build_native.object_evidence(
                 self.root, "library.a", [{"output": "source.o"}], "/original/build")

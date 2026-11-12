@@ -92,6 +92,57 @@ class ProxyEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "compiled upstream sources"):
             build_proxy.check_commands(output, "windows-x86_64", ["ignore_domain"], self.source)
 
+    def test_proxy_archive_proof_requires_exact_compiler_closure_and_installed_copy(self):
+        output, commands = self.commands()
+        for index, command in enumerate(commands):
+            target = ("modman" if "module_manager.cpp" in command["file"] else
+                      "tests" if "/test/" in command["file"] else "proxy")
+            command.update(directory="/original/build",
+                           output="CMakeFiles/" + target + ".dir/" + str(index) + ".obj")
+        self.save_commands(output, commands)
+        (output / "install/lib").mkdir(parents=True)
+        for filename in ("libproxy.lib", "modman.lib"):
+            (output / "build" / filename).write_bytes(filename.encode())
+            (output / "install/lib" / filename).write_bytes(filename.encode())
+        with mock.patch.object(inspect_proxy, "object_evidence",
+                               return_value={"compiledObjects": [], "archiveObjects": []}):
+            proof = inspect_proxy.compiler_archive_evidence(
+                output, "windows-x86_64", ["ignore_domain"], str(self.source), "/original/build")
+            self.assertEqual(len(proof["proxy"]["compiledSources"]), 6)
+            self.assertEqual(len(proof["modman"]["compiledSources"]), 1)
+            commands[0]["command"] = "cl /MD"
+            self.save_commands(output, commands)
+            with self.assertRaisesRegex(ValueError, "static release CRT"):
+                inspect_proxy.compiler_archive_evidence(
+                    output, "windows-x86_64", ["ignore_domain"], str(self.source), "/original/build")
+            commands[0]["command"] = "cl /MT"
+            commands[1]["directory"] = "/wrong/build"
+            self.save_commands(output, commands)
+            with self.assertRaisesRegex(ValueError, "source closure or original"):
+                inspect_proxy.compiler_archive_evidence(
+                    output, "windows-x86_64", ["ignore_domain"], str(self.source), "/original/build")
+            commands[1]["directory"] = "/original/build"
+            self.save_commands(output, commands)
+            (output / "install/lib/libproxy.lib").write_bytes(b"other archive")
+            with self.assertRaisesRegex(ValueError, "actual build output"):
+                inspect_proxy.compiler_archive_evidence(
+                    output, "windows-x86_64", ["ignore_domain"], str(self.source), "/original/build")
+
+    def test_only_the_observed_darwin_symbol_table_timestamp_can_change_on_install(self):
+        built, installed = self.root / "built.a", self.root / "installed.a"
+        data = bytearray(b"!<arch>\n" + b"__.SYMDEF".ljust(16) + b"1234567890  " + b"x" * 50)
+        built.write_bytes(data)
+        data[33] = ord("1")
+        installed.write_bytes(data)
+        self.assertEqual(inspect_proxy.install_transformation(built, installed, "macos-arm64"),
+                         "darwin-ranlib-symbol-table-timestamp-only")
+        with self.assertRaisesRegex(ValueError, "actual build output"):
+            inspect_proxy.install_transformation(built, installed, "windows-x86_64")
+        data[-1] ^= 1
+        installed.write_bytes(data)
+        with self.assertRaisesRegex(ValueError, "actual build output"):
+            inspect_proxy.install_transformation(built, installed, "macos-arm64")
+
     def test_rejects_wrong_architecture_or_deployment_target(self):
         output, commands = self.commands("macos-arm64")
         build_proxy.check_commands(output, "macos-arm64", ["ignore_domain"], self.source)

@@ -5,7 +5,26 @@ are supported. This is not a linker, an executable probe, or a general ABI audit
 Offsets are relative to the thin archive/member, never a universal-file offset.
 """
 
+from collections import Counter
+import hashlib
 import struct
+
+
+def object_evidence(output, archive, commands, original_build):
+    from provenance import archive_hashes
+    prefix = str(original_build).replace("\\", "/").rstrip("/") + "/"
+    paths = []
+    for command in commands:
+        path = command["output"].replace("\\", "/")
+        if path.startswith(prefix):
+            path = path[len(prefix):]
+        paths.append("build/" + path)
+    compiled = archive_hashes(output, paths)
+    objects = [{"member": name, "sha256": hashlib.sha256(data).hexdigest()}
+               for name, _, data in members((output / archive).read_bytes())]
+    if Counter(a["sha256"] for a in compiled) != Counter(a["sha256"] for a in objects):
+        raise ValueError("Archive members do not equal the actual compiled object outputs")
+    return {"compiledObjects": compiled, "archiveObjects": objects}
 
 
 def region(data, offset, size):

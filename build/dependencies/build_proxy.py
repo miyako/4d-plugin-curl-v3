@@ -14,7 +14,7 @@ import tarfile
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "sbom"))
 from provenance import archive_hashes, digest, git, write_json
-from inspect_proxy import inspect, verify_architecture, verify_source_delta
+from inspect_proxy import compiler_archive_evidence, inspect, verify_architecture, verify_source_delta
 
 
 TARGETS = ("macos-arm64", "macos-x86_64", "windows-x86_64")
@@ -186,6 +186,7 @@ def build(source, output, target, baseline):
             archive.add(HERE.parents[1] / item["path"], arcname=item["path"])
     evidence_paths = ["configure.log", "build.log", "tests.log", "test-results.xml", "install.log",
         "build/CMakeCache.txt", "build/compile_commands.json", "build/build.ninja",
+        "build/cmake_install.cmake",
         "install/include/proxy.h", "install/share/licenses/libproxy/COPYING",
         "upstream-base.tar", "upstream-source.tar", "candidate-recipe.tar"]
     compiler_files = sorted((output / "build/CMakeFiles").glob("*/CMakeCXXCompiler.cmake"))
@@ -202,8 +203,19 @@ def build(source, output, target, baseline):
     if not ninja or not cmake:
         raise ValueError("Missing actual CMake/Ninja toolchain path")
     tools = [Path(compiler[1]), Path(cmake), Path(ninja[1])]
+    for name in ("CMAKE_AR", "CMAKE_LINKER") + (() if target.startswith("windows") else ("CMAKE_RANLIB",)):
+        tool = re.search(r"^" + name + r":FILEPATH=(.+)$", cache, re.MULTILINE)
+        if not tool:
+            raise ValueError("Missing original proxy build tool: " + name)
+        tools.append(Path(tool[1]))
+    proof = compiler_archive_evidence(output, target, lock["modules"][platform_key],
+                                     staged.as_posix(), (output / "build").as_posix())
+    evidence_paths += [p["path"] for value in proof.values() for p in value["compiledObjects"]]
+    evidence_paths += [value["builtArchive"] for value in proof.values()]
     record = {
-        "schema_version": 1, "evidence_type": "isolated-source-build-candidate",
+        "schema_version": 2, "evidence_type": "isolated-source-build-candidate",
+        "originalSource": staged.as_posix(), "originalBuild": (output / "build").as_posix(),
+        "compilerArchiveEvidence": proof,
         "status": lock["status"], "source_repository": lock["repository"],
         "source_commit": lock["commit"], "components": lock["components"],
         "target": target, "configure_arguments": arguments,
@@ -237,7 +249,7 @@ def build(source, output, target, baseline):
 def verify(source, output, target):
     lock = json.loads((HERE / "proxy-source.json").read_text())
     record = json.loads((output / "proxy-build-provenance.json").read_text())
-    if (record["schema_version"] != 1 or record["target"] != target
+    if (record["schema_version"] != 2 or record["target"] != target
             or record["source_commit"] != lock["commit"]
             or record["source_repository"] != lock["repository"]
             or record["status"] != lock["status"]

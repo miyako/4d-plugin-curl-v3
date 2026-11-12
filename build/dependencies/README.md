@@ -329,6 +329,23 @@ compared with all original kits: 12 macOS plus five Windows source/archive
 bindings matched, without running downloaded binaries. This is candidate
 source/copy evidence, not final-plugin selections or production coverage.
 
+### Proxy compiler-object closure
+
+Fresh proxy records use schema 2 to bind each exact compiler source/working
+directory and static-CRT setting to both archive payloads, retaining every
+compiler object, original built archive, installed hash and install script.
+Schema 1 remains inspectable as historical hash/architecture evidence; it does
+not acquire the new compiler-payload claim retroactively. A shared read-only
+object comparator is used by proxy and the other native producers.
+
+The local arm64 schema-2 build and delivered-source modified-library standalone
+relink passed. macOS CMake install ran `ranlib`, changing only one byte in the
+first symbol-table timestamp field for each archive. The verifier permits only
+that bounded macOS header-field delta, records it explicitly and preserves both
+exact archive hashes; any code/member/index-payload difference fails. Windows
+still requires byte-identical installation. Fresh three-target results remain
+required, followed by proxy inventory integration and full-plugin/host gates.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \
