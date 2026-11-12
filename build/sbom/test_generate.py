@@ -88,6 +88,17 @@ class InventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "bundle version"):
             generate.inventory(self.path, "0.0.0", {})
 
+    def test_composite_source_licenses_use_standard_expression_fields(self):
+        inv = generate.inventory(self.path, "4.9.6", {})
+        curl = next(d for d in inv["targets"][0]["dependencies"] if d["name"] == "curl")
+        curl["license"] = "curl AND ISC"
+        component = next(c for c in generate.cyclonedx(inv)["components"]
+                         if c["bom-ref"] == "macos-arm64-curl")
+        package = next(p for p in generate.spdx(inv)["packages"]
+                       if p["SPDXID"] == "SPDXRef-macos-arm64-curl")
+        self.assertEqual(component["licenses"], [{"expression": "curl AND ISC"}])
+        self.assertEqual(package["licenseDeclared"], "curl AND ISC")
+
     def test_malformed_architectures_are_errors(self):
         for data in (b"bad", fat()[:45]):
             with self.assertRaises(ValueError):

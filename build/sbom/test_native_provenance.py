@@ -33,7 +33,7 @@ class NativeProvenanceTests(unittest.TestCase):
                               "sha256": "a" * 64, "licenseSha256": "b" * 64},
             "archives": [{"path": "lib/libcurl.a", "sha256": provenance.digest(installed)}],
             "status": "not-approved-for-production", "configure_arguments": ["static"],
-            "toolchain": {}, "recipeFiles": [],
+            "toolchain": {}, "recipeFiles": [], "sourceFiles": [],
         }
         (kit / "native-build-provenance.json").write_text(json.dumps(record))
         return kit
@@ -60,7 +60,7 @@ class NativeProvenanceTests(unittest.TestCase):
         }
         dependency = generate.build_dependencies(record, "windows-x86_64", [])[0]
         self.assertEqual((dependency["name"], dependency["version"], dependency["license"]),
-                         ("curl", "8.21.0", "curl"))
+                         ("curl", "8.21.0", "curl AND ISC"))
         record["linkEvidence"]["windows-x86_64"]["archives"][0]["sha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "disagrees with source"):
             generate.build_dependencies(record, "windows-x86_64", [])

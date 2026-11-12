@@ -558,7 +558,10 @@ def cyclonedx(inv):
                 "text": {"contentType": "text/plain", "content": evidence["text"]},
             }}]
         elif row.get("license"):
-            item["licenses"] = [{"license": {"id": row["license"]}}]
+            if re.search(r"\s+(?:AND|OR|WITH)\s+", row["license"]):
+                item["licenses"] = [{"expression": row["license"]}]
+            else:
+                item["licenses"] = [{"license": {"id": row["license"]}}]
         if row.get("purl"):
             item["purl"] = row["purl"]
         if row.get("origin"):

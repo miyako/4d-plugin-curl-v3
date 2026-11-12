@@ -12,7 +12,7 @@ import provenance
 
 
 LIBRARIES = {
-    "curl": ("build_curl", "curl", "a/libcurl.a", "lib/64/libcurl.lib"),
+    "curl": ("build_curl", "curl AND ISC", "a/libcurl.a", "lib/64/libcurl.lib"),
     "zlib": ("build_native", "Zlib", "a/libz.a", "lib/64/zlib.lib"),
     "nghttp2": ("build_http", "MIT", "a/libnghttp2.a", "lib/64/nghttp2.lib"),
     "nghttp3": ("build_http", "MIT", "a/libnghttp3.a", None),
@@ -123,6 +123,10 @@ def collect(root, target, kits):
                 "toolchain": rows[architecture][0]["toolchain"],
                 "recipeFiles": rows[architecture][0]["recipeFiles"],
             } for architecture in sorted(rows)],
+            **({"additionalNoticeFiles": [
+                item for item in first["sourceFiles"] if item["path"] in {
+                    "lib/vssh/vssh.c", "lib/curlx/inet_ntop.c", "lib/curlx/inet_pton.c",
+                }]} if library == "curl" else {}),
             "limitations": [
                 "Original source/compiler/archive kits must accompany these record hashes.",
                 "Source inspection and archive binding do not approve production adoption, "

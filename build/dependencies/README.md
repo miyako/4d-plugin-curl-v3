@@ -297,6 +297,10 @@ original record/recipe/toolchain hashes. A signed release tarball remains an
 exact-hash source archive; its related Git tag is not promoted to a source commit.
 `generate.py inputs --native-source-kit PATH` repeats inspection at final input
 collection. Only actual hash-matched linker selections receive package identity.
+The actual curl translation units include ISC notices in `vssh/vssh.c` and
+`curlx/inet_{ntop,pton}.c`; the aggregate license is `curl AND ISC`, not the root
+COPYING identifier alone. Both formats retain this as a standard expression
+and the source record retains the additional notice-file hashes.
 
 The adapter's CLI creates a **new** isolated vendor-layout directory; it refuses
 existing outputs. The curl source workflow stages curl/zlib/nghttp2 on both
