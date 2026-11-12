@@ -29,6 +29,26 @@ The cURL plugin wraps [libcurl](https://curl.se/) to give 4D methods direct acce
 
 **Platforms:** macOS and Windows.
 
+### Bump version and Build
+
+In **Actions**, run **Bump version** on the desired branch and choose `patch`,
+`minor`, or `major`. It validates the Xcode/Info.plist version fields and commits
+only the source version change. It does **not** create a tag or start a build.
+
+Then run **Build** on that branch. There is no tag or version input: the workflow
+reads the checked-in version and builds the exact commit selected at dispatch.
+It signs, notarizes and packages the cross-platform plugin, validates the final
+ZIP/DMG SBOM sidecars, then creates the matching `vX.Y.Z` tag and GitHub release.
+Tag pushes no longer start a release automatically.
+
+Build rejects inconsistent source versions, a tag pointing to another commit,
+or an already-published release before native compilation. Existing releases
+are never overwritten. If publication fails after creating the tag but before
+creating the release, a new Build on the **same commit** may reuse that tag;
+a partially created release requires explicit maintainer inspection instead of
+automatic replacement. **Unsigned native linker trace** remains the safe
+build-only workflow, without signing or publication.
+
 ### Release SBOM sidecars and native traceability
 
 New release builds generate artifact-bound CycloneDX JSON and SPDX JSON
