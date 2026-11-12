@@ -18,6 +18,45 @@ from provenance import archive_hashes, digest, write_json
 MANIFEST = "portable-windows-object-kit.json"
 
 
+def inspect_replay(kit, output, modified=None, modified_iconv=None):
+    record = json.loads((kit / MANIFEST).read_text())
+    proof = json.loads((output / "portable-windows-replay-proof.json").read_text())
+    if (record["schemaVersion"] != 1 or record["target"] != "windows-x86_64"
+            or record["status"] != "not-approved-for-production"
+            or proof["status"] != record["status"] or proof["target"] != record["target"]
+            or proof["kitManifestSha256"] != digest(kit / MANIFEST)):
+        raise ValueError("Portable Windows replay does not bind this candidate kit")
+    verify_files(kit, record)
+    binary = kit / "project/test/Plugins/cURL.bundle/Contents/Windows64/cURL.4DX"
+    if (digest(binary) != record["originalBinarySha256"]
+            or digest(kit / "project/native-trace/build-evidence.json")
+            != record["originalBuildEvidenceSha256"]):
+        raise ValueError("Original Windows plugin/build binding changed")
+    markers = set()
+    for path, key, marker in (
+            (modified, "modifiedArchiveSha256", local.MARKER),
+            (modified_iconv, "modifiedIconvArchiveSha256", local.ICONV_MARKER)):
+        if (digest(path) if path else None) != proof.get(key):
+            raise ValueError("Provide the original modified archive matching the replay proof")
+        if path:
+            markers.add(marker)
+    if set(proof["links"]) != ({"baseline", "modified"} if markers else {"baseline"}):
+        raise ValueError("Unexpected portable Windows replay output set")
+    for mode, link in proof["links"].items():
+        if digest(output / mode / "cURL.4DX") != link["sha256"]:
+            raise ValueError("Portable Windows replay binary changed")
+    original = local.pe_layout(binary.read_bytes())
+    if original != local.pe_layout((output / "baseline/cURL.4DX").read_bytes()):
+        raise ValueError("Relocated Windows baseline differs beyond clock/checksum fields")
+    if markers:
+        changed = (output / "modified/cURL.4DX").read_bytes()
+        if (set(original[1]) & markers
+                or set(local.pe_layout(changed)[1]) != set(original[1]) | markers
+                or changed == binary.read_bytes()):
+            raise ValueError("Portable Windows modified functions are missing or unexplained")
+    return proof
+
+
 def relocate(arguments, project):
     arguments = local.link_arguments(arguments, PureWindowsPath("${OUTPUT}") / "baseline")
     arguments[0] = "${DRIVER}"
@@ -135,7 +174,7 @@ def export(project, output):
     return record
 
 
-def replay(kit, output, modified=None):
+def replay(kit, output, modified=None, modified_iconv=None):
     if platform.system() != "Windows" or output.exists() or output.is_relative_to(kit):
         raise ValueError("Use a fresh external replay directory on Windows")
     record = json.loads((kit / MANIFEST).read_text())
@@ -149,9 +188,10 @@ def replay(kit, output, modified=None):
     if digest(driver) != record["linkDriverSha256"]:
         raise ValueError("MSVC linker differs from the original build")
     modified_hash = digest(modified) if modified else None
+    iconv_hash = digest(modified_iconv) if modified_iconv else None
     output.mkdir(parents=True)
     results = {}
-    for mode in ("baseline", "modified") if modified else ("baseline",):
+    for mode in ("baseline", "modified") if modified or modified_iconv else ("baseline",):
         folder = output / mode
         folder.mkdir()
         arguments = []
@@ -160,7 +200,8 @@ def replay(kit, output, modified=None):
                                  ("${DRIVER}", str(driver))):
                 argument = argument.replace(token, value)
             arguments.append(argument)
-        arguments = local.link_arguments(arguments, folder, modified if mode == "modified" else None)
+        arguments = local.link_arguments(arguments, folder, modified if mode == "modified" else None,
+                                         modified_iconv if mode == "modified" else None)
         with (folder / "link.log").open("w") as stream:
             subprocess.run(arguments, cwd=project, stdout=stream, stderr=subprocess.STDOUT, check=True)
         results[mode] = {"command": arguments, "sha256": digest(folder / "cURL.4DX")}
@@ -170,32 +211,41 @@ def replay(kit, output, modified=None):
         raise ValueError("Original Windows plugin binding changed")
     if local.pe_layout(original) != local.pe_layout(baseline):
         raise ValueError("Relocated Windows baseline differs beyond clock/checksum fields")
-    if modified:
+    if modified or modified_iconv:
         changed = (output / "modified/cURL.4DX").read_bytes()
-        if (set(local.pe_layout(changed)[1]) != set(local.pe_layout(original)[1]) | {local.MARKER}
-                or changed == original or digest(modified) != modified_hash):
-            raise ValueError("Relocated modified proxy code/binding changed")
+        markers = ({local.MARKER} if modified else set()) | (
+            {local.ICONV_MARKER} if modified_iconv else set())
+        if (set(local.pe_layout(original)[1]) & markers
+                or set(local.pe_layout(changed)[1]) != set(local.pe_layout(original)[1]) | markers
+                or changed == original
+                or (modified and digest(modified) != modified_hash)
+                or (modified_iconv and digest(modified_iconv) != iconv_hash)):
+            raise ValueError("Relocated modified proxy/iconv code or archive binding changed")
     verify_files(kit, record)
     system_archives(record, project)
     proof = {"status": record["status"], "target": record["target"],
              "kitManifestSha256": digest(kit / MANIFEST), "links": results,
              "modifiedArchiveSha256": modified_hash,
+             "modifiedIconvArchiveSha256": iconv_hash,
              "scope": "Relocated actual Windows object links; not host or complete licensing verification"}
     write_json(output / "portable-windows-replay-proof.json", proof)
-    return proof
+    return inspect_replay(kit, output, modified, modified_iconv)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("export", "replay"):
+    for name in ("export", "replay", "inspect"):
         command = sub.add_parser(name)
         command.add_argument("--project" if name == "export" else "--kit", type=Path, required=True)
         command.add_argument("--output", type=Path, required=True)
-        if name == "replay":
+        if name != "export":
             command.add_argument("--modified-proxy", type=Path)
+            command.add_argument("--modified-iconv", type=Path)
     args = parser.parse_args()
     result = (export(args.project.resolve(), args.output.resolve()) if args.command == "export"
-              else replay(args.kit.resolve(), args.output.resolve(),
-                          args.modified_proxy.resolve() if args.modified_proxy else None))
+              else (replay if args.command == "replay" else inspect_replay)(
+                          args.kit.resolve(), args.output.resolve(),
+                          args.modified_proxy.resolve() if args.modified_proxy else None,
+                          args.modified_iconv.resolve() if args.modified_iconv else None))
     print(json.dumps({k: result[k] for k in ("status", "target")}, indent=2))

@@ -3,6 +3,7 @@
 
 import argparse
 from collections import Counter
+from datetime import date as calendar_date, datetime, timezone
 import json
 import ntpath
 import os
@@ -32,6 +33,23 @@ WINDOWS_RECIPES = ["build/dependencies/prepare_cygwin.py",
                    "build/dependencies/windows-build-tools.json",
                    "build/dependencies/native/msvc-trace/cl",
                    "build/dependencies/native/msvc-trace/windres"]
+
+
+def modified_source(original, date):
+    date = calendar_date.fromisoformat(date).isoformat()
+    return original + (
+        "\n/* User-relink demonstration change on " + date + " (UTC). */\n"
+        "int iconv_user_relink_probe(void) { return 1; }\n").encode()
+
+
+def user_baseline(base):
+    original = json.loads((base / "native-build-provenance.json").read_text())
+    if original["schema_version"] != 1:
+        raise ValueError("A user rebuild must derive directly from a pristine source candidate")
+    inspect(base)
+    archive = original["archives"][0]
+    return {"name": "libiconv", "version": original["version"],
+            "path": "user-base/install/" + archive["path"], "sha256": archive["sha256"]}
 
 
 def core_sources(target):
@@ -112,6 +130,28 @@ def execute(arguments, log, *, cwd=None, env=None):
 
 def inspect(output):
     record = json.loads((output / "native-build-provenance.json").read_text())
+    user = record.get("schema_version") == 2
+    before_sources = record.get("originalSourceFiles") if user else record.get("sourceFiles")
+    if user:
+        base = output / "user-base"
+        if record.get("userBaseRecordSha256") != digest(base / "native-build-provenance.json"):
+            raise ValueError("GNU user rebuild original source record changed")
+        selected_base = user_baseline(base)
+        original = json.loads((base / "native-build-provenance.json").read_text())
+        modification = record["userModification"]
+        source = output / "source/lib/iconv.c"
+        if (record["target"] != original["target"]
+                or before_sources != original["sourceFiles"]
+                or modification["path"] != "lib/iconv.c"
+                or modification["beforeSha256"] != digest(base / "source/lib/iconv.c")
+                or modification["afterSha256"] != digest(source)
+                or source.read_bytes() != modified_source(
+                    (base / "source/lib/iconv.c").read_bytes(), modification["dateUtc"])):
+            raise ValueError("GNU user rebuild is not the dated benign source modification")
+        expected_sources = [dict(a) for a in before_sources]
+        next(a for a in expected_sources if a["path"] == "lib/iconv.c")["sha256"] = digest(source)
+        if record["sourceFiles"] != expected_sources:
+            raise ValueError("Additional GNU user rebuild source changes are unexplained")
     expected = pin(record["target"])
     windows = record["target"].startswith("windows")
     core = core_sources(record["target"])
@@ -121,9 +161,10 @@ def inspect(output):
                              if windows else {"build/lib/.libs/libiconv.a"}):
         raise ValueError("Unexpected GNU iconv static build output")
     installed_archive = "lib/libiconv.lib" if windows else "lib/libiconv.a"
-    if (record.get("schema_version") != 1 or record.get("library") != "libiconv"
+    if (record.get("schema_version") not in (1, 2) or record.get("library") != "libiconv"
             or record.get("version") != expected["version"] or record.get("sourceArchive") != expected
-            or record.get("evidence_type") != "isolated-source-build-candidate"
+            or record.get("evidence_type") != (
+                "source-only-user-relink" if user else "isolated-source-build-candidate")
             or record.get("status") != "not-approved-for-production"
             or record.get("licenseFile") != expected["licenseFile"]
             or record.get("licenseFileSha256") != expected["licenseSha256"]
@@ -133,7 +174,7 @@ def inspect(output):
         raise ValueError("GNU iconv source, acquisition pin or candidate status changed")
     prefix = "libiconv-" + expected["version"] + "/"
     verify_tar(output / "upstream-source.tar.gz",
-               [{"path": prefix + p["path"], "sha256": p["sha256"]} for p in record["sourceFiles"]],
+               [{"path": prefix + p["path"], "sha256": p["sha256"]} for p in before_sources],
                directories=True)
     if (set(p["path"] for p in record["recipeFiles"])
             != set(ICONV_RECIPES + (WINDOWS_RECIPES if windows else []))
@@ -214,7 +255,8 @@ def inspect(output):
                 or arguments.count("-arch") != 1 or arguments[-1] == "-arch"
                 or arguments[arguments.index("-arch") + 1] != record["target"].removeprefix("macos-")):
             raise ValueError("GNU iconv actual compiler/architecture/deployment settings changed")
-    old_archive = next(p for p in baseline(record["target"]) if p["name"] == "libiconv")
+    old_archive = selected_base if user else next(
+        p for p in baseline(record["target"]) if p["name"] == "libiconv")
     if (record["baselineArchive"] != old_archive
             or record["probeInputs"]["baseline"]["libiconv"]["sha256"] != old_archive["sha256"]
             or record["probeInputs"]["candidate"]["libiconv"]["sha256"]
@@ -231,7 +273,7 @@ def inspect(output):
             "conversionChecks": len(CHECKS), "status": record["status"]}
 
 
-def build(archive, output, target, cygwin_root=None):
+def build(archive, output, target, cygwin_root=None, user_candidate=None):
     windows = target.startswith("windows")
     if (platform.system() != ("Windows" if windows else "Darwin")
             or (windows and cygwin_root is None)):
@@ -240,19 +282,39 @@ def build(archive, output, target, cygwin_root=None):
     expected = pin(target)
     if output.exists():
         raise ValueError("Use a fresh GNU iconv evidence directory")
+    if user_candidate and output.is_relative_to(user_candidate.resolve()):
+        raise ValueError("GNU user rebuild output must be outside its original candidate")
     if digest(archive) != expected["sha256"]:
         raise ValueError("GNU iconv source archive does not match the reviewed acquisition pin")
-    selected = next(p for p in baseline(target) if p["name"] == "libiconv")
-    original = ROOT / selected["path"]
+    if user_candidate:
+        selected = user_baseline(user_candidate)
+        original = user_candidate / selected["path"].removeprefix("user-base/")
+        base_record = json.loads((user_candidate / "native-build-provenance.json").read_text())
+        if base_record["target"] != target:
+            raise ValueError("GNU user rebuild target differs from its original candidate")
+    else:
+        selected = next(p for p in baseline(target) if p["name"] == "libiconv")
+        original = ROOT / selected["path"]
     if digest(original) != selected["sha256"]:
         raise ValueError("The exact selected old libiconv archive changed")
     output.mkdir(parents=True)
+    if user_candidate:
+        shutil.copytree(user_candidate, output / "user-base")
     shutil.copyfile(archive, output / "upstream-source.tar.gz")
     source = output / "source"
     extract(archive, source, expected["version"])
     files = tree_files(source)
     if digest(source / expected["licenseFile"]) != expected["licenseSha256"]:
         raise ValueError("GNU iconv library license text differs from the reviewed pin")
+    modification = None
+    if user_candidate:
+        original_files = files
+        path = source / "lib/iconv.c"
+        date = datetime.now(timezone.utc).date().isoformat()
+        modification = {"path": "lib/iconv.c", "dateUtc": date, "beforeSha256": digest(path)}
+        path.write_bytes(modified_source(path.read_bytes(), date))
+        modification["afterSha256"] = digest(path)
+        files = tree_files(source)
     recipe_paths = ICONV_RECIPES + (WINDOWS_RECIPES if windows else [])
     recipes = archive_hashes(ROOT, recipe_paths)
     for item in recipes:
@@ -271,12 +333,22 @@ def build(archive, output, target, cygwin_root=None):
 
     def probe(kind, header, library):
         executable = output / (kind + (".exe" if windows else ""))
+        actual_source = probe_source
+        if user_candidate and kind == "candidate":
+            shutil.copyfile(probe_source, output / "iconv-probe-original.c")
+            shutil.copyfile(probe_source.parent / "probe-json.h", output / "probe-json.h")
+            actual_source = output / "user-probe.c"
+            actual_source.write_text(
+                '#define main original_iconv_probe\n#include "iconv-probe-original.c"\n'
+                '#undef main\nextern int iconv_user_relink_probe(void);\n'
+                'int main(void) { if (iconv_user_relink_probe() != 1) return 1; '
+                'return original_iconv_probe(); }\n')
         arguments = ([compiler, *flags, "/DLIBICONV_STATIC", "/I" + str(header),
-                      str(probe_source), str(library), "/Fo" + str(output / (kind + ".obj")),
+                      str(actual_source), str(library), "/Fo" + str(output / (kind + ".obj")),
                       "/Fe" + str(executable), "/link", "/VERBOSE:LIB",
                       "/MAP:" + str(output / (kind + ".map"))] if windows else [
                           compiler, *flags, "-DLIBICONV_STATIC", "-I" + str(header),
-                          str(probe_source), str(library), "-Wl,-map," + str(output / (kind + ".map")),
+                          str(actual_source), str(library), "-Wl,-map," + str(output / (kind + ".map")),
                           "-o", str(executable)])
         execute(arguments, output / (kind + "-build.log"))
         with (output / (kind + ".json")).open("w") as stdout, (
@@ -392,7 +464,8 @@ def build(archive, output, target, cygwin_root=None):
     if windows:
         build_paths += ["tools/cl", "tools/windres"]
     record = {
-        "schema_version": 1, "evidence_type": "isolated-source-build-candidate",
+        "schema_version": 2 if user_candidate else 1,
+        "evidence_type": "source-only-user-relink" if user_candidate else "isolated-source-build-candidate",
         "status": "not-approved-for-production", "library": "libiconv", "target": target,
         "version": expected["version"], "sourceArchive": expected,
         "licenseFile": "COPYING.LIB", "licenseFileSha256": expected["licenseSha256"],
@@ -414,6 +487,9 @@ def build(archive, output, target, cygwin_root=None):
                        "The Windows libcharset header-bootstrap archive is not incorporated; libiconv compiles localcharset.c directly.",
                        "This is not a full-plugin corresponding-source/relink distribution or host validation."],
     }
+    if user_candidate:
+        record.update({"userModification": modification, "originalSourceFiles": original_files,
+                       "userBaseRecordSha256": digest(output / "user-base/native-build-provenance.json")})
     write_json(output / "native-build-provenance.json", record)
     return inspect(output)
 
@@ -426,8 +502,10 @@ if __name__ == "__main__":
     sub.add_argument("--output", type=Path, required=True)
     sub.add_argument("--target", choices=("macos-arm64", "macos-x86_64", "windows-x86_64"), required=True)
     sub.add_argument("--cygwin-root", type=Path)
+    sub.add_argument("--user-candidate", type=Path)
     sub = commands.add_parser("inspect")
     sub.add_argument("output", type=Path)
     args = parser.parse_args()
     print(json.dumps(inspect(args.output) if args.command == "inspect"
-                     else build(args.archive, args.output, args.target, args.cygwin_root), indent=2))
+                     else build(args.archive, args.output, args.target, args.cygwin_root,
+                                args.user_candidate), indent=2))

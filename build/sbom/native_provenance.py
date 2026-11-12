@@ -116,7 +116,11 @@ def _kit_records(kit):
     if native.exists() and proxy.exists():
         raise ValueError("Ambiguous native/proxy original build records")
     if not proxy.exists():
-        return native, [json.loads(native.read_text(encoding="utf-8"))]
+        original = json.loads(native.read_text(encoding="utf-8"))
+        if (original.get("schema_version") != 1
+                or original.get("evidence_type") != "isolated-source-build-candidate"):
+            raise ValueError("Native inventory requires an unmodified source candidate, not a user relink")
+        return native, [original]
     original = json.loads(proxy.read_text(encoding="utf-8"))
     if original["schema_version"] != 2:
         raise ValueError("Proxy inventory requires fresh compiler-object/archive evidence")

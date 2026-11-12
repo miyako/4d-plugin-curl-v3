@@ -28,6 +28,7 @@ class NativeProvenanceTests(unittest.TestCase):
         installed.parent.mkdir(parents=True)
         installed.write_bytes(b"!<arch>\n" + target.encode())
         record = {
+            "schema_version": 1, "evidence_type": "isolated-source-build-candidate",
             "library": "curl", "target": target, "version": version,
             "sourceArchive": {"library": "curl", "version": version,
                               "url": "https://curl.se/download/curl-8.21.0.tar.xz",
@@ -38,6 +39,16 @@ class NativeProvenanceTests(unittest.TestCase):
         }
         (kit / "native-build-provenance.json").write_text(json.dumps(record))
         return kit
+
+    def test_user_modified_source_build_cannot_be_promoted_into_candidate_inventory(self):
+        kit = self.kit("windows-x86_64")
+        path = kit / "native-build-provenance.json"
+        record = json.loads(path.read_text())
+        record.update(schema_version=2, evidence_type="source-only-user-relink")
+        path.write_text(json.dumps(record))
+        with self.assertRaisesRegex(ValueError, "not a user relink"):
+            native_provenance.collect(self.vendor, "windows-x86_64", [kit])
+        self.inspector.assert_not_called()
 
     def copy_windows(self, kit):
         path = self.vendor / "lib/64/libcurl.lib"

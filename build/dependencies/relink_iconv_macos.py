@@ -2,7 +2,7 @@
 """Rebuild delivered GNU iconv sources with a dated benign modification on Mac."""
 
 import argparse
-from datetime import date as calendar_date, datetime, timezone
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -16,11 +16,7 @@ import build_iconv as iconv
 from provenance import archive_hashes, digest, write_json
 
 
-def modified_source(original, date):
-    date = calendar_date.fromisoformat(date).isoformat()
-    return original + (
-        "\n/* User-relink demonstration change on " + date + " (UTC). */\n"
-        "int iconv_user_relink_probe(void) { return 1; }\n").encode()
+modified_source = iconv.modified_source
 
 
 def rebuild(candidate, output):

@@ -21,6 +21,7 @@ from relink_candidate import inspect_relink
 
 
 MARKER = "proxy_user_relink_probe"
+ICONV_MARKER = "iconv_user_relink_probe"
 
 
 def pe_layout(data):
@@ -68,10 +69,11 @@ def pe_layout(data):
         if key in exports:
             raise ValueError("Duplicate PE export name")
         exports[key] = address
-    if MARKER in exports:
-        if export <= exports[MARKER] < export + length:
-            raise ValueError("Modified-plugin marker is a forwarder, not its own function")
-        location(exports[MARKER], executable=True)
+    for marker in (MARKER, ICONV_MARKER):
+        if marker in exports:
+            if export <= exports[marker] < export + length:
+                raise ValueError("Modified-plugin marker is a forwarder, not its own function")
+            location(exports[marker], executable=True)
     normalized = bytearray(data)
     fields = {"coffTimeDateStamp": pe + 8, "optionalHeaderCheckSum": optional + 64,
               "exportTimeDateStamp": directory + 4}
@@ -94,7 +96,7 @@ def pe_layout(data):
     return bytes(normalized), exports, fields
 
 
-def link_arguments(original, output, modified=None):
+def link_arguments(original, output, modified=None, modified_iconv=None):
     arguments = list(original)
     if len([a for a in arguments if a.lower() == "libproxy.lib"]) != 1:
         raise ValueError("Expected one original proxy library")
@@ -111,6 +113,12 @@ def link_arguments(original, output, modified=None):
         index = next(i for i, a in enumerate(arguments) if a.lower() == "libproxy.lib")
         arguments[index] = str(modified)
         arguments.append("/EXPORT:" + MARKER)
+    if modified_iconv:
+        indexes = [i for i, a in enumerate(arguments) if a.lower() == "iconv.lib"]
+        if len(indexes) != 1:
+            raise ValueError("Expected one original GNU iconv library")
+        arguments[indexes[0]] = str(modified_iconv)
+        arguments.append("/EXPORT:" + ICONV_MARKER)
     return arguments
 
 

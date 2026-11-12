@@ -397,6 +397,17 @@ class ProxyEvidenceTests(unittest.TestCase):
             relink_plugin_windows.link_arguments(original + ["libproxy.lib"], self.root)
         with self.assertRaisesRegex(ValueError, "additional Windows"):
             relink_plugin_windows.link_arguments(original + ["/DEBUG"], self.root)
+        with self.assertRaisesRegex(ValueError, "one original GNU iconv"):
+            relink_plugin_windows.link_arguments(original, self.root,
+                                                modified_iconv=self.root / "iconv.lib")
+        combined = relink_plugin_windows.link_arguments(
+            original + ["iconv.lib"], self.root, self.root / "modified-proxy.lib",
+            self.root / "modified-iconv.lib")
+        self.assertEqual(combined[7:10], [
+            "libcurl.lib", str(self.root / "modified-proxy.lib"), "libssl.lib"])
+        self.assertEqual(combined[-3:], [
+            str(self.root / "modified-iconv.lib"), "/EXPORT:proxy_user_relink_probe",
+            "/EXPORT:iconv_user_relink_probe"])
 
     def test_windows_marker_must_export_own_executable_code_and_baseline_mask_is_narrow(self):
         data = bytearray(2048)
@@ -434,6 +445,10 @@ class ProxyEvidenceTests(unittest.TestCase):
         data[1024] = 1
         self.assertNotEqual(relink_plugin_windows.pe_layout(data)[0], normalized)
         struct.pack_into("<I", data, 560, 4100)
+        with self.assertRaisesRegex(ValueError, "forwarder"):
+            relink_plugin_windows.pe_layout(data)
+        name = b"iconv_user_relink_probe\0"
+        data[576:608] = name.ljust(32, b"\0")
         with self.assertRaisesRegex(ValueError, "forwarder"):
             relink_plugin_windows.pe_layout(data)
 

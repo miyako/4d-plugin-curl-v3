@@ -615,6 +615,28 @@ not redistributed. The recorded unused developer search directory must remain
 absent, rather than silently deleting it from the search order. Fresh native
 CI and independent persisted-kit inspection must establish this new delivery
 path before it is treated as verified. It does not initialize the DLL or 4D.
+Run `43312699533` passed the moved Windows execution, but its original uploaded
+kit omitted hidden directories, including GNU `.libs` build outputs and product
+`.github` recipes. The persisted kit therefore fails its own manifest inspection;
+that run is not portable-delivery proof. The upload now includes hidden files,
+and a fresh exact-head run and downloaded-kit inspection are required.
+
+The next isolated Windows check rebuilds GNU iconv with the same dated, benign
+`iconv_user_relink_probe` change as the Mac demonstration, using
+`build_iconv.py build --user-candidate /delivered/original/iconv ...`.
+This derives directly from the delivered pristine candidate, retains its source
+kit and original build record, records the source delta separately, and compares
+all aliases and nine conversion/rejection cases against that source candidate.
+The modified probe also calls the new function. Its schema-2
+`source-only-user-relink` record cannot enter the normal candidate inventory.
+The portable link can accept `--modified-iconv` alongside `--modified-proxy`;
+both exports must point into the resulting plugin's own executable code.
+The newly acquired job-local GNU tools are outside the uploaded materials;
+their acquisition/installed-package records are retained, not their binaries.
+Native Windows execution of this addition remains pending.
+`portable_plugin_windows.py inspect` can recheck delivered bytes, baseline
+normalization and modified exports on another platform without loading a DLL;
+this is not an install/trust or 4D host check.
 
 ```sh
 python3 build/dependencies/build_curl.py build \

@@ -17,6 +17,15 @@ import relink_iconv_macos
 
 
 class IconvTests(unittest.TestCase):
+    def test_user_rebuild_cannot_chain_modified_candidates(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "native-build-provenance.json").write_text(json.dumps({"schema_version": 2}))
+            with mock.patch.object(build_iconv, "inspect") as inspect:
+                with self.assertRaisesRegex(ValueError, "directly from a pristine"):
+                    build_iconv.user_baseline(root)
+                inspect.assert_not_called()
+
     def test_user_source_modification_preserves_bytes_and_requires_a_real_date(self):
         source = b"/* Original library notice */\nint original(void) { return 0; }\n"
         changed = relink_iconv_macos.modified_source(source, "2026-11-12")
