@@ -350,3 +350,43 @@ class NativeProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Latest exact source producer"):
             native_provenance.verify_producer_run(
                 run, jobs, "owner/repo", "candidate", "inventory")
+
+    def test_provider_reuse_requires_all_three_latest_material_jobs(self):
+        run = {"id": 1, "head_sha": "1" * 40, "head_repository": {"full_name": "owner/repo"},
+               "head_branch": "candidate", "path": ".github/workflows/native-trace.yml",
+               "event": "workflow_dispatch"}
+        jobs = {"total_count": 3, "jobs": [
+            {"id": i, "name": "source-providers / provider-materials (runner, " + target + ")",
+             "run_attempt": 1, "conclusion": "success"}
+            for i, target in enumerate(("macos-arm64", "macos-x86_64", "windows-x86_64"))]}
+        self.assertEqual(len(native_provenance.verify_producer_run(
+            run, jobs, "owner/repo", "candidate", "providers")["producers"]), 3)
+        jobs["jobs"].append(dict(jobs["jobs"][2], run_attempt=2, conclusion="failure"))
+        jobs["total_count"] += 1
+        with self.assertRaisesRegex(ValueError, "Latest exact source producer"):
+            native_provenance.verify_producer_run(
+                run, jobs, "owner/repo", "candidate", "providers")
+
+    def test_fresh_provider_staging_refuses_weak_duplicate_or_missing_targets(self):
+        kit = self.root / "materials"
+        path = kit / "provider-brotli/vendor/brotli-provenance.json"
+        path.parent.mkdir(parents=True)
+        target = "windows-x86_64"
+        ssl = {"target": target, "buildMaterials": {"target": target}}
+        brotli = {"name": "Brotli", "sourceRepository": "https://github.com/google/brotli",
+                  "license": "MIT", "buildMaterials": {"target": target}}
+        path.write_text(json.dumps(brotli))
+        with patch.object(provenance, "read_record", return_value=ssl), \
+                patch.object(native_provenance.material_evidence, "compact_record"), \
+                patch.object(native_provenance.importlib, "import_module"):
+            self.assertEqual(set(native_provenance.read_provider_materials(target, [kit])), {target})
+            with self.assertRaisesRegex(ValueError, "distinct measured"):
+                native_provenance.read_provider_materials(target, [kit, kit])
+            ssl["buildMaterials"] = {}
+            with self.assertRaisesRegex(ValueError, "distinct measured"):
+                native_provenance.read_provider_materials(target, [kit])
+            ssl.update(target="macos-arm64", buildMaterials={"target": "macos-arm64"})
+            brotli["buildMaterials"]["target"] = "macos-arm64"
+            path.write_text(json.dumps(brotli))
+            with self.assertRaisesRegex(ValueError, "Every native target"):
+                native_provenance.read_provider_materials("macos-universal", [kit])

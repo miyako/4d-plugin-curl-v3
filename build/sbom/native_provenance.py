@@ -11,6 +11,7 @@ import sys
 from urllib.parse import quote
 
 import provenance
+import provider_materials as material_evidence
 
 
 LIBRARIES = {
@@ -52,6 +53,7 @@ def verify_producer_run(run, jobs, repository, branch, role):
         "nghttp3": "native-prerequisites / http-prerequisites (",
         "libproxy": "Isolated proxy candidate (",
         "inventory": "curl-source / inventory",
+        "providers": "source-providers / provider-materials (",
     }[role]
     targets = {"macos-arm64", "macos-x86_64"}
     if role == "inventory":
@@ -302,11 +304,40 @@ def stage(output, target, kits):
     return record
 
 
-def stage_project(source, output, target, kits):
+def read_provider_materials(target, kits):
+    dependencies = str(Path(__file__).resolve().parents[1] / "dependencies")
+    if dependencies not in sys.path:
+        sys.path.insert(0, dependencies)
+    tls = importlib.import_module("probe_provider_tls")
+    models = {}
+    for kit in kits:
+        ssl_path = kit / "provider-openssl/install" / provenance.RECORD
+        brotli_path = kit / "provider-brotli/vendor/brotli-provenance.json"
+        ssl = provenance.read_record(ssl_path)
+        architecture = ssl["target"]
+        brotli = json.loads(brotli_path.read_text(encoding="utf-8"))
+        if (architecture not in TARGETS[target] or architecture in models
+                or brotli.get("name") != "Brotli"
+                or brotli.get("sourceRepository") != "https://github.com/google/brotli"
+                or brotli.get("license") != "MIT"
+                or any(record.get("buildMaterials", {}).get("target") != architecture
+                       for record in (ssl, brotli))):
+            raise ValueError("Fresh provider kits require distinct measured matching native targets")
+        for path, record in ((ssl_path, ssl), (brotli_path, brotli)):
+            material_evidence.compact_record(path, record)
+        tls.inspect_proof(ssl_path.parent, kit / "provider-tls")
+        models[architecture] = (ssl_path, brotli_path)
+    if set(models) != TARGETS[target]:
+        raise ValueError("Every native target needs its original fresh provider and TLS kit")
+    return models
+
+
+def stage_project(source, output, target, kits, material_kits=()):
     """Prepare a separate committed-source checkout, never edit the caller's vendor files."""
     if output.exists():
         raise ValueError("Plugin candidate staging requires a new output directory")
     grouped = _read_kits(target, kits)
+    fresh = read_provider_materials(target, material_kits) if material_kits else {}
     required = set(LIBRARIES) - ({"nghttp3"} if target == "windows-x86_64" else set())
     if set(grouped) != required:
         raise ValueError("Plugin staging requires every selected native source candidate")
@@ -375,6 +406,25 @@ def stage_project(source, output, target, kits):
     curls = grouped["curl"]
     ssl_records = {t: curls[t][3] / "providers/ssh/provider/openssl-build-provenance.json"
                    for t in sorted(curls)}
+    original_provider_records = []
+    provider_changes = []
+    if fresh:
+        for architecture, original_path in ssl_records.items():
+            old = provenance.read_record(original_path)
+            new_path = fresh[architecture][0]
+            new = provenance.read_record(new_path)
+            if any(old[key] != new[key] for key in
+                   ("library", "version", "source_repository", "source_commit", "license", "purl")):
+                raise ValueError("Fresh OpenSSL is not the version-matched original source identity")
+            provider_changes.append({
+                "library": "OpenSSL", "target": architecture,
+                "originalConsumerProviderRecordSha256": provenance.digest(original_path),
+                "freshProviderRecordSha256": provenance.digest(new_path),
+                "originalConfigureArguments": old["configure_arguments"],
+                "freshConfigureArguments": new["configure_arguments"],
+            })
+        ssl_records = {t: paths[0] for t, paths in fresh.items()}
+        original_provider_records.extend(ssl_records.values())
     for name in ("crypto", "ssl"):
         extension = ".lib" if target.startswith("windows") else ".a"
         merge({t: p.parent / ("lib/lib" + name + extension) for t, p in ssl_records.items()},
@@ -390,10 +440,26 @@ def stage_project(source, output, target, kits):
         if original["archives"] != provenance.archive_hashes(
                 provider, [a["path"] for a in original["archives"]]):
             raise ValueError("Original Brotli provider archives changed")
+        if fresh:
+            baseline_path = record_path
+            record_path = fresh[architecture][1]
+            current = json.loads(record_path.read_text(encoding="utf-8"))
+            if any(original[key] != current[key] for key in
+                   ("name", "version", "sourceRepository", "sourceCommit", "license", "purl")):
+                raise ValueError("Fresh Brotli is not the version-matched original source identity")
+            provider_changes.append({
+                "library": "Brotli", "target": architecture,
+                "originalConsumerProviderRecordSha256": provenance.digest(baseline_path),
+                "freshProviderRecordSha256": provenance.digest(record_path),
+            })
+            original = current
+            provider = record_path.parent
+            original_provider_records.append(record_path)
         brotli_records[architecture] = (original, provider, provenance.digest(record_path))
     first = brotli_records[sorted(brotli_records)[0]][0]
-    identity = {k: v for k, v in first.items() if k != "archives"}
-    if any({k: v for k, v in r[0].items() if k != "archives"} != identity
+    excluded = {"archives", "buildMaterials"}
+    identity = {k: v for k, v in first.items() if k not in excluded}
+    if any({k: v for k, v in r[0].items() if k not in excluded} != identity
            for r in brotli_records.values()):
         raise ValueError("Original Brotli provider source identities disagree")
     selected = [a["path"] for a in first["archives"]
@@ -406,7 +472,9 @@ def stage_project(source, output, target, kits):
     brotli = {
         **identity, "target": target, "status": "not-approved-for-production",
         "archives": provenance.archive_hashes(project, selected),
-        "source_builds": [{"target": t, "originalRecordSha256": r[2], "record": r[0]}
+        "source_builds": [{"target": t, "originalRecordSha256": r[2],
+                          "record": (material_evidence.compact_record(
+                              r[1] / "brotli-provenance.json", r[0]) if fresh else r[0])}
                           for t, r in brotli_records.items()],
     }
     provenance.write_json(project / "brotli-provenance.json", brotli)
@@ -416,14 +484,19 @@ def stage_project(source, output, target, kits):
         "projectCommit": commit, "target": target, "status": "not-approved-for-production",
         "projectDirectory": "project", "cloneCommand": clone,
         "nativeSourceKits": [str(Path(p).resolve()) for p in kits],
+        "providerSourceRecords": [str(p.resolve()) for p in original_provider_records],
+        "providerChanges": provider_changes,
         "rebuiltArchiveEvidence": staged["rebuiltArchiveEvidence"],
         "providerMergeCommands": merge_commands, "mergeTool": staged["mergeTool"],
         "publicHeaders": [{"path": "include/" + p, "sha256": sha}
                           for p, (_, sha) in sorted(headers.items())],
         "limitations": [
             "Prepared inputs only: no plugin compilation, linker selection or actual 4D host proof.",
-            "OpenSSL/Brotli retain their original source/archive evidence class, not new "
-            "compiler-object closure or retroactive build materials.",
+            ("Fresh provider compiler materials are bound to their original records; existing "
+             "curl/SSH producer kits still retain their original provider test conditions. "
+             "Final consumer transfers require independent verification." if fresh else
+             "OpenSSL/Brotli retain their original source/archive evidence class, not new "
+             "compiler-object closure or retroactive build materials."),
             "The shared Git clone and externally referenced kits are not a portable LGPL "
             "source/relink delivery; complete self-contained materials remain required.",
         ],
@@ -440,8 +513,13 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--project-source", type=Path,
                         help="Prepare a separate committed project checkout; never replace caller archives")
+    parser.add_argument("--provider-materials-kit", type=Path, action="append", default=[],
+                        help="Optional original measured provider/TLS kit for each native target")
     args = parser.parse_args()
-    result = (stage_project(args.project_source, args.output, args.target, args.kit)
+    if args.provider_materials_kit and not args.project_source:
+        raise ValueError("Fresh providers are only supported in an isolated project checkout")
+    result = (stage_project(args.project_source, args.output, args.target, args.kit,
+                            args.provider_materials_kit)
               if args.project_source else stage(args.output, args.target, args.kit))
     print(json.dumps({"target": result["target"], "status": result["status"],
                       "libraries": [r["name"] for r in result["rebuiltArchiveEvidence"]]}))

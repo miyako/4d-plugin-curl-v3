@@ -55,6 +55,10 @@ on:
         description: 'Original successful complete source inventory run for isolated plugin validation'
         type: string
         default: ''
+      native-materials-provider-run:
+        description: 'Optional successful measured OpenSSL/Brotli/TLS run for isolated candidate plugins'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -214,6 +218,7 @@ jobs:
         shell: python
         env:
           GH_TOKEN: ${{ github.token }}
+          MATERIALS_RUN: ${{ inputs.native-materials-provider-run }}
         run: |
           import json, os, sys, urllib.request
           from pathlib import Path
@@ -242,7 +247,22 @@ jobs:
                   raise ValueError("Original source producer identity/attempt changed")
               with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
                   stream.write(name + "=" + identifier + "\n")
+          identifier = os.environ["MATERIALS_RUN"]
+          if identifier:
+              if not identifier.isascii() or not identifier.isdigit():
+                  raise ValueError("Measured provider source run ID must be an ASCII integer")
+              records["providers"] = verify_producer_run(
+                  get("/actions/runs/" + identifier),
+                  get("/actions/runs/" + identifier + "/jobs?per_page=100&filter=all"),
+                  os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_REF_NAME"], "providers")
           (root / "candidate-source-acquisition.json").write_text(json.dumps(records, indent=2))
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.native-candidate-plugin-only && inputs.native-materials-provider-run != '' }}
+        with:
+          run-id: ${{ inputs.native-materials-provider-run }}
+          github-token: ${{ github.token }}
+          pattern: isolated-provider-materials-${{ runner.os == 'Windows' && 'windows-x86_64' || 'macos-*' }}
+          path: ${{ runner.temp }}/candidate-provider-materials
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         if: ${{ inputs.native-candidate-plugin-only }}
         with:
@@ -305,8 +325,11 @@ jobs:
                            kits / ("isolated-proxy-" + target)]
               if mac:
                   selected.append(kits / ("native-nghttp3-" + target))
+          materials = root / "candidate-provider-materials"
+          provider_kits = [materials / ("isolated-provider-materials-" + target)
+                           for target in targets] if materials.exists() else []
           stage_project(Path.cwd(), root / "plugin-candidate",
-                        "macos-universal" if mac else "windows-x86_64", selected)
+                        "macos-universal" if mac else "windows-x86_64", selected, provider_kits)
           with open(os.environ["GITHUB_ENV"], "a") as stream:
               stream.write("PLUGIN_ROOT=" + str(root / "plugin-candidate/project") + "\n")
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -493,6 +516,8 @@ jobs:
               staging = json.loads(Path("../plugin-candidate-staging.json").read_text())
               for kit in staging["nativeSourceKits"]:
                   command.extend(["--native-source-kit", kit])
+              for record in staging.get("providerSourceRecords", []):
+                  command.extend(["--provider-source-record", record])
           subprocess.run(command, check=True)
       - name: Upload unsigned macOS build and ingestion evidence
         if: runner.os == 'macOS'

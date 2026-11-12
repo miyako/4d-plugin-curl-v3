@@ -2,6 +2,7 @@ import copy
 import hashlib
 import json
 import struct
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -11,6 +12,43 @@ from provenance import archive_hashes, digest
 
 
 class ProviderMaterialsTests(unittest.TestCase):
+    def test_git_symlink_delivery_does_not_replace_native_target(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            source, install, calls = [root / p for p in ("source", "install", "calls")]
+            for path in (source, install, calls):
+                path.mkdir()
+            def git(*args, **kwargs):
+                return subprocess.check_output(["git", "-C", str(source), *args], **kwargs).strip()
+            git("init", "--quiet")
+            git("config", "user.name", "Offline fixture")
+            git("config", "user.email", "offline@example.invalid")
+            git("config", "core.symlinks", "false")
+            (source / "input.c").write_bytes(b"synthetic source")
+            (source / "alias").write_bytes(b"input.c")
+            git("add", "input.c")
+            blob = git("hash-object", "-w", "--stdin", input=b"input.c").decode()
+            git("update-index", "--add", "--cacheinfo", "120000," + blob + ",alias")
+            git("-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "Synthetic source")
+            object_file = root / "input.obj"
+            data = struct.pack("<HHIIIHH", 0x8664, 0, 0, 0, 0, 0, 0)
+            object_file.write_bytes(data)
+            header = (f"{'input.obj/':<16}{0:<12}{0:<6}{0:<6}{'100644':<8}{len(data):<10}`\n").encode()
+            (install / "lib.lib").write_bytes(b"!<arch>\n" + header + data)
+            call = {"returnCode": 0, "compiler": "C:/actual/cl.exe",
+                    "arguments": ["/c", "/MT"],
+                    "inputs": [{"path": (source / "input.c").as_posix(),
+                                "sha256": digest(source / "input.c")}],
+                    "object": {"path": object_file.as_posix(), "sha256": digest(object_file)}}
+            (calls / "call.json").write_text(json.dumps(call))
+            record = {"source_commit": git("rev-parse", "HEAD").decode(),
+                      "archives": archive_hashes(install, ["lib.lib"])}
+            proof = provider_materials.capture(
+                source, install, record, calls, [], [], [],
+                {"cc": {"path": "C:/actual/cl.exe", "sha256": "a" * 64}}, "windows-x86_64")
+            self.assertEqual(proof["target"], "windows-x86_64")
+            self.assertEqual(proof["sourceLinks"][0]["target"], "input.c")
+
     def test_native_deployment_and_static_crt_are_measured_not_just_declared(self):
         call = {"inputs": [{"path": "/source/input.c"}], "arguments": ["-c", "-MT"]}
         provider_materials.compile_profile(call, "windows-x86_64")

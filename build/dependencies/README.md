@@ -714,6 +714,23 @@ the corresponding `--provider-source-record` inputs and rechecks them before
 accepting aggregated material summaries. Missing originals, changed bytes or
 changed summary counts fail. Existing historical records remain unchanged.
 
+Run `43325201101` exposed two capture defects rather than completing the gate:
+Brotli's preserved Git symlink target shadowed the native-target variable, and
+OpenSSL's recursive Windows NMAKE calls dropped command-line tracer macros.
+The fixes keep symlink text separate and propagate exact tracer environment
+macros with NMAKE's `/E`; actual compiler flags/object deployment still must
+pass. The untraced Windows build's passing standalone TLS cases do not upgrade
+its incomplete compiler record.
+
+Candidate-plugin runs may explicitly supply `native-materials-provider-run`.
+Every latest target producer must succeed. Staging then requires complete
+measured native provider kits and their independently inspected TLS receipts,
+preserves the original curl/SSH provider test records, and rejects source
+identity/version/license changes. Only the separate candidate checkout receives
+the fresh archives. Original-record references feed the existing normalized
+inventory; this option neither adopts production archives nor closes transfer,
+redistribution, user-relink or 4D host gates.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

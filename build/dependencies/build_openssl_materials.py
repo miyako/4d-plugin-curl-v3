@@ -91,10 +91,10 @@ def build(source, output, target, commit):
                            stderr=subprocess.STDOUT, check=True)
 
     configure_command = [toolchain["perl"]["path"], str(source / "Configure"), *arguments]
-    build_command = ([toolchain["nmake"]["path"], *make_variables] if windows else
+    build_command = ([toolchain["nmake"]["path"], "/E", *make_variables] if windows else
                      [toolchain["make"]["path"], "-j3"])
     install_command = [toolchain["nmake" if windows else "make"]["path"],
-                       *make_variables, "install_sw"]
+                       *(["/E"] if windows else []), *make_variables, "install_sw"]
     provenance.write_json(output / "commands.json", {
         "configure": configure_command, "build": build_command, "install": install_command})
     run(configure_command, "configure.log")
@@ -112,6 +112,8 @@ def build(source, output, target, commit):
     if windows:
         if configured["AS"] != env["AS"]:
             raise ValueError("OpenSSL Configure did not retain the native NASM configuration")
+        # Recursive NMAKE calls omit command-line macros; /E retains these exact tracers.
+        env.update(variable.split("=", 1) for variable in make_variables)
     run(build_command, "build.log")
     run(install_command, "install.log")
     if (tools(target) != toolchain or provenance.source_identity(source) != identity
@@ -130,7 +132,8 @@ def build(source, output, target, commit):
     record["buildMaterials"]["compilerEnvironment"] = {
         key: env.get(key) for key in ("CC", "AS", "CFLAGS", "CPPFLAGS", "LDFLAGS", "SDKROOT",
                                      "MACOSX_DEPLOYMENT_TARGET", "DEVELOPER_DIR", "INCLUDE",
-                                     "LIB", "WindowsSdkDir", "WindowsSDKVersion", "VCToolsVersion")}
+                                     "LIB", "CL", "_CL_", "MAKEFLAGS", "WindowsSdkDir",
+                                     "WindowsSDKVersion", "VCToolsVersion")}
     provenance.write_json(install / provenance.RECORD, record)
     provenance.read_record(install / provenance.RECORD)
     return {"target": target, "sourceCommit": commit,

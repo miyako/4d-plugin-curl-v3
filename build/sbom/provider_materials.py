@@ -202,14 +202,14 @@ def capture(source, install, record, calls, configuration, logs, recipes, toolch
             files.add(name)
         elif mode == "120000":
             raw = subprocess.check_output(["git", "-C", str(source), "cat-file", "blob", sha])
-            target = raw.decode()
-            if (PurePosixPath(target).is_absolute()
-                    or not (source / name).parent.joinpath(target).resolve().is_relative_to(source)):
+            link_target = raw.decode()
+            if (PurePosixPath(link_target).is_absolute()
+                    or not (source / name).parent.joinpath(link_target).resolve().is_relative_to(source)):
                 raise ValueError("Provider Git symlink leaves its source tree: " + name)
             path = root / "source-links" / (name + ".txt")
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
-            links.append({"path": name, "target": target, "gitObject": sha,
+            links.append({"path": name, "target": link_target, "gitObject": sha,
                           "textFile": path.relative_to(root).as_posix()})
         else:
             raise ValueError("Provider source needs explicit non-regular file delivery: " + name)

@@ -12,6 +12,38 @@ from build_native import ROOT
 import provenance
 
 
+def validate_results(lines):
+    if len(lines) != 6:
+        raise ValueError("TLS probe did not report all six independent cases")
+    for index, version in enumerate(("TLSv1.2", "TLSv1.3")):
+        positive, hostname, untrusted = lines[index * 3:index * 3 + 3]
+        if (not positive.startswith(version + " ")
+                or not positive.endswith(" verified-hostname authenticated-data")
+                or hostname != version + " rejected-hostname verify=62"
+                or untrusted != version + " rejected-untrusted verify=18"):
+            raise ValueError("TLS authentication, hostname or trust rejection differs")
+
+
+def inspect_proof(install, output):
+    record_path = install / provenance.RECORD
+    record = provenance.read_record(record_path)
+    receipt = json.loads((output / "tls-proof.json").read_text())
+    binary = output / ("tls-probe.exe" if record["target"] == "windows-x86_64" else "tls-probe")
+    if (receipt["schemaVersion"] != 1 or receipt["target"] != record["target"]
+            or receipt["providerRecordSha256"] != provenance.digest(record_path)
+            or receipt["providerInputs"] != provenance.archive_hashes(
+                install, [p["path"] for p in receipt["providerInputs"]])
+            or receipt["recipeInputs"] != provenance.archive_hashes(
+                output / "recipes", [p["path"] for p in receipt["recipeInputs"]])
+            or receipt["files"] != provenance.archive_hashes(
+                output, [p["path"] for p in receipt["files"]])
+            or receipt["binarySha256"] != provenance.digest(binary)
+            or receipt["results"] != (output / "stdout.txt").read_text().splitlines()):
+        raise ValueError("Persisted TLS proof differs from its original provider or executed inputs")
+    validate_results(receipt["results"])
+    return receipt
+
+
 def probe(install, output):
     install, output = install.resolve(), output.resolve()
     record_path = install / provenance.RECORD
@@ -54,15 +86,7 @@ def probe(install, output):
     (output / "stderr.txt").write_text(result.stderr)
     result.check_returncode()
     lines = result.stdout.splitlines()
-    if len(lines) != 6:
-        raise ValueError("TLS probe did not report all six independent cases")
-    for index, version in enumerate(("TLSv1.2", "TLSv1.3")):
-        positive, hostname, untrusted = lines[index * 3:index * 3 + 3]
-        if (not positive.startswith(version + " ")
-                or not positive.endswith(" verified-hostname authenticated-data")
-                or hostname != version + " rejected-hostname verify=62"
-                or untrusted != version + " rejected-untrusted verify=18"):
-            raise ValueError("TLS authentication, hostname or trust rejection differs")
+    validate_results(lines)
     if (inputs != provenance.archive_hashes(install, [p["path"] for p in inputs])
             or recipe_hashes != provenance.archive_hashes(ROOT, recipes)
             or compiler_sha != provenance.digest(Path(compiler))):
@@ -84,6 +108,7 @@ def probe(install, output):
                  "checks; not curl transfers, released-archive comparison or 4D host verification.",
     }
     provenance.write_json(output / "tls-proof.json", receipt)
+    inspect_proof(install, output)
     return receipt
 
 
