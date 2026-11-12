@@ -38,13 +38,14 @@ checkout, headers, directory strings, or the old vcpkg helper script.
 | macOS x86_64 | 12 / 12 / 10 | 4 (OpenSSL and Brotli) |
 | Windows x64 | 11 / 11 / 9 | 4 (OpenSSL and Brotli) |
 
-The remaining **23 target/archive bindings lack source-build provenance**.
+Those **23 historical target/archive bindings lack source-build provenance**;
+the isolated source candidates below do not retroactively identify their origin.
 The summary separates unused repository candidates from non-repository linker
 selections. `zs.lib` is not selected; Windows uses `zlib.lib` 1.3.1. Additional
 vendor files do not expand migration scope without actual selection evidence.
 The recorded macOS compiler command requests 10.13 (arm64 has the platform's
 11.0 minimum); Windows uses `/MT`. Library search order and local project
-settings are not changed. Runtime curl feature/protocol recovery is underway;
+settings are not changed. Runtime curl feature/protocol recovery is complete;
 the original prebuilt configure arguments remain an explicit baseline gap.
 
 ## Checklist and gates
@@ -57,17 +58,24 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 - [x] Rebuild delivered library sources with a user modification and relink a
   standalone consumer on all three targets; independently inspect persisted proofs.
 - [ ] Adopt only after an explicit replacement decision and plugin compatibility checks.
-- [ ] Source-build selected prerequisites: zlib (1.3.2 macOS / 1.3.1 Windows),
+- [x] Isolated source-build selected prerequisites: zlib (1.3.2 macOS / 1.3.1 Windows),
   libiconv (1.16 / 1.18), nghttp2 1.70.0, macOS nghttp3 1.15.0, libssh2.
-- [ ] Preserve the libssh2 `1.11.1_DEV` observation; establish an actual source
-  identity, not a vulnerability/development conclusion from that suffix.
-- [ ] Source-build curl 8.21.0 against verified prerequisites without losing features.
-- [ ] Consolidate source records with existing OpenSSL/Brotli ingestion and check
+- [x] Preserve the libssh2 `1.11.1_DEV` observation; establish the candidate's actual
+  source identity, not the historical archive's origin or a vulnerability/development
+  conclusion from that suffix.
+- [x] Isolated source-build curl 8.21.0 against verified prerequisites without losing features.
+- [x] Consolidate source records with existing OpenSSL/Brotli ingestion and check
   actual ftpparse/SDK compile inputs; do not introduce a second release SBOM model.
-- [ ] Enforce source/patch/toolchain/configuration/output/selection/binary bindings
-  for migrated libraries, including original records on any cache reuse.
+- [ ] Strengthen the twelve original OpenSSL/Brotli bindings' compiler/object/build materials.
+- [x] Enforce source/patch/toolchain/configuration/output/selection/binary bindings
+  for the twenty-three migrated candidate inputs in safe isolated CI, retaining original records.
+- [x] Verify actual all-target source-candidate plugin selections and full
+  original-object modified-proxy relinks on Mac and Windows.
+- [x] Relocate Mac source/object materials and verify modified delivered proxy
+  and GNU iconv sources in both full-plugin slices.
+- [ ] Complete portable Windows materials and Windows GNU modification/relink verification.
 - [ ] Run protocol/proxy/TLS/SSH/compression/conversion and deployment/CRT checks.
-- [ ] Independently inspect persisted unsigned cross-platform ZIP and DMG outputs.
+- [x] Independently inspect persisted unsigned cross-platform ZIP and DMG outputs.
 - [ ] Require zero opaque selected third-party archives, with explicit exclusions.
 
 Never delete old archives/evidence before verified replacement. Historical
