@@ -99,8 +99,16 @@ int main(void) {
     fputs("}\n", stdout);
     return 0;
 #else
+    const curl_ssl_backend **backends = NULL;
+    CURLsslset backend_status = curl_global_sslset(CURLSSLBACKEND_NONE, NULL, &backends);
+    unsigned int i;
     curl_version_info_data *info;
-    CURLcode status = curl_global_init(CURL_GLOBAL_DEFAULT);
+    CURLcode status;
+    if (backend_status != CURLSSLSET_UNKNOWN_BACKEND || !backends || !backends[0]) {
+        fprintf(stderr, "TLS backend enumeration failed: %d\n", (int)backend_status);
+        return 1;
+    }
+    status = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (status != CURLE_OK) {
         fprintf(stderr, "curl_global_init failed: %s\n", curl_easy_strerror(status));
         return 1;
@@ -131,6 +139,12 @@ int main(void) {
     field("rtmpVersion", info->rtmp_version);
     field("cainfo", info->cainfo);
     field("capath", info->capath);
+    fputs(",\"tlsBackends\":[", stdout);
+    for (i = 0; backends[i]; ++i) {
+        if (i) putchar(',');
+        string(backends[i]->name);
+    }
+    putchar(']');
     if (ssh_algorithms()) {
         curl_global_cleanup();
         return 1;

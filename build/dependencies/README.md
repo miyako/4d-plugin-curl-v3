@@ -150,6 +150,15 @@ only `none` for SSH compression; this informs the version-matched source
 recipe rather than enabling compression merely because zlib is selected.
 These lists describe supported API algorithms, not successful negotiation,
 authentication or interoperability with a live SSH server.
+The Windows raw observation from
+[run 43258085914](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43258085914)
+reports 18 features and the same 21 protocols, with
+`OpenSSL/3.5.8 (Schannel)`, MultiSSL, Kerberos, SPNEGO, SSPI and Unicode.
+Its old single-backend validation assumption rejected that legitimate banner;
+the target-specific check now preserves the dual-backend requirement and the
+probe enumerates available TLS backends before initialization without selecting
+one. This measurement is not a successful TLS handshake or original configure
+argument recovery. A corrected persisted Windows record is still required.
 
 `build_http.py` adds version-matched nghttp2 1.70.0
 (`85e300c79fb6dbcfa9c1013215c8710c1c2cd3d2`) and macOS nghttp3 1.15.0
@@ -189,7 +198,7 @@ complete plugin materials and host validation are still open gates.
 `a312b43325e3383c865a87bb1d26cb52e3292641`, against the verified matching-source
 OpenSSL provider. The tag itself reports `1.11.1_DEV`; this matches the
 observed banner but does not identify the historical archive's source commit.
-The isolated arm64 build passes upstream `test_simple` and exactly preserves
+Both isolated local macOS builds pass upstream `test_simple` and exactly preserve
 all eight ordered supported-algorithm lists, including disabled SSH compression.
 Native CI runs the same gate on each target, reusing its fresh baseline/provider
 job rather than choosing an unobserved Windows configuration.

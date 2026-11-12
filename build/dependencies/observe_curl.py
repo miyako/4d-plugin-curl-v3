@@ -5,7 +5,6 @@ import argparse
 import json
 from pathlib import Path
 import platform
-import re
 import shutil
 import subprocess
 import sys
@@ -27,13 +26,16 @@ def baseline(target):
     return next(t for t in frozen["targets"] if t["id"] == target)["selectedArchives"]
 
 
-def validate_observations(info, selected):
+def validate_observations(info, selected, target):
     versions = {a["name"]: a["version"] for a in selected if "version" in a}
+    ssl_version = "OpenSSL/" + versions["OpenSSL"]
+    if target == "windows-x86_64":
+        ssl_version += " (Schannel)"
     if (info["version"] != versions["curl"] or info["libzVersion"] != versions["zlib"]
             or info["brotliVersion"] not in (versions["Brotli"], "brotli/" + versions["Brotli"])
             or info["libsshVersion"] != "libssh2/" + versions["libssh2"]
             or info["nghttp2Version"] != versions["nghttp2"]
-            or not re.fullmatch(r"OpenSSL/" + re.escape(versions["OpenSSL"]), info["sslVersion"])
+            or info["sslVersion"] != ssl_version
             or not isinstance(info["featuresMask"], int)
             or not info["features"] or not info["protocols"]
             or len(set(info["features"])) != len(info["features"])
@@ -47,6 +49,10 @@ def validate_observations(info, selected):
                 or any(not isinstance(value, str) or not value for value in values)
                 or len(set(values)) != len(values) for values in algorithms.values())):
             raise ValueError("SSH algorithm observations are incomplete or duplicated")
+    if "tlsBackends" in info:
+        expected = ["openssl", "schannel"] if target.startswith("windows") else ["openssl"]
+        if info["tlsBackends"] != expected:
+            raise ValueError("Curl TLS backend availability/order differs from the measured baseline")
 
 
 def baseline_inputs(selected, target):
@@ -71,7 +77,7 @@ def inspect(output):
     if not required.issubset(paths) or record["buildFiles"] != archive_hashes(output, paths):
         raise ValueError("Curl observation outputs/original logs changed")
     info = json.loads((output / "runtime.json").read_text())
-    validate_observations(info, selected)
+    validate_observations(info, selected, record["target"])
     if info != record["observations"]:
         raise ValueError("Stored curl observations differ from the original output")
     if (set(a["path"] for a in record["recipeFiles"]) != set(RECIPES)
@@ -184,9 +190,9 @@ def observe(target, output, openssl_install, brotli_vendor):
     with (output / "runtime.json").open("w") as stdout, (output / "runtime.stderr").open("w") as stderr:
         subprocess.run([str(executable)], stdout=stdout, stderr=stderr, check=True)
     info = json.loads((output / "runtime.json").read_text())
-    if "sshAlgorithms" not in info:
-        raise ValueError("The current probe must recover the SSH algorithm baseline")
-    validate_observations(info, selected)
+    if "sshAlgorithms" not in info or "tlsBackends" not in info:
+        raise ValueError("The current probe must recover SSH algorithms and available TLS backends")
+    validate_observations(info, selected, target)
     if (source_before != digest(source) or interface != archive_hashes(
             ROOT, [a["path"] for a in interface])
             or any(digest(ROOT / a["path"]) != a["sha256"] for a in inputs)
