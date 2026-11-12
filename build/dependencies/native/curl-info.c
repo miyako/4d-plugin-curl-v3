@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "curl/curl.h"
+#include "libssh2.h"
 
 static void string(const char *text) {
     const unsigned char *p;
@@ -37,6 +38,57 @@ static void field(const char *name, const char *value) {
     string(value);
 }
 
+static int ssh_algorithms(void) {
+    static const int methods[] = {
+        LIBSSH2_METHOD_KEX, LIBSSH2_METHOD_HOSTKEY,
+        LIBSSH2_METHOD_CRYPT_CS, LIBSSH2_METHOD_CRYPT_SC,
+        LIBSSH2_METHOD_MAC_CS, LIBSSH2_METHOD_MAC_SC,
+        LIBSSH2_METHOD_COMP_CS, LIBSSH2_METHOD_COMP_SC
+    };
+    static const char *names[] = {
+        "kex", "hostkey", "cipherClientToServer", "cipherServerToClient",
+        "macClientToServer", "macServerToClient",
+        "compressionClientToServer", "compressionServerToClient"
+    };
+    LIBSSH2_SESSION *session;
+    unsigned int i;
+    int status = libssh2_init(0);
+    if (status) {
+        fprintf(stderr, "libssh2_init failed: %d\n", status);
+        return 1;
+    }
+    session = libssh2_session_init();
+    if (!session) {
+        fputs("libssh2_session_init failed\n", stderr);
+        libssh2_exit();
+        return 1;
+    }
+    fputs(",\"sshAlgorithms\":{", stdout);
+    for (i = 0; i < sizeof(methods) / sizeof(methods[0]); ++i) {
+        const char **algorithms = NULL;
+        int j, count = libssh2_session_supported_algs(session, methods[i], &algorithms);
+        if (count <= 0) {
+            fprintf(stderr, "libssh2_session_supported_algs(%s) failed: %d\n", names[i], count);
+            libssh2_session_free(session);
+            libssh2_exit();
+            return 1;
+        }
+        if (i) putchar(',');
+        string(names[i]);
+        fputs(":[", stdout);
+        for (j = 0; j < count; ++j) {
+            if (j) putchar(',');
+            string(algorithms[j]);
+        }
+        putchar(']');
+        libssh2_free(session, algorithms);
+    }
+    putchar('}');
+    libssh2_session_free(session);
+    libssh2_exit();
+    return 0;
+}
+
 int main(void) {
     curl_version_info_data *info;
     CURLcode status = curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -67,9 +119,13 @@ int main(void) {
     field("zstdVersion", info->zstd_version);
     field("aresVersion", info->ares);
     field("idnVersion", info->libidn);
-    field("rtmpVersion", info->librtmp_version);
+    field("rtmpVersion", info->rtmp_version);
     field("cainfo", info->cainfo);
     field("capath", info->capath);
+    if (ssh_algorithms()) {
+        curl_global_cleanup();
+        return 1;
+    }
     fputs("}\n", stdout);
     curl_global_cleanup();
     return 0;

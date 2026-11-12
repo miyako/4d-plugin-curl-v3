@@ -107,7 +107,10 @@ Missing selection diagnostics remain a rejection, not a basename fallback.
 Five tests exchange raw-deflate, zlib and gzip streams in both directions
 between the candidate and the exact selected old archive, reject truncated
 streams and require full numeric equality of `zlibCompileFlags()` and version.
-Both local macOS targets pass. This does not recover every old compiler option
+All three native targets pass in
+[run 43255384031](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43255384031)
+at `d85d6ba`; their downloaded original records were independently inspected.
+This does not recover every old compiler option
 or prove older operating-system compatibility. In particular, the linker
 reports old macOS zlib objects built for macOS 26.0 despite the product's
 recorded 10.13 compiler request; that warning is preserved, not reinterpreted
@@ -129,16 +132,24 @@ python3 build/dependencies/observe_curl.py observe \
 python3 build/dependencies/observe_curl.py inspect /downloaded/curl-observation
 ```
 
-The standalone public-API probe initializes libcurl only, never the plugin or
-4D, and makes no transfers. It binds exact frozen curl/non-provider archives,
+The standalone public-API probe initializes libcurl and a standalone libssh2
+session, never the plugin or 4D, and makes no transfers. It binds exact frozen curl/non-provider archives,
 original provider records and delivered provider archives, actual interface
 headers, probe/recipe bytes, commands, executable, map and runtime JSON.
-The local arm64 observation reports curl 8.21.0, 14 feature names and 21
+Both independently inspected macOS observations from
+[run 43251815097](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43251815097)
+report curl 8.21.0, identical 14 feature names and 21
 protocols: HTTP2, AppleSecTrust, OpenSSL, Brotli, zlib, threaded asynchronous DNS,
 TLS-SRP and Unix sockets are among the enabled features. HTTP3, QUIC and zstd
 are not advertised; selecting an nghttp3 archive is not proof of enabled HTTP3.
 The original configure command is still unknown. Other targets require their
 own persisted observations, not extrapolation from arm64.
+The extended probe also records the exact ordered libssh2 algorithm lists in
+both directions, including compression. The local arm64 baseline advertises
+only `none` for SSH compression; this informs the version-matched source
+recipe rather than enabling compression merely because zlib is selected.
+These lists describe supported API algorithms, not successful negotiation,
+authentication or interoperability with a live SSH server.
 
 `build_http.py` adds version-matched nghttp2 1.70.0
 (`85e300c79fb6dbcfa9c1013215c8710c1c2cd3d2`) and macOS nghttp3 1.15.0
@@ -150,8 +161,11 @@ commit `ff7f230e7df2844afef7dc49631cda03a30455f3` is separately captured as
 compiled parser source. Its nested, unused munit pointer and nghttp2's unused
 application submodules do not become incorporated library dependencies.
 
-Both macOS architectures pass all 194 nghttp2 and all 56 nghttp3 upstream main
-cases without skips. These are **source self-tests**, not old/new
+All three nghttp2 targets pass 194 upstream main cases; both macOS nghttp3
+targets pass 56 cases without skips in
+[run 43255384031](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43255384031).
+All five downloaded source/object/archive records were independently inspected.
+These are **source self-tests**, not old/new
 interoperability or full-plugin compatibility proof. Allocator fault-injection
 tests are not enabled. The native matrix also builds nghttp2 on Windows;
 nghttp3 is deliberately absent from Windows because it is not selected there.
@@ -166,7 +180,7 @@ Initialize only the parent-pinned `tests/munit` submodule for nghttp2;
 nghttp3 additionally requires `lib/sfparse`. Do not use floating submodule
 branches. Original acquisition tars, actual checkout bytes, canonical staged
 compile inputs and unused gitlink pointers remain distinct evidence.
-Windows nghttp2, old/new HTTP interoperability, libiconv, libssh2, curl rebuild,
+Old/new HTTP interoperability, libiconv, libssh2, curl rebuild,
 complete plugin materials and host validation are still open gates.
 
 ## Host-verification prerequisites

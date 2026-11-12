@@ -52,6 +52,16 @@ class CurlObservationTests(unittest.TestCase):
         self.assertTrue(any("version" not in a for a in selected))
         observe_curl.validate_observations(self.info, selected)
 
+    def test_ssh_algorithm_baseline_requires_every_method_without_duplicates(self):
+        info = dict(self.info, sshAlgorithms={name: ["test-algorithm"]
+                                             for name in observe_curl.SSH_METHODS})
+        observe_curl.validate_observations(info, self.selected)
+        for algorithms in (None, {},
+                           dict(info["sshAlgorithms"], kex=[]),
+                           dict(info["sshAlgorithms"], kex=["duplicate", "duplicate"])):
+            with self.subTest(algorithms=algorithms), self.assertRaisesRegex(ValueError, "SSH algorithm"):
+                observe_curl.validate_observations(dict(info, sshAlgorithms=algorithms), self.selected)
+
 
 if __name__ == "__main__":
     unittest.main()

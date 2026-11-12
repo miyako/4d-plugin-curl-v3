@@ -17,6 +17,9 @@ from provenance import archive_hashes, digest, read_record, write_json
 
 RECIPES = ["build/dependencies/observe_curl.py", "build/dependencies/native/curl-info.c",
            "build/dependencies/baseline-v4.9.10.json", "build/sbom/provenance.py"]
+SSH_METHODS = {"kex", "hostkey", "cipherClientToServer", "cipherServerToClient",
+               "macClientToServer", "macServerToClient",
+               "compressionClientToServer", "compressionServerToClient"}
 
 
 def baseline(target):
@@ -37,6 +40,13 @@ def validate_observations(info, selected):
             or len(set(info["protocols"])) != len(info["protocols"])):
         raise ValueError("Curl runtime observations do not match the frozen versions/interface: "
                          + json.dumps(info, sort_keys=True))
+    if "sshAlgorithms" in info:
+        algorithms = info["sshAlgorithms"]
+        if (not isinstance(algorithms, dict) or set(algorithms) != SSH_METHODS or any(
+                not isinstance(values, list) or not values
+                or any(not isinstance(value, str) or not value for value in values)
+                or len(set(values)) != len(values) for values in algorithms.values())):
+            raise ValueError("SSH algorithm observations are incomplete or duplicated")
 
 
 def baseline_inputs(selected, target):
@@ -129,7 +139,7 @@ def observe(target, output, openssl_install, brotli_vendor):
             shutil.copyfile(root / item["path"], path)
     executable = output / ("curl-probe.exe" if windows else "curl-probe")
     source = HERE / "native/curl-info.c"
-    headers = sorted((ROOT / "include/curl").glob("*.h"))
+    headers = sorted((ROOT / "include/curl").glob("*.h")) + [ROOT / "include/libssh2.h"]
     interface = archive_hashes(ROOT, [p.relative_to(ROOT).as_posix() for p in headers])
     for item in interface:
         path = output / "interface" / item["path"]
@@ -147,7 +157,7 @@ def observe(target, output, openssl_install, brotli_vendor):
         compiler = shutil.which("cl")
         if not compiler:
             raise ValueError("Run curl probing in the native MSVC developer environment")
-        arguments = [compiler, "/nologo", "/O2", "/MT", "/DCURL_STATICLIB",
+        arguments = [compiler, "/nologo", "/O2", "/MT", "/DCURL_STATICLIB", "/DLIBSSH2_STATIC",
                      "/I" + str(ROOT / "include"), str(source),
                      "/Fo" + str(output / "curl-info.obj"), "/Fe" + str(executable)]
         arguments += [str(p) for p in paths]
@@ -159,7 +169,7 @@ def observe(target, output, openssl_install, brotli_vendor):
         sdk = subprocess.check_output(["xcrun", "--sdk", "macosx", "--show-sdk-path"], text=True).strip()
         arguments = [compiler, "-arch", target.removeprefix("macos-"),
                      "-isysroot", sdk,
-                     "-mmacosx-version-min=10.13", "-DCURL_STATICLIB",
+                     "-mmacosx-version-min=10.13", "-DCURL_STATICLIB", "-DLIBSSH2_STATIC",
                      "-I" + str(ROOT / "include"), str(source)]
         arguments += [str(p) for p in paths]
         arguments += ["-framework", "Security", "-framework", "CoreFoundation",
@@ -174,6 +184,8 @@ def observe(target, output, openssl_install, brotli_vendor):
     with (output / "runtime.json").open("w") as stdout, (output / "runtime.stderr").open("w") as stderr:
         subprocess.run([str(executable)], stdout=stdout, stderr=stderr, check=True)
     info = json.loads((output / "runtime.json").read_text())
+    if "sshAlgorithms" not in info:
+        raise ValueError("The current probe must recover the SSH algorithm baseline")
     validate_observations(info, selected)
     if (source_before != digest(source) or interface != archive_hashes(
             ROOT, [a["path"] for a in interface])
@@ -196,7 +208,7 @@ def observe(target, output, openssl_install, brotli_vendor):
             "Exact historical curl and selected non-provider archive hashes, not execution of the old plugin.",
             "OpenSSL/Brotli use matching pinned source versions rebuilt now, not original release archive bytes.",
             "This recovers enabled runtime features/protocols, not the historical configure command or every compiler option.",
-            "The 4D application is never loaded or initialized by this probe; no network transfers are performed.",
+            "The 4D application is never loaded or initialized; only library APIs are initialized, with no network transfers.",
         ],
     }
     write_json(output / "curl-baseline-observation.json", record)
