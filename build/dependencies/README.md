@@ -204,6 +204,8 @@ the normal candidate URL/proxy/PAC tests must still pass. The modified archive,
 resulting test executable, source delta and original logs are hash-bound.
 The second command independently inspects persisted bytes without running them.
 CI uploads separate source-candidate and user-relink proof artifacts.
+Uploads preserve hidden source/recipe files from the isolated output directories;
+checkout `.git` metadata is not included.
 
 This verifies **library-source** rebuild/relink usability only. It does not
 supply or verify a complete 4D plugin relink kit. That kit still needs every

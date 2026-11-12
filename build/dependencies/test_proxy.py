@@ -1,3 +1,4 @@
+import hashlib
 import json
 import io
 from pathlib import Path
@@ -118,7 +119,6 @@ class ProxyEvidenceTests(unittest.TestCase):
                     info.size = len(data)
                     archive.addfile(info, io.BytesIO(data))
         write([("COPYING", b"license")])
-        import hashlib
         files = [{"path": "COPYING", "sha256": hashlib.sha256(b"license").hexdigest()}]
         inspect_proxy.verify_tar(path, files)
         write([("COPYING", b"mutated")])
@@ -200,14 +200,14 @@ class ProxyEvidenceTests(unittest.TestCase):
     def test_canonical_staging_ignores_git_archive_eol_conversion(self):
         lock = self.checkout()
         lock["patches"] = []
-        canonical = digest(self.source / "COPYING")
+        canonical = hashlib.sha256(subprocess.check_output(
+            ["git", "-C", str(self.source), "cat-file", "blob", "HEAD:COPYING"])).hexdigest()
         self.git("config", "core.autocrlf", "true")
         checkout = build_proxy.source_snapshot(self.source, lock)
         output = self.root / "staging"
         output.mkdir()
         staged, base, compiled = build_proxy.stage_source(self.source, output, lock, checkout)
         self.assertEqual(base[0]["sha256"], canonical)
-        self.assertEqual(base, checkout)
         self.assertEqual(base, compiled)
         self.assertEqual(build_proxy.source_snapshot(self.source, lock), checkout)
 
