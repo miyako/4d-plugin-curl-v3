@@ -74,7 +74,9 @@
             "shared_dictionary.c.o",
             "transform.c.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "db24a98aed38a16de78cc05ca15cdd8dc2a0d92d",
+          "sourceRepository": "https://github.com/google/brotli"
         },
         {
           "path": "a/libbrotlidec.a",
@@ -89,7 +91,9 @@
             "state.c.o",
             "static_init.c.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "db24a98aed38a16de78cc05ca15cdd8dc2a0d92d",
+          "sourceRepository": "https://github.com/google/brotli"
         },
         {
           "path": "a/libcrypto.a",
@@ -947,7 +951,9 @@
             "libdefault-lib-tls1_prf.o",
             "libdefault-lib-x942kdf.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+          "sourceRepository": "https://github.com/openssl/openssl"
         },
         {
           "path": "a/libcurl.a",
@@ -1293,7 +1299,9 @@
             "libssl-lib-tlsany_meth.o",
             "libssl-lib-uint_set.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+          "sourceRepository": "https://github.com/openssl/openssl"
         },
         {
           "path": "a/libz.a",
@@ -1403,7 +1411,9 @@
             "shared_dictionary.c.o",
             "transform.c.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "db24a98aed38a16de78cc05ca15cdd8dc2a0d92d",
+          "sourceRepository": "https://github.com/google/brotli"
         },
         {
           "path": "a/libbrotlidec.a",
@@ -1418,7 +1428,9 @@
             "state.c.o",
             "static_init.c.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "db24a98aed38a16de78cc05ca15cdd8dc2a0d92d",
+          "sourceRepository": "https://github.com/google/brotli"
         },
         {
           "path": "a/libcrypto.a",
@@ -2286,7 +2298,9 @@
             "libdefault-lib-tls1_prf.o",
             "libdefault-lib-x942kdf.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+          "sourceRepository": "https://github.com/openssl/openssl"
         },
         {
           "path": "a/libcurl.a",
@@ -2632,7 +2646,9 @@
             "libssl-lib-tlsany_meth.o",
             "libssl-lib-uint_set.o"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+          "sourceRepository": "https://github.com/openssl/openssl"
         },
         {
           "path": "a/libz.a",
@@ -2742,7 +2758,9 @@
             "shared_dictionary.obj",
             "transform.obj"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "db24a98aed38a16de78cc05ca15cdd8dc2a0d92d",
+          "sourceRepository": "https://github.com/google/brotli"
         },
         {
           "path": "lib/64/brotlidec.lib",
@@ -2757,7 +2775,9 @@
             "state.obj",
             "static_init.obj"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "db24a98aed38a16de78cc05ca15cdd8dc2a0d92d",
+          "sourceRepository": "https://github.com/google/brotli"
         },
         {
           "path": "lib/64/iconv.lib",
@@ -3631,7 +3651,9 @@
             "libdefault-lib-winstore_store.obj",
             "libdefault-lib-x942kdf.obj"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+          "sourceRepository": "https://github.com/openssl/openssl"
         },
         {
           "path": "lib/64/libcurl.lib",
@@ -3927,7 +3949,9 @@
             "libssl-lib-tlsany_meth.obj",
             "libssl-lib-uint_set.obj"
           ],
-          "sourceBuilt": true
+          "sourceBuilt": true,
+          "sourceCommit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+          "sourceRepository": "https://github.com/openssl/openssl"
         },
         {
           "path": "lib/64/modman.lib",

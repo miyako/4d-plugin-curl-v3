@@ -48,12 +48,13 @@ def baseline_inputs(root, target):
     return inputs
 
 
-def run(command, log):
+def run(command, log, check=True):
     with log.open("w", encoding="utf-8") as stream:
         result = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT)
-    if result.returncode:
+    if result.returncode and check:
         sys.stderr.write(log.read_text(encoding="utf-8"))
         raise subprocess.CalledProcessError(result.returncode, command)
+    return result.returncode
 
 
 def expected_archives(target):
@@ -115,9 +116,9 @@ def build(source, output, target, baseline):
                       "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13"]
     run(arguments, output / "configure.log")
     run(["cmake", "--build", str(output / "build"), "--verbose"], output / "build.log")
-    run(["ctest", "--test-dir", str(output / "build"), "--verbose",
+    test_exit_code = run(["ctest", "--test-dir", str(output / "build"), "--verbose",
          "--output-on-failure", "--output-junit", str(output / "test-results.xml")],
-        output / "tests.log")
+        output / "tests.log", check=False)
     run(["cmake", "--install", str(output / "build")], output / "install.log")
     check_commands(output, target, lock["modules"][platform_key], source)
     if before != source_snapshot(source, lock) or recipe != recipe_snapshot():
@@ -154,6 +155,8 @@ def build(source, output, target, baseline):
         "status": lock["status"], "source_repository": lock["repository"],
         "source_commit": lock["commit"], "components": lock["components"],
         "target": target, "configure_arguments": arguments,
+        "testExitCode": test_exit_code,
+        "validationStatus": "passed" if test_exit_code == 0 else "failed",
         "sourceFiles": before, "recipeFiles": recipe, "patches": lock["patches"],
         "recipeLicenseSha256": digest(HERE.parents[1] / "LICENSE"),
         "licenseFile": lock["licenseFile"], "licenseFileSha256": digest(source / lock["licenseFile"]),
@@ -170,6 +173,8 @@ def build(source, output, target, baseline):
     }
     write_json(output / "proxy-build-provenance.json", record)
     verify(source, output, target)
+    if test_exit_code:
+        sys.stderr.write((output / "tests.log").read_text())
     inspect(output)
     return record
 
@@ -219,3 +224,4 @@ if __name__ == "__main__":
         build(args.source, args.output, args.target, args.baseline_root)
     else:
         verify(args.source, args.output, args.target)
+        inspect(args.output)

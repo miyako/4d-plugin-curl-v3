@@ -50,19 +50,22 @@ def verify_architecture(path, target):
     return count
 
 
-def verify_tests(path):
+def verify_tests(path, allow_failed=False):
     suite = ET.parse(path).getroot()
     tests = suite.findall("testcase")
     expected = {"proxy_behavior", "proxy_url_test", "proxy_url_encode", "proxy_baseline_behavior"}
     if (suite.tag != "testsuite" or suite.get("tests") != "4"
-            or suite.get("failures") != "0"
             or len(tests) != 4 or {t.get("name") for t in tests} != expected
             or any(t.get("status") != "run" or any(
-                t.find(tag) is not None for tag in ("failure", "error", "skipped")) for t in tests)):
+                t.find(tag) is not None for tag in ("error", "skipped")) for t in tests)):
         raise ValueError("Missing successful native candidate/baseline comparisons")
+    failed = sorted(t.get("name") for t in tests if t.find("failure") is not None)
+    if suite.get("failures") != str(len(failed)) or (failed and not allow_failed):
+        raise ValueError("Native candidate/baseline compatibility tests failed: " + ", ".join(failed))
+    return failed
 
 
-def inspect(output):
+def inspect(output, allow_failed_tests=False):
     record = json.loads((output / "proxy-build-provenance.json").read_text())
     lock = json.loads((HERE / "proxy-source.json").read_text())
     target = record["target"]
@@ -105,8 +108,12 @@ def inspect(output):
     if (len(record["baselineArchives"]) != 2 or
             {a["name"]: a["sha256"] for a in record["baselineArchives"]} != expected_old):
         raise ValueError("Historical comparison archive mismatch")
-    verify_tests(output / "test-results.xml")
+    failed = verify_tests(output / "test-results.xml", allow_failed_tests)
+    if ((record["testExitCode"] == 0) != (not failed)
+            or record["validationStatus"] != ("failed" if failed else "passed")):
+        raise ValueError("Native test status disagrees with original build record")
     return {"target": target, "sourceCommit": record["source_commit"],
+            "validationStatus": record["validationStatus"], "failedTests": failed,
             "archives": [
                 {**a, "objectMembers": verify_architecture(output / "install" / a["path"], target)}
                 for a in record["archives"]],
@@ -116,5 +123,7 @@ def inspect(output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--allow-failed-tests", action="store_true",
+                        help="Read rejected candidate evidence; never waive adoption gates")
     args = parser.parse_args()
-    print(json.dumps(inspect(args.output), indent=2))
+    print(json.dumps(inspect(args.output, args.allow_failed_tests), indent=2))

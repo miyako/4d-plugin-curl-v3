@@ -71,6 +71,43 @@ Never delete old archives/evidence before verified replacement. Historical
 read-only analysis must remain supported. A release/sign/tag/merge requires
 separate authorization; candidate CI has read-only repository permissions.
 
+## Measured candidate results and unresolved decision
+
+[First isolated run 43235756612](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43235756612)
+built all three native targets. Both macOS jobs passed all four test executables;
+their downloaded source/recipe/archive records were independently inspected.
+Windows compilation succeeded, but two tests failed. These are retained
+**rejections**, not evidence of full compatibility:
+
+- The old Windows archive ignores a multi-entry `ProxyOverride` list, while the
+  candidate applies it. Upstream change
+  [`75e349c6734573fb60f1e0a3c4af3e6e43a289cf`](https://github.com/libproxy/libproxy/commit/75e349c6734573fb60f1e0a3c4af3e6e43a289cf)
+  explains the candidate's behavior: split semicolons and return the full list,
+  rather than accepting only the exact string `<local>`. This supports an
+  intentional bug-fix decision, **not** assigning the old archive a revision.
+- The pinned upstream Windows URL tests expect conversion of drive-letter and
+  UNC `file:` URLs, but this revision's `url::get_path()` returns the unchanged
+  parsed path. This is a source/test mismatch, not a compiler failure.
+  Libproxy's file-path handling is used for fetching local PAC files, not the
+  plugin's normal libcurl transfer/file-path options. With no built-in Windows
+  PAC runner and external modules isolated, the tested PAC lookup falls back
+  to direct. This does not establish safety with external PAC modules or
+  eliminate the upstream defect.
+
+The product reaches libproxy through `AUTOPROXY` in
+`4DPlugin-cURL.cpp:1154-1184`; ordinary transfer paths/options go to libcurl.
+The wrapper skips `direct://` entries and an explicit `PROXY` option is applied
+after automatic settings. Thus library comparisons are not a claim that the
+4D wrapper retries ordered PAC entries or forcibly disables environment proxy
+settings. Those product behaviors are not changed by this migration.
+
+Do not patch the candidate to reproduce the old bypass failure or turn the
+failing tests into expected passes. Approval choices remain: authorize the
+intentional bypass fix plus a narrowly scoped, reviewed Windows file-URL
+correction and a complete LGPL relink-delivery plan before adoption; or retain
+the current archives while evaluating a different proxy implementation and
+its compatibility/licensing tradeoffs. Neither choice authorizes a release.
+
 ## Isolated proxy candidate
 
 `proxy-source.json` pins upstream tag 0.4.17 to commit
@@ -121,12 +158,22 @@ records are not release SBOM identities or plugin selection evidence.
 archive-member CPUs, source/recipe tar contents, installed license/header
 bindings and original build logs without relying on the original runner paths
 or executing any downloaded binary.
+Failed native tests retain a source/archive build record with
+`validationStatus: failed`; the build and default verifier still fail.
+`inspect_proxy.py --allow-failed-tests OUTPUT` supports explicit read-only
+inspection of rejected candidates and reports failed tests, without waiving
+the compatibility/adoption gate.
 
 ## Static-distribution decision (not a legal-compliance claim)
 
 Both libraries' compiled source notices say LGPL 2.1 or later; the pinned
 `COPYING` contains LGPL 2.1. Keep that actual text and all applicable notices,
 including the Red Hat attribution in `url.cpp`, with corresponding source.
+The macOS-compiled `modules/pacutils.h` embeds Mozilla/Netscape PAC JavaScript
+under its original NPL/GPL/LGPL alternative notice; its stated LGPL 2.1-or-later
+option is explicitly offered by the original notice and is recorded for the
+candidate. Preserve
+that complete original notice rather than erasing the alternative grants.
 Identifying these notices alone does not establish compliance for a distributed
 static plugin. The plugin's own MIT license does not relicense these libraries.
 

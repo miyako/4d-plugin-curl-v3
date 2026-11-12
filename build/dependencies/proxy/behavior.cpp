@@ -104,6 +104,8 @@ public:
 #endif
 };
 
+static unsigned mismatches = 0;
+
 static void expect(const char* name, const char* url, std::vector<std::string> expected) {
     pxProxyFactory* factory = px_proxy_factory_new();
     require(factory != NULL, "factory allocation");
@@ -117,7 +119,10 @@ static void expect(const char* name, const char* url, std::vector<std::string> e
     std::cout << name << ":";
     for (const auto& proxy : actual) std::cout << " " << proxy;
     std::cout << std::endl;
-    require(actual == expected, name);
+    if (actual != expected) {
+        std::cerr << "Compatibility mismatch: " << name << std::endl;
+        ++mismatches;
+    }
 }
 
 int main(int argc, char** argv) {
@@ -134,6 +139,8 @@ int main(int argc, char** argv) {
         config.text("ProxyOverride", "bypass.invalid;<local>");
         expect("bypass-host", "http://bypass.invalid/", {"direct://"});
         expect("bypass-local", "http://intranet/", {"direct://"});
+        config.text("ProxyOverride", "<local>");
+        expect("bypass-local-only", "http://intranet/", {"direct://"});
         config.clear();
         config.number("ProxyEnable", 1);
         config.text("ProxyServer", "socks=socks.invalid:1080");
@@ -172,7 +179,7 @@ int main(int argc, char** argv) {
         expect("pac-direct", "http://bypass.invalid/", {"direct://"});
 #endif
         expect("invalid-url", "not a URL", {"direct://"});
-        return 0;
+        return mismatches ? 1 : 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << std::endl;
         return 1;

@@ -65,6 +65,9 @@ release without republishing it. See [usage, evidence and coverage limits](build
 Future releases include GitHub build provenance and separate ZIP/DMG SBOM
 attestations, with per-platform dependency versions in the release notes.
 Existing releases do not gain retroactive build provenance.
+The [staged native source-provenance migration](build/dependencies/README.md)
+records the frozen release baseline and isolated proxy candidate; it does not
+replace production libraries until compatibility and redistribution gates pass.
 See [security policy](SECURITY.md) and
 [dependency/security follow-up](build/sbom/SECURITY-REVIEW.md) for remaining
 metadata, version-review and repository-control decisions.

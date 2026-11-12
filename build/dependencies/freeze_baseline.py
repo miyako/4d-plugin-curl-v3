@@ -56,14 +56,25 @@ def freeze(root):
         if build["sourceCommit"] != COMMIT:
             raise ValueError("Unexpected baseline source commit")
         selected = []
+        rebuilt = {}
+        for source in build["rebuiltArchiveEvidence"]:
+            if not source.get("sourceCommit") or not source.get("sourceRepository"):
+                raise ValueError("Incomplete contemporaneous source-build identity")
+            for archive in source["archives"]:
+                rebuilt[(archive["path"], archive["sha256"])] = source
         for dependency in target["dependencies"]:
             for archive in dependency.get("selectedArchives", []):
+                source = rebuilt.get((archive["candidatePath"], archive["sha256"]))
+                if source and source["name"] != dependency["name"]:
+                    raise ValueError("Source-build/package identity mismatch")
                 selected.append({
                     "path": archive["candidatePath"], "sha256": archive["sha256"],
                     "name": dependency["name"],
                     **({"version": dependency["version"]} if dependency.get("version") else {}),
                     "members": archive["selectedMembers"],
-                    "sourceBuilt": dependency["name"] in ("OpenSSL", "Brotli"),
+                    "sourceBuilt": source is not None,
+                    **({"sourceCommit": source["sourceCommit"],
+                        "sourceRepository": source["sourceRepository"]} if source else {}),
                 })
         if len({a["path"] for a in selected}) != len(selected):
             raise ValueError("Duplicate baseline selected archive")

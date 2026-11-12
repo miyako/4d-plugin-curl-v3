@@ -151,6 +151,14 @@ class ProxyEvidenceTests(unittest.TestCase):
         ET.ElementTree(suite).write(path)
         with self.assertRaisesRegex(ValueError, "successful native"):
             inspect_proxy.verify_tests(path)
+        suite[-1].remove(suite[-1].find("skipped"))
+        ET.SubElement(suite[-1], "failure")
+        suite.set("failures", "1")
+        ET.ElementTree(suite).write(path)
+        with self.assertRaisesRegex(ValueError, "compatibility tests failed"):
+            inspect_proxy.verify_tests(path)
+        self.assertEqual(inspect_proxy.verify_tests(path, allow_failed=True),
+                         ["proxy_baseline_behavior"])
 
 
 if __name__ == "__main__":
