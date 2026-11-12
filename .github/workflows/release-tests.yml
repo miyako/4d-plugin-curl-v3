@@ -1,0 +1,32 @@
+name: Release workflow regression tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/bump-version.yml'
+      - '.github/workflows/release-tests.yml'
+      - 'Info.plist'
+      - 'cURL.xcodeproj/project.pbxproj'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test source-only bumps and publication guards without building or releasing
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python -m unittest discover -s .github/scripts -p 'test_*.py'
+          python .github/scripts/release_version.py read

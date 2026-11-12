@@ -10,20 +10,12 @@
 # project.pbxproj need no changes. Brotli is also rebuilt from pinned
 # patched source; other dependencies remain vendored.
 #
-# Trigger: push a tag matching v*.*.* (either by hand, or via bump-version.yml).
-# You can also run it manually against an existing tag with workflow_dispatch.
+# Run Build manually on the selected branch. Version comes from source, not a tag input.
 
-name: Build & Release
+name: Build
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing tag to build (e.g. v2.3.0)
-        required: true
 
 permissions:
   contents: write
@@ -50,12 +42,13 @@ env:
   # --------------------------------------------------------------
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-publication
   cancel-in-progress: false
 
 jobs:
 
   brotli:
+    needs: version
     uses: ./.github/workflows/build-brotli.yml
 
   version:
@@ -64,11 +57,15 @@ jobs:
       tag: ${{ steps.set.outputs.tag }}
       version: ${{ steps.set.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - id: set
-        run: |
-          TAG="${{ inputs.tag || github.ref_name }}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+        name: Validate source version and publication before native work
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 .github/scripts/release_version.py preflight --sha "$GITHUB_SHA" --ref "$GITHUB_REF"
 
   build-windows:
     name: Build Windows (x64)
@@ -77,9 +74,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ github.sha }}
 
-      # Manual builds may check out an older tag without SBOM scripts.
+      # Use the same immutable workflow revision for SBOM tooling.
       - name: checkout SBOM tooling from the workflow revision
         uses: actions/checkout@v4
         with:
@@ -239,7 +236,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ github.sha }}
 
       - name: checkout SBOM tooling from the workflow revision
         uses: actions/checkout@v4
@@ -486,11 +483,9 @@ jobs:
           if-no-files-found: warn
 
       - name: create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.version.outputs.tag }}
-          name: ${{ needs.version.outputs.tag }}
-          files: |
-            ${{ env.ZIP_PATH }}
-            ${{ env.DMG_PATH }}
-            sbom/*.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          python3 .github/scripts/release_version.py publish --sha "$GITHUB_SHA" \
+            --version "$RELEASE_VERSION" "$ZIP_PATH" "$DMG_PATH" sbom/*.json
