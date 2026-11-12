@@ -96,7 +96,7 @@ class ProxyEvidenceTests(unittest.TestCase):
         output, commands = self.commands()
         for index, command in enumerate(commands):
             target = ("modman" if "module_manager.cpp" in command["file"] else
-                      "tests" if "/test/" in command["file"] else "proxy")
+                      "tests" if "/test/" in command["file"].replace("\\", "/") else "proxy")
             command.update(directory="/original/build",
                            output="CMakeFiles/" + target + ".dir/" + str(index) + ".obj")
         self.save_commands(output, commands)
