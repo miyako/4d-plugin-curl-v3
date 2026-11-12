@@ -6,6 +6,15 @@ on:
       provider-run-id:
         type: string
         required: true
+      inventory-only:
+        type: boolean
+        default: false
+      source-run-id:
+        type: string
+        default: ''
+      iconv-provider-run-id:
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -13,6 +22,7 @@ permissions:
 
 jobs:
   curl-source:
+    if: ${{ !inputs.inventory-only }}
     strategy:
       fail-fast: false
       matrix:
@@ -144,7 +154,8 @@ jobs:
 
   inventory:
     needs: curl-source
-    runs-on: macos-latest
+    if: ${{ !cancelled() && (needs.curl-source.result == 'success' || inputs.inventory-only) }}
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -152,16 +163,77 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
+      - name: Verify the original source producer jobs before downloading cached evidence
+        shell: python
+        env:
+          SOURCE_RUN: ${{ inputs.source-run-id }}
+          PROVIDER_RUN: ${{ inputs.provider-run-id }}
+          ICONV_RUN: ${{ inputs.iconv-provider-run-id }}
+          INVENTORY_ONLY: ${{ inputs.inventory-only }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, os, sys, urllib.request
+          from pathlib import Path
+          sys.path.insert(0, "build/sbom")
+          from native_provenance import verify_producer_run
+          source = os.environ["SOURCE_RUN"]
+          if (os.environ["INVENTORY_ONLY"] == "true") != bool(source):
+              raise ValueError("Inventory-only requires an explicit original curl run; build mode must use its own outputs")
+          roles = [("curl", source or os.environ["GITHUB_RUN_ID"]),
+                   ("nghttp3", os.environ["PROVIDER_RUN"])]
+          if os.environ["ICONV_RUN"]:
+              roles.append(("libiconv", os.environ["ICONV_RUN"]))
+          base = os.environ["GITHUB_API_URL"] + "/repos/" + os.environ["GITHUB_REPOSITORY"]
+          def get(path):
+              request = urllib.request.Request(base + path, headers={
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                  "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+          records = {}
+          for role, identifier in roles:
+              if not identifier.isascii() or not identifier.isdigit():
+                  raise ValueError("Every reused source run ID must be an explicit ASCII integer")
+              records[role] = verify_producer_run(
+                  get("/actions/runs/" + identifier),
+                  get("/actions/runs/" + identifier + "/jobs?per_page=100&filter=all"),
+                  os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_REF_NAME"], role)
+          output = Path(os.environ["RUNNER_TEMP"]) / "native-source-inventory"
+          output.mkdir()
+          (output / "acquisition.json").write_text(json.dumps(records, indent=2))
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
+          run-id: ${{ inputs.source-run-id || github.run_id }}
+          github-token: ${{ github.token }}
           pattern: native-libcurl-*
+          path: ${{ runner.temp }}/native-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          run-id: ${{ inputs.provider-run-id }}
+          github-token: ${{ github.token }}
+          pattern: native-nghttp3-*
+          path: ${{ runner.temp }}/native-kits
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.iconv-provider-run-id != '' }}
+        with:
+          run-id: ${{ inputs.iconv-provider-run-id }}
+          github-token: ${{ github.token }}
+          pattern: native-libiconv-*
           path: ${{ runner.temp }}/native-kits
       - name: Inspect original kits and bind isolated vendor-layout copies to the shared inventory
         shell: bash
+        env:
+          ICONV_RUN: ${{ inputs.iconv-provider-run-id }}
         run: |
           set -euo pipefail
           python -m unittest discover -s build/sbom -p test_native_provenance.py
           KITS="$RUNNER_TEMP/native-kits"
+          MAC_ICONV=()
+          WIN_ICONV=()
+          if [ -n "$ICONV_RUN" ]; then
+            MAC_ICONV=(--kit "$KITS/native-libiconv-macos-arm64" --kit "$KITS/native-libiconv-macos-x86_64")
+            WIN_ICONV=(--kit "$KITS/native-libiconv-windows-x86_64")
+          fi
           python build/sbom/native_provenance.py --target macos-universal \
             --kit "$KITS/native-libcurl-macos-arm64" \
             --kit "$KITS/native-libcurl-macos-x86_64" \
@@ -169,11 +241,16 @@ jobs:
             --kit "$KITS/native-libcurl-macos-x86_64/providers/zlib" \
             --kit "$KITS/native-libcurl-macos-arm64/providers/http" \
             --kit "$KITS/native-libcurl-macos-x86_64/providers/http" \
+            --kit "$KITS/native-libcurl-macos-arm64/providers/ssh" \
+            --kit "$KITS/native-libcurl-macos-x86_64/providers/ssh" \
+            --kit "$KITS/native-nghttp3-macos-arm64" \
+            --kit "$KITS/native-nghttp3-macos-x86_64" "${MAC_ICONV[@]}" \
             --output "$RUNNER_TEMP/native-source-inventory/macos"
           python build/sbom/native_provenance.py --target windows-x86_64 \
             --kit "$KITS/native-libcurl-windows-x86_64" \
             --kit "$KITS/native-libcurl-windows-x86_64/providers/zlib" \
             --kit "$KITS/native-libcurl-windows-x86_64/providers/http" \
+            --kit "$KITS/native-libcurl-windows-x86_64/providers/ssh" "${WIN_ICONV[@]}" \
             --output "$RUNNER_TEMP/native-source-inventory/windows"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

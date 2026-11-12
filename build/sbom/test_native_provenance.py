@@ -126,3 +126,49 @@ class NativeProvenanceTests(unittest.TestCase):
             invalid["sourceArchive"].pop(field)
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "pinned sourceArchive"):
                 generate.normalized_provenance(invalid)
+
+    def test_mixed_ssh_notices_are_preserved_without_relicensing_public_domain(self):
+        kit = self.kit("windows-x86_64")
+        record_path = kit / "native-build-provenance.json"
+        record = json.loads(record_path.read_text())
+        record.pop("sourceArchive")
+        record.update(library="libssh2", version="1.11.1_DEV", source_commit="1" * 40,
+                      source_repository="https://github.com/libssh2/libssh2",
+                      licenseFileSha256="b" * 64, noticeFiles=[])
+        for name, text in (("COPYING", "BSD terms fixture"),
+                           ("src/chacha.c", "/* Public domain fixture */\nint not_license;"),
+                           ("src/bcrypt.c", "/* Permission to use: ISC-style fixture */")):
+            path = kit / "source" / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+            record["noticeFiles"].append({"path": name, "sha256": provenance.digest(path)})
+        record_path.write_text(json.dumps(record))
+        copied = self.vendor / "lib/64/libssh2.lib"
+        copied.parent.mkdir(parents=True)
+        copied.write_bytes((kit / "install/lib/libcurl.a").read_bytes())
+        row = native_provenance.collect(self.vendor, "windows-x86_64", [kit])[0]
+        self.assertNotIn("license", row)
+        self.assertIn("Public domain fixture", row["licenseEvidence"]["text"])
+        self.assertIn("ISC-style fixture", row["licenseEvidence"]["text"])
+        self.assertNotIn("int not_license", row["licenseEvidence"]["text"])
+        self.assertTrue(row["licenseEvidence"]["id"].startswith("LicenseRef-"))
+
+    def test_source_reuse_rejects_foreign_runs_and_failed_latest_attempts(self):
+        run = {"id": 1, "head_sha": "1" * 40, "head_repository": {"full_name": "owner/repo"},
+               "head_branch": "candidate", "path": ".github/workflows/native-trace.yml",
+               "event": "workflow_dispatch"}
+        jobs = {"total_count": 3, "jobs": [
+            {"id": i, "name": "curl-source / curl-source (runner, " + target + ")",
+             "run_attempt": 1, "conclusion": "success"}
+            for i, target in enumerate(("macos-arm64", "macos-x86_64", "windows-x86_64"))]}
+        result = native_provenance.verify_producer_run(run, jobs, "owner/repo", "candidate", "curl")
+        self.assertEqual(len(result["producers"]), 3)
+        with self.assertRaisesRegex(ValueError, "same-repository/branch"):
+            native_provenance.verify_producer_run(run, jobs, "other/repo", "candidate", "curl")
+        jobs["jobs"].append(dict(jobs["jobs"][0], run_attempt=2, conclusion="failure"))
+        jobs["total_count"] += 1
+        with self.assertRaisesRegex(ValueError, "Latest exact source producer"):
+            native_provenance.verify_producer_run(run, jobs, "owner/repo", "candidate", "curl")
+        jobs["jobs"].pop()
+        with self.assertRaisesRegex(ValueError, "complete bounded enumeration"):
+            native_provenance.verify_producer_run(run, jobs, "owner/repo", "candidate", "curl")

@@ -289,7 +289,7 @@ verified archive backups outside both worktree and session storage.
 
 ### Shared source inventory integration
 
-`build/sbom/native_provenance.py` adapts inspected curl/zlib/nghttp2/nghttp3
+`build/sbom/native_provenance.py` adapts inspected curl/zlib/nghttp2/nghttp3/libiconv/libssh2
 kits into the existing `rebuiltArchiveEvidence` model, consumed by both SBOM
 emitters. It rechecks original source/compiler/archive records, requires both
 macOS architectures, binds every universal slice or Windows copy, and retains
@@ -305,9 +305,23 @@ and the source record retains the additional notice-file hashes.
 The adapter's CLI creates a **new** isolated vendor-layout directory; it refuses
 existing outputs. The curl source workflow stages curl/zlib/nghttp2 on both
 platforms using this path and retains merge commands/tool identity. This is not a
-full plugin or release package. LGPL proxy/modman/iconv and the mixed-notice SSH
-adapter/delivery gates remain open; historical input collection without the new
-option is unchanged. Normalized sidecars alone do not satisfy relink/host gates.
+full plugin or release package. GNU iconv's aggregate license expression retains
+both LGPL-2.1-or-later core and LGPL-2.0-or-later localcharset/relocatable terms;
+its original notices and static delivery/relink gate are not waived.
+SSH retains its complete reviewed BSD, ISC-style and public-domain comment
+notices as one extracted `LicenseRef` collection, not a blanket BSD-3-Clause or
+MIT/CC0 relabeling. Proxy/modman adapters and the LGPL delivery gates remain open.
+Historical input collection without the new option is unchanged.
+Normalized sidecars alone do not satisfy relink/host gates.
+
+The `inventory` dispatch scope can reuse original curl, GNU and nghttp3 outputs
+without rebuilding or restamping them. Supply `native-provider-run` (original
+HTTP prerequisites), `native-curl-provider-run`, and optionally
+`native-iconv-provider-run`. Every original run must be explicitly dispatched
+from this repository/branch, with every exact target producer successful on its
+latest attempt. Incomplete job enumeration fails. Original records are then
+inspected again; source jobs are skipped and only fresh isolated copies and
+merge/evidence records are produced. No plugin, signing or release job runs.
 
 ```sh
 python3 build/dependencies/build_curl.py build \

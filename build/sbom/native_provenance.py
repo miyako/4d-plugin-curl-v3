@@ -1,8 +1,10 @@
 """Adapt inspected native candidate kits into the existing rebuilt-archive inventory."""
 
+import hashlib
 import importlib
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +18,17 @@ LIBRARIES = {
     "zlib": ("build_native", "Zlib", "a/libz.a", "lib/64/zlib.lib"),
     "nghttp2": ("build_http", "MIT", "a/libnghttp2.a", "lib/64/nghttp2.lib"),
     "nghttp3": ("build_http", "MIT", "a/libnghttp3.a", None),
+    "libiconv": ("build_iconv", "LGPL-2.1-or-later AND LGPL-2.0-or-later",
+                 "a/libiconv.a", "lib/64/libiconv.lib"),
+    "libssh2": ("build_ssh", None, "a/libssh2.a", "lib/64/libssh2.lib"),
+}
+ARCHIVE_ORIGINS = {
+    "curl": "https://github.com/curl/curl",
+    "libiconv": "https://savannah.gnu.org/git/?group=libiconv",
+}
+ADDITIONAL_NOTICES = {
+    "curl": {"lib/vssh/vssh.c", "lib/curlx/inet_ntop.c", "lib/curlx/inet_pton.c"},
+    "libiconv": {"libcharset/COPYING.LIB", "libcharset/lib/localcharset.c", "lib/relocatable.c"},
 }
 TARGETS = {
     "macos-universal": {"macos-arm64", "macos-x86_64"},
@@ -23,11 +36,65 @@ TARGETS = {
 }
 
 
+def verify_producer_run(run, jobs, repository, branch, role):
+    if (run["head_repository"]["full_name"] != repository
+            or run["head_branch"] != branch
+            or run["path"] != ".github/workflows/native-trace.yml"
+            or run["event"] != "workflow_dispatch"):
+        raise ValueError("Source producer must be an explicit same-repository/branch native run")
+    if jobs["total_count"] > 100 or len(jobs["jobs"]) != jobs["total_count"]:
+        raise ValueError("Source producer jobs require complete bounded enumeration")
+    prefix = {
+        "curl": "curl-source / curl-source (",
+        "libiconv": "native-prerequisites / iconv-prerequisites (",
+        "nghttp3": "native-prerequisites / http-prerequisites (",
+    }[role]
+    targets = {"macos-arm64", "macos-x86_64"}
+    if role != "nghttp3":
+        targets.add("windows-x86_64")
+    producers = []
+    for target in sorted(targets):
+        suffix = ", " + target + (", nghttp3, " if role == "nghttp3" else ")")
+        matches = [j for j in jobs["jobs"] if j["name"].startswith(prefix) and suffix in j["name"]]
+        attempt = max((j["run_attempt"] for j in matches), default=0)
+        matches = [j for j in matches if j["run_attempt"] == attempt]
+        if len(matches) != 1 or matches[0]["conclusion"] != "success":
+            raise ValueError("Latest exact source producer must succeed: " + role + "/" + target)
+        producers.append({k: matches[0][k] for k in ("id", "name", "run_attempt", "conclusion")})
+    return {"run": {k: run[k] for k in ("id", "head_sha", "head_branch", "path", "event")},
+            "producers": producers}
+
+
 def _inspect(module, kit):
     dependencies = str(Path(__file__).resolve().parents[1] / "dependencies")
     if dependencies not in sys.path:
         sys.path.insert(0, dependencies)
     importlib.import_module(module).inspect(kit)
+
+
+def _ssh_license(record, kit):
+    notices = []
+    seen = set()
+    for item in record["noticeFiles"]:
+        text = (kit / "source" / item["path"]).read_bytes().decode("utf-8")
+        blocks = ([text] if item["path"] == "COPYING" else
+                  [m.group() for m in re.finditer(r"/\*.*?\*/", text, re.S)
+                   if re.search(r"copyright|permission|public[- ]domain|licen[cs]e",
+                                m.group(), re.I)])
+        if not blocks:
+            raise ValueError("Missing original SSH notice: " + item["path"])
+        for block in blocks:
+            if block not in seen:
+                notices.append(item["path"] + "\n" + block)
+                seen.add(block)
+    if not notices:
+        raise ValueError("Missing original SSH license notices")
+    text = "\n\n".join(notices)
+    return {
+        "id": "LicenseRef-libssh2-notices-" + hashlib.sha256(text.encode()).hexdigest()[:16],
+        "name": "libssh2 BSD, ISC-style and public-domain source notices",
+        "text": text,
+    }
 
 
 def _read_kits(target, kits):
@@ -62,7 +129,7 @@ def _read_kits(target, kits):
         rows = grouped.setdefault(library, {})
         if record["target"] in rows:
             raise ValueError("Duplicate native source target")
-        rows[record["target"]] = (record, installed, provenance.digest(record_path))
+        rows[record["target"]] = (record, installed, provenance.digest(record_path), kit)
 
     for library, rows in sorted(grouped.items()):
         if set(rows) != TARGETS[target]:
@@ -95,10 +162,10 @@ def collect(root, target, kits):
         elif provenance.digest(copied) != provenance.digest(rows[target][1]):
             raise ValueError("Copied native archive differs from original build")
         source_archive = first.get("sourceArchive")
-        if library == "curl":
+        if library in ARCHIVE_ORIGINS:
             if not isinstance(source_archive, dict):
-                raise ValueError("Curl requires its verified release source archive")
-            origin = "https://github.com/curl/curl"
+                raise ValueError("Library requires its verified release source archive")
+            origin = ARCHIVE_ORIGINS[library]
             source = {"sourceArchive": source_archive}
             purl = ("pkg:generic/" + library + "@" + first["version"]
                     + "?download_url=" + quote(source_archive["url"], safe=""))
@@ -113,8 +180,12 @@ def collect(root, target, kits):
             license_hash = first["licenseFileSha256"]
         rebuilt.append({
             "name": library, "version": first["version"], "sourceRepository": origin,
-            **source, "license": license_id, "licenseFileSha256": license_hash, "purl": purl,
+            **source, **({"license": license_id} if license_id else {}),
+            "licenseFileSha256": license_hash, "purl": purl,
+            **({"licenseEvidence": _ssh_license(first, rows[sorted(rows)[0]][3]),
+                "additionalNoticeFiles": first["noticeFiles"]} if library == "libssh2" else {}),
             "status": "not-approved-for-production",
+            **({"licenseScope": first["licenseScope"]} if "licenseScope" in first else {}),
             "evidenceType": "inspected-original-native-source-and-archive-build-records",
             "archives": [{"path": destination, "sha256": provenance.digest(copied)}],
             "originalBuildRecords": [{
@@ -124,9 +195,9 @@ def collect(root, target, kits):
                 "recipeFiles": rows[architecture][0]["recipeFiles"],
             } for architecture in sorted(rows)],
             **({"additionalNoticeFiles": [
-                item for item in first["sourceFiles"] if item["path"] in {
-                    "lib/vssh/vssh.c", "lib/curlx/inet_ntop.c", "lib/curlx/inet_pton.c",
-                }]} if library == "curl" else {}),
+                item for item in first["sourceFiles"]
+                if item["path"] in ADDITIONAL_NOTICES[library]
+            ]} if library in ADDITIONAL_NOTICES else {}),
             "limitations": [
                 "Original source/compiler/archive kits must accompany these record hashes.",
                 "Source inspection and archive binding do not approve production adoption, "

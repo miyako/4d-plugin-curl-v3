@@ -397,7 +397,8 @@ def build_dependencies(record, target, observed):
                 "name": provenance["name"], "version": provenance["version"],
                 "evidenceType": "source-build-and-selected-archive",
                 "origin": provenance["sourceRepository"],
-                **{key: provenance[key] for key in ("license", "purl") if key in provenance},
+                **{key: provenance[key] for key in ("license", "licenseEvidence", "purl")
+                   if key in provenance},
                 "sourceEvidence": provenance,
             }]
         elif path in entries:

@@ -29,10 +29,18 @@ on:
       native-prerequisite-scope:
         description: 'Isolated prerequisite jobs to run (only applies with native-prerequisites-only)'
         type: choice
-        options: [all, iconv, curl]
+        options: [all, iconv, curl, inventory]
         default: all
       native-provider-run:
         description: 'Original successful prerequisite producer run (only applies to scope curl)'
+        type: string
+        default: ''
+      native-curl-provider-run:
+        description: 'Original curl source run for inventory-only reuse'
+        type: string
+        default: ''
+      native-iconv-provider-run:
+        description: 'Optional original successful GNU source run for inventory assembly'
         type: string
         default: ''
 
@@ -45,19 +53,22 @@ concurrency:
 
 jobs:
   native-prerequisites:
-    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope != 'curl' }}
+    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope != 'curl' && inputs.native-prerequisite-scope != 'inventory' }}
     uses: ./.github/workflows/native-dependencies.yml
     with:
       scope: ${{ inputs.native-prerequisite-scope || 'all' }}
 
   curl-source:
-    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope == 'curl' }}
+    if: ${{ inputs.native-prerequisites-only && (inputs.native-prerequisite-scope == 'curl' || inputs.native-prerequisite-scope == 'inventory') }}
     permissions:
       contents: read
       actions: read
     uses: ./.github/workflows/native-curl-source.yml
     with:
       provider-run-id: ${{ inputs.native-provider-run }}
+      inventory-only: ${{ inputs.native-prerequisite-scope == 'inventory' }}
+      source-run-id: ${{ inputs.native-curl-provider-run }}
+      iconv-provider-run-id: ${{ inputs.native-iconv-provider-run }}
 
   proxy-candidate:
     if: ${{ !inputs.native-prerequisites-only }}
