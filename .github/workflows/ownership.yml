@@ -1,0 +1,45 @@
+name: 4D ownership regressions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '4DPlugin-cURL.cpp'
+      - 'support/**'
+      - 'include/ftpparse.*'
+      - '4D Plugin API/**'
+      - 'tests/ownership/**'
+      - '.github/workflows/ownership.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '4DPlugin-cURL.cpp'
+      - 'support/**'
+      - 'include/ftpparse.*'
+      - '4D Plugin API/**'
+      - 'tests/ownership/**'
+      - '.github/workflows/ownership.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ownership:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      # cb612de: the last commit before the ownership fix; its source must keep failing exactly as listed
+      BASELINE_SHA: cb612de632e5403f73fef23847b13549d3c68e1a
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fixed source (no expected failures)
+        run: python3 tests/ownership/run.py --tree . --out "$RUNNER_TEMP/fixed" --expect-none
+      - name: Immutable baseline (named expected failures)
+        run: |
+          mkdir "$RUNNER_TEMP/baseline-tree"
+          git archive "$BASELINE_SHA" | tar -x -C "$RUNNER_TEMP/baseline-tree"
+          python3 tests/ownership/run.py --tree "$RUNNER_TEMP/baseline-tree" --out "$RUNNER_TEMP/baseline" \
+            --expect tests/ownership/baseline-expected-failures.txt

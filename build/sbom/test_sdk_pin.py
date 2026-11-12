@@ -195,7 +195,9 @@ class SDKPinTests(unittest.TestCase):
         self.assertRegex(
             core,
             rb"if \(execute_callback_method\)\s*\{\s*"
-            rb"cbparams\[0\] = PA_CreateVariable\(eVK_Unistring\);\s*"
+            rb"/\*[^*]*\*/\s*"
+            rb"PA_Unistring method = PA_CreateUnistring\([^;]*\);\s*"
+            rb"cbparams\[0\] = PA_CreateVariable\(eVK_Undefined\);\s*"
             rb"cbparams\[1\] = PA_CreateVariable\(eVK_Boolean\);\s*"
             rb"cbparams\[2\] = PA_CreateVariable\(eVK_Object\);\s*"
             rb"cbparams\[3\] = PA_CreateVariable\(eVK_Unistring\);",

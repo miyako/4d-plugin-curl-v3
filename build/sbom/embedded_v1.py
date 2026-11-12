@@ -72,8 +72,8 @@ HASHES = {
     "4D Plugin API/Classes/C_TEXT.cpp": "24aafc136c58448741235202aee4207eebe9770d1b458b48630b0fd0b78f5397",
     "4D Plugin API/Classes/C_TEXT.h": "7e3d01dcb328a958568a6517dea3ecae09895fa1330e2e4b308cf0651b99e840",
     "4D Plugin API/Classes/C_TYPES.h": "5859ff4d7004d983e68e38c974e19d20ad2d9dc670158564e2d9fceaf179a0af",
-    "support/4DPlugin-JSON.cpp": "e403a82db1a2b071ee0ce2d7dab5691b9479de6cac562ee8dd7d8db448cfa052",
-    "support/4DPlugin-JSON.h": "eba18fc6663838d25880e4c4bf0ee1dfde0a422d9cae63c84237cb040ee1093e",
+    "support/4DPlugin-JSON.cpp": "087ced410ed50b47e66d69038309c195f7f9d2ed8fb9d786214767be1e09dde5",
+    "support/4DPlugin-JSON.h": "54113a01442c04e814e2e84a385196ebb00002b5a7d42dd19e368d68a4d6fb2e",
     "support/ufopen.c": "1714d5260b61169073434df1059cbb171768580ea20ae643b39802cb4c6f5fec",
     "support/ufopen.h": "8499dae2c7357c61d80d4527c6fa0a2f2331ba6498c3eaf49e030c7af1dc5fbd",
     "include/json/allocator.h": "058a9743fdcc390c7534f9bcaf88f298a194e06ba25d4c037790a6701c638676",
@@ -107,8 +107,8 @@ CRLF_HASHES = {
     "4D Plugin API/Classes/C_TEXT.cpp": "0539c0f83b20aa4a4968d1ee4cc491ce0ee46e9abb0bacccea1deac5a73c2311",
     "4D Plugin API/Classes/C_TEXT.h": "9c159256f0a71ab8e00eb746e630a0b4dc5c2ba8c6a462a289adad6ab5aa13ab",
     "4D Plugin API/Classes/C_TYPES.h": "5859ff4d7004d983e68e38c974e19d20ad2d9dc670158564e2d9fceaf179a0af",
-    "support/4DPlugin-JSON.cpp": "f87141549a0553df4e6225dd8fce6bcb71ba32d53066ec3824ef91f013365fa8",
-    "support/4DPlugin-JSON.h": "444119ca68bbf7cbe15d7a6850215331c4dc3ec8715cdebfb100016a7dc35dd0",
+    "support/4DPlugin-JSON.cpp": "bcb344cf21853022977ce8d2c1384e6bf67bc9891988525824770444e56dc50a",
+    "support/4DPlugin-JSON.h": "4ff2f1dd6e854bb6117299aaebe7c5ccf98e21f7c96ff6f797d2369255409ba3",
     "support/ufopen.c": "e02701b8a69686fa42f2c85efc4621dc3744bbbbead3f6522a7c8982bb24312f",
     "support/ufopen.h": "42d50edc0cfb9ddf872d901965061a7644326d4fad012a147df9627aa7282442",
     "include/json/allocator.h": "e4576213639d00bd3f7a2fee4ef2ee215411969f84dc8d62ad8a312d7bb544a6",
@@ -124,8 +124,8 @@ CRLF_HASHES = {
 }
 LF_HASHES = {
     "4D Plugin API/Classes/C_TYPES.h": "07a2dbc6f772f53bf332dd87986890995e793678138216726897943a6a7d17c0",
-    "support/4DPlugin-JSON.cpp": "fe791db1202de5847c162abbb18e659e0005e6670d69c850c6424b5ba526ff98",
-    "support/4DPlugin-JSON.h": "361bd4eeb0ea309ec9c0e50a3ec9f7f96a8c6f4261a4ea0d6801440acfda649f",
+    "support/4DPlugin-JSON.cpp": "7befda680e90be439c5bfdd8980e98d015adb6f57edaa8777fdb07cd66eaf294",
+    "support/4DPlugin-JSON.h": "2634b8d72cc2109ba1383061fe95ae6266582ab8e9a7e052d46e5e46c2a7c793",
 }
 
 MIT_BODY = """Permission is hereby granted, free of charge, to any person obtaining a copy

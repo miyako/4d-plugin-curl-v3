@@ -346,7 +346,7 @@ static void curl_get_info(CURL *curl, PA_ObjectRef transferInfo) {
                 std::string stringValue = slist->data;
                 CUTF16String utf16value;
                 convert_string_to_unistring(stringValue, utf16value);
-                PA_Variable v = PA_CreateVariable(eVK_Unistring);
+                PA_Variable v = PA_CreateVariable(eVK_Undefined);
                 PA_Unistring value = PA_CreateUnistring((PA_Unichar *)utf16value.c_str());
                 PA_SetStringVariable(&v, &value);
                 PA_SetCollectionElement(certs, PA_GetCollectionLength(certs), v);
@@ -480,8 +480,6 @@ static CURLcode curl_perform_non_atomic(CURL *curl,
         }
     }
     
-    PA_Unistring method = PA_CreateUnistring((PA_Unichar *)methodName.c_str());
-
     CUTF16String info;
     CURLMcode mc = CURLM_OK; /* not used to abort */
     CURLcode result = CURLE_OK;
@@ -502,7 +500,9 @@ static CURLcode curl_perform_non_atomic(CURL *curl,
     
     if (execute_callback_method)
     {
-        cbparams[0] = PA_CreateVariable(eVK_Unistring);
+        /* cbparams[0] takes ownership of method; created undefined so no empty string is orphaned */
+        PA_Unistring method = PA_CreateUnistring((PA_Unichar *)methodName.c_str());
+        cbparams[0] = PA_CreateVariable(eVK_Undefined);
         cbparams[1] = PA_CreateVariable(eVK_Boolean);
         cbparams[2] = PA_CreateVariable(eVK_Object);
         cbparams[3] = PA_CreateVariable(eVK_Unistring);
@@ -601,6 +601,8 @@ static CURLcode curl_perform_non_atomic(CURL *curl,
                         curl_get_info(curl, transferInfo);
 
                         if (execute_callback_method) {
+                            /* release the previous transferInfo before replacing it */
+                            PA_ClearVariable(&cbparams[2]);
                             PA_SetObjectVariable(&cbparams[2], transferInfo);
                             PA_ExecuteCommandByID(1007 /*EXECUTE METHOD*/, cbparams, 4);
                             PA_Variable statusCode = cbparams[1];
@@ -615,16 +617,24 @@ static CURLcode curl_perform_non_atomic(CURL *curl,
                             }
                         }
                         else {
+                            PA_ClearVariable(&cbparams[0]);
                             PA_SetObjectVariable(&cbparams[0], transferInfo);
                             PA_Variable statusCode = PA_ExecuteMethodByID(method_id, cbparams, 2);
-                            if (PA_GetVariableKind(statusCode) == eVK_Boolean)
+                            /* the method result is owned by the plugin: clear it on success */
+                            bool shouldAbort = false;
+                            if (PA_GetLastError() == eER_NoErr)
                             {
-                                if (PA_GetBooleanVariable(statusCode))
+                                if (PA_GetVariableKind(statusCode) == eVK_Boolean)
                                 {
-                                    /* abort */
-                                    result = CURLE_ABORTED_BY_CALLBACK;
-                                    goto curl_abort_transfer;
+                                    shouldAbort = PA_GetBooleanVariable(statusCode);
                                 }
+                                PA_ClearVariable(&statusCode);
+                            }
+                            if (shouldAbort)
+                            {
+                                /* abort */
+                                result = CURLE_ABORTED_BY_CALLBACK;
+                                goto curl_abort_transfer;
                             }
                         }
                     }
@@ -672,11 +682,17 @@ curl_abort_transfer:
             curl_get_info(curl, transferInfo);
             
             if (execute_callback_method) {
+                PA_ClearVariable(&cbparams[2]);
                 PA_SetObjectVariable(&cbparams[2], transferInfo);
                 PA_ExecuteCommandByID(1007 /*EXECUTE METHOD*/, cbparams, 4);
             }else{
+                PA_ClearVariable(&cbparams[0]);
                 PA_SetObjectVariable(&cbparams[0], transferInfo);
-                PA_ExecuteMethodByID(method_id, cbparams, 2);
+                PA_Variable statusCode = PA_ExecuteMethodByID(method_id, cbparams, 2);
+                if (PA_GetLastError() == eER_NoErr)
+                {
+                    PA_ClearVariable(&statusCode);
+                }
             }
         }
     }
@@ -795,7 +811,7 @@ void cURL_VersionInfo(PA_PluginParameters params) {
                     std::string stringValue = protocol;
                     CUTF16String utf16value;
                     convert_string_to_unistring(stringValue, utf16value);
-                    PA_Variable v = PA_CreateVariable(eVK_Unistring);
+                    PA_Variable v = PA_CreateVariable(eVK_Undefined);
                     PA_Unistring value = PA_CreateUnistring((PA_Unichar *)utf16value.c_str());
                     PA_SetStringVariable(&v, &value);
                     PA_SetCollectionElement(protocols, PA_GetCollectionLength(protocols), v);
@@ -1025,12 +1041,15 @@ static void curl_easy_setopt_enum(CURL *curl, CURLoption option, CUTF8String& s)
     curl_easy_setopt(curl, option, v);
 }
 
+/* consumes col: the collection returned by ob_get_c is owned and disposed here */
 static void curl_easy_setopt_array(CURL *curl, CURLoption option, PA_CollectionRef col, struct curl_slist **list) {
     
     if((col) && (list)) {
         
         for(PA_long32 i =0; i < PA_GetCollectionLength(col); ++i) {
             PA_Variable v = PA_GetCollectionElement(col, i);
+            /* the element is an owned copy */
+            if(PA_GetLastError() != eER_NoErr) continue;
             if(PA_GetVariableKind(v) == eVK_Unistring){
                 PA_Unistring u = PA_GetStringVariable(v);
                 CUTF16String u16value = CUTF16String(u.fString, u.fLength);
@@ -1040,10 +1059,14 @@ static void curl_easy_setopt_array(CURL *curl, CURLoption option, PA_CollectionR
                     *list = curl_slist_append(*list, stringValue.c_str());
                 }
             }
+            PA_ClearVariable(&v);
         }
         if(*list)
             curl_easy_setopt(curl, option, *list);
     }
+    
+    if(col)
+        PA_DisposeCollection(col);
 }
 
 static void curl_easy_setopt_path(CURL *curl, CURLoption option, CUTF8String& stringValue) {
