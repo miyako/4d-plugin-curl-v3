@@ -633,7 +633,12 @@ The portable link can accept `--modified-iconv` alongside `--modified-proxy`;
 both exports must point into the resulting plugin's own executable code.
 The newly acquired job-local GNU tools are outside the uploaded materials;
 their acquisition/installed-package records are retained, not their binaries.
-Native Windows execution of this addition remains pending.
+Run `43314819192` passed the Windows GNU rebuild and combined full-plugin replay,
+but upload encountered an inaccessible GNU `.libs/libiconv.la` convenience
+alias. Its on-host result is not persisted-kit proof. Staging now uses the same
+narrow `.libs/*.la` omission as the original GNU producer, retaining every hashed
+build file, direct archive and original record, with an explicit omission list.
+A fresh run and independently inspected downloaded outputs remain required.
 `portable_plugin_windows.py inspect` can recheck delivered bytes, baseline
 normalization and modified exports on another platform without loading a DLL;
 this is not an install/trust or 4D host check.

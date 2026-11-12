@@ -570,11 +570,32 @@ jobs:
               "replay", "--kit", str(kit), "--output", str(root / "replay"),
               "--modified-proxy", str(modified / "build/libproxy.lib"),
               "--modified-iconv", str(iconv / "install/lib/libiconv.lib")], check=True)
+      - name: Stage portable evidence without inaccessible libtool convenience aliases
+        if: ${{ always() && inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
+        shell: python
+        run: |
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          source = root / "portable-plugin"
+          omitted = []
+          def aliases(directory, names):
+              ignored = [n for n in names
+                         if Path(directory).name == ".libs" and n.endswith(".la")]
+              omitted.extend((Path(directory) / n).relative_to(source).as_posix() for n in ignored)
+              return ignored
+          if source.exists():
+              destination = root / "portable-plugin-upload"
+              shutil.copytree(source, destination, ignore=aliases)
+              (destination / "omitted-libtool-aliases.json").write_text(json.dumps({
+                  "paths": sorted(omitted),
+                  "scope": "Unused GNU convenience aliases only; direct archives, metadata, "
+                           "original records and all hashed build files retained."}, indent=2))
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ always() && inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
         with:
           name: isolated-portable-plugin-Windows
-          path: ${{ runner.temp }}/portable-plugin/
+          path: ${{ runner.temp }}/portable-plugin-upload/
           include-hidden-files: true
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
