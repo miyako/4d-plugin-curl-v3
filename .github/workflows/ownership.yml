@@ -31,7 +31,7 @@ jobs:
       # cb612de: the last commit before the ownership fix; its source must keep failing exactly as listed
       BASELINE_SHA: cb612de632e5403f73fef23847b13549d3c68e1a
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
