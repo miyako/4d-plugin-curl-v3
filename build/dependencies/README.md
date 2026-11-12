@@ -52,7 +52,9 @@ prebuilt configure arguments are still an explicit baseline gap.
 - [x] Preserve and independently inspect published containers and archive selections.
 - [ ] Recover curl feature/protocol baseline and original configuration where possible.
 - [ ] Resolve libproxy/libmodman replacement and static-distribution obligations.
-- [ ] Build/test the proxy candidate against exact baseline archives on all three targets.
+- [x] Build/test the proxy candidate against exact baseline archives on all three targets.
+- [x] Rebuild delivered library sources with a user modification and relink a
+  standalone consumer on all three targets; independently inspect persisted proofs.
 - [ ] Adopt only after an explicit replacement decision and plugin compatibility checks.
 - [ ] Source-build selected prerequisites: zlib (1.3.2 macOS / 1.3.1 Windows),
   libiconv (1.16 / 1.18), nghttp2 1.70.0, macOS nghttp3 1.15.0, libssh2.
@@ -72,6 +74,13 @@ read-only analysis must remain supported. A release/sign/tag/merge requires
 separate authorization; candidate CI has read-only repository permissions.
 
 ## Measured results and scoped candidate decision
+
+Checkpoint `d93ab29` passed all five candidate/baseline test executables and
+all five delivered-library relink test executables on macOS arm64, macOS x86_64
+and Windows x64 in [run 43244909872](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43244909872).
+All six downloaded candidate/relink artifacts were independently inspected,
+without running downloaded binaries. This verifies the isolated libraries and
+their source kit, not production adoption, a complete plugin kit or host loading.
 
 [First isolated run 43235756612](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43235756612)
 built all three native targets. Both macOS jobs passed all four test executables;
