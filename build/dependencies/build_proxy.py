@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Build an isolated proxy candidate; never overwrite selected vendor archives."""
+
+import argparse
+import json
+from pathlib import Path
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "sbom"))
+from provenance import archive_hashes, digest, git, write_json
+from inspect_proxy import inspect, verify_architecture
+
+
+TARGETS = ("macos-arm64", "macos-x86_64", "windows-x86_64")
+
+
+def source_snapshot(source, lock):
+    if git(source, "rev-parse", "HEAD") != lock["commit"]:
+        raise ValueError("Proxy source commit does not match the immutable candidate pin")
+    if git(source, "status", "--porcelain", "--untracked-files=all"):
+        raise ValueError("Proxy source checkout must be clean, including untracked files")
+    paths = git(source, "ls-files").splitlines()
+    return archive_hashes(source, paths)
+
+
+def recipe_snapshot():
+    return archive_hashes(HERE, ["build_proxy.py", "inspect_proxy.py", "proxy-source.json",
+        "baseline-v4.9.10.json", "proxy/CMakeLists.txt", "proxy/behavior.cpp", "proxy/test.pac"])
+
+
+def baseline_inputs(root, target):
+    frozen = json.loads((HERE / "baseline-v4.9.10.json").read_text())
+    record = next(t for t in frozen["targets"] if t["id"] == target)
+    inputs = []
+    for name in ("libproxy", "libmodman"):
+        archive = next(a for a in record["selectedArchives"] if a["name"] == name)
+        path = root / archive["path"]
+        if digest(path) != archive["sha256"]:
+            raise ValueError("Baseline proxy archive hash mismatch: " + str(path))
+        inputs.append({"path": str(path.resolve()), "sha256": archive["sha256"],
+                       "name": name, "identity": "historical-version-unknown"})
+    return inputs
+
+
+def run(command, log):
+    with log.open("w", encoding="utf-8") as stream:
+        result = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT)
+    if result.returncode:
+        sys.stderr.write(log.read_text(encoding="utf-8"))
+        raise subprocess.CalledProcessError(result.returncode, command)
+
+
+def expected_archives(target):
+    return (["lib/libproxy.lib", "lib/modman.lib"] if target == "windows-x86_64"
+            else ["lib/libmodman.a", "lib/libproxy.a"])
+
+
+def check_commands(output, target, modules, source):
+    commands = json.loads((output / "build/compile_commands.json").read_text())
+    expected = {
+        "libmodman/module_manager.cpp", "libproxy/extension_config.cpp",
+        "libproxy/extension_pacrunner.cpp", "libproxy/extension_wpad.cpp",
+        "libproxy/proxy.cpp", "libproxy/url.cpp",
+        "libproxy/test/url-test.cpp", "libproxy/test/url-encode.cpp",
+        *("libproxy/modules/" + module + ".cpp" for module in modules),
+    }
+    actual = {Path(c["file"]).resolve().relative_to(source.resolve()).as_posix()
+              for c in commands if Path(c["file"]).resolve().is_relative_to(source.resolve())}
+    if actual != expected:
+        raise ValueError("Actual compiled upstream sources differ from the candidate recipe")
+    for entry in commands:
+        command = entry["command"]
+        if target == "windows-x86_64":
+            if not re.search(r"(?:^|[ /-])MT(?:\s|$)", command) or re.search(
+                    r"(?:^|[ /-])M[DT]d(?:\s|$)|(?:^|[ /-])MD(?:\s|$)", command):
+                raise ValueError("Proxy candidate must use the release static MSVC CRT")
+        else:
+            if ("-arch " + target.removeprefix("macos-") not in command
+                    or "-mmacosx-version-min=10.13" not in command):
+                raise ValueError("Proxy compile command changed target/deployment compatibility")
+
+
+def build(source, output, target, baseline):
+    lock = json.loads((HERE / "proxy-source.json").read_text())
+    source = source.resolve()
+    output = output.resolve()
+    before = source_snapshot(source, lock)
+    recipe = recipe_snapshot()
+    if output.exists():
+        raise ValueError("Use a fresh output directory; an old build cannot receive new provenance")
+    old = baseline_inputs(baseline, target)
+    windows = target == "windows-x86_64"
+    if windows != (platform.system() == "Windows"):
+        raise ValueError("Target requires its native operating system")
+    output.mkdir(parents=True)
+    platform_key = "windows" if windows else "macos"
+    install = output / "install"
+    arguments = [
+        "cmake", "-S", str(HERE / "proxy"), "-B", str(output / "build"),
+        "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+        "-DPROXY_SOURCE=" + str(source),
+        "-DPROXY_MODULES=" + ";".join(lock["modules"][platform_key]),
+        "-DPROXY_MODULE_DIRECTORY=" + lock["moduleDirectory"][platform_key],
+        "-DCMAKE_INSTALL_PREFIX=" + str(install),
+        "-DBASELINE_PROXY=" + old[0]["path"], "-DBASELINE_MODMAN=" + old[1]["path"],
+    ]
+    if not windows:
+        arguments += ["-DCMAKE_OSX_ARCHITECTURES=" + target.removeprefix("macos-"),
+                      "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13"]
+    run(arguments, output / "configure.log")
+    run(["cmake", "--build", str(output / "build"), "--verbose"], output / "build.log")
+    run(["ctest", "--test-dir", str(output / "build"), "--verbose",
+         "--output-on-failure", "--output-junit", str(output / "test-results.xml")],
+        output / "tests.log")
+    run(["cmake", "--install", str(output / "build")], output / "install.log")
+    check_commands(output, target, lock["modules"][platform_key], source)
+    if before != source_snapshot(source, lock) or recipe != recipe_snapshot():
+        raise ValueError("Source or recipe changed during compilation")
+    if old != baseline_inputs(baseline, target):
+        raise ValueError("Baseline archives changed during comparison")
+    with tarfile.open(output / "upstream-source.tar", "w") as archive:
+        for item in before:
+            archive.add(source / item["path"], arcname=item["path"])
+    with tarfile.open(output / "candidate-recipe.tar", "w") as archive:
+        for item in recipe:
+            archive.add(HERE / item["path"], arcname=item["path"])
+        archive.add(HERE.parents[1] / "LICENSE", arcname="recipe-LICENSE")
+    evidence_paths = ["configure.log", "build.log", "tests.log", "test-results.xml", "install.log",
+        "build/CMakeCache.txt", "build/compile_commands.json", "build/build.ninja",
+        "install/include/proxy.h", "install/share/licenses/libproxy/COPYING",
+        "upstream-source.tar", "candidate-recipe.tar"]
+    compiler_files = sorted((output / "build/CMakeFiles").glob("*/CMakeCXXCompiler.cmake"))
+    if len(compiler_files) != 1:
+        raise ValueError("Expected one CMake compiler identity")
+    evidence_paths.append(compiler_files[0].relative_to(output).as_posix())
+    compiler_text = compiler_files[0].read_text()
+    compiler = re.search(r'set\(CMAKE_CXX_COMPILER "([^"]+)"\)', compiler_text)
+    if not compiler:
+        raise ValueError("Missing actual CMake compiler path")
+    tools = [Path(compiler[1])]
+    for tool in ("cmake", "ninja"):
+        path = shutil.which(tool)
+        if not path:
+            raise ValueError("Missing build tool: " + tool)
+        tools.append(Path(path))
+    record = {
+        "schema_version": 1, "evidence_type": "isolated-source-build-candidate",
+        "status": lock["status"], "source_repository": lock["repository"],
+        "source_commit": lock["commit"], "components": lock["components"],
+        "target": target, "configure_arguments": arguments,
+        "sourceFiles": before, "recipeFiles": recipe, "patches": lock["patches"],
+        "recipeLicenseSha256": digest(HERE.parents[1] / "LICENSE"),
+        "licenseFile": lock["licenseFile"], "licenseFileSha256": digest(source / lock["licenseFile"]),
+        "modules": lock["modules"][platform_key],
+        "baselineArchives": old, "archives": archive_hashes(install, expected_archives(target)),
+        "toolchainExecutables": [{"path": str(path.resolve()), "sha256": digest(path)}
+                                for path in tools],
+        "buildFiles": archive_hashes(output, evidence_paths),
+        "limitations": lock["limitations"] + [
+            "This is not plugin linker-selection evidence and is not promoted into release SBOMs.",
+            "Tests exercise synthetic settings and a local PAC; WPAD discovery and external proxy/TLS traffic are not covered.",
+            "Fresh builds only; no cached output is relabeled."
+        ],
+    }
+    write_json(output / "proxy-build-provenance.json", record)
+    verify(source, output, target)
+    inspect(output)
+    return record
+
+
+def verify(source, output, target):
+    lock = json.loads((HERE / "proxy-source.json").read_text())
+    record = json.loads((output / "proxy-build-provenance.json").read_text())
+    if (record["schema_version"] != 1 or record["target"] != target
+            or record["source_commit"] != lock["commit"]
+            or record["source_repository"] != lock["repository"]
+            or record["status"] != lock["status"]
+            or record["components"] != lock["components"]
+            or record["patches"] != lock["patches"]
+            or record["licenseFile"] != lock["licenseFile"]
+            or record["licenseFileSha256"] != digest(source / lock["licenseFile"])
+            or record["modules"] != lock["modules"]["windows" if target.startswith("windows") else "macos"]):
+        raise ValueError("Proxy candidate identity mismatch")
+    if [a["path"] for a in record["archives"]] != sorted(expected_archives(target)):
+        raise ValueError("Unexpected proxy output archive set")
+    for expected, actual in (
+        (record["sourceFiles"], source_snapshot(source, lock)),
+        (record["recipeFiles"], recipe_snapshot()),
+        (record["archives"], archive_hashes(output / "install",
+                                          [a["path"] for a in record["archives"]])),
+        (record["buildFiles"], archive_hashes(output, [a["path"] for a in record["buildFiles"]])),
+    ):
+        if expected != actual:
+            raise ValueError("Proxy source/recipe/output/original-build evidence mismatch")
+    check_commands(output, target, record["modules"], source)
+    for tool in record["toolchainExecutables"]:
+        if digest(Path(tool["path"])) != tool["sha256"]:
+            raise ValueError("Proxy toolchain executable changed")
+    for archive in record["archives"]:
+        verify_architecture(output / "install" / archive["path"], target)
+    return record
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", choices=("build", "verify"))
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--target", choices=TARGETS, required=True)
+    parser.add_argument("--baseline-root", type=Path, default=HERE.parents[1])
+    args = parser.parse_args()
+    if args.command == "build":
+        build(args.source, args.output, args.target, args.baseline_root)
+    else:
+        verify(args.source, args.output, args.target)

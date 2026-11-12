@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "status": "isolated-candidate-not-approved-for-production",
+  "repository": "https://github.com/libproxy/libproxy",
+  "commit": "e78a5ccfe0a2340f2c73e419767f8492ffc2787a",
+  "tag": "0.4.17",
+  "components": [
+    {"name": "libproxy", "version": "0.4.17", "license": "LGPL-2.1-or-later"},
+    {"name": "libmodman", "license": "LGPL-2.1-or-later"}
+  ],
+  "licenseFile": "COPYING",
+  "patches": [],
+  "modules": {
+    "macos": ["config_macosx", "ignore_domain", "ignore_hostname", "ignore_ip", "pacrunner_webkit", "wpad_dns_alias"],
+    "windows": ["config_w32reg", "ignore_domain", "ignore_hostname", "ignore_ip", "wpad_dns_alias"]
+  },
+  "moduleDirectory": {
+    "macos": "/usr/local/lib/libproxy/0.4.17/modules",
+    "windows": "C:/Program Files (x86)/Project/.\\modules"
+  },
+  "limitations": [
+    "This pin identifies new candidate builds only, not the old archives.",
+    "libmodman is bundled source at the pinned commit, not an independently established release version.",
+    "Module directories preserve observed archive strings; they do not prove the historical source or original configure arguments.",
+    "No PAC runner is added on Windows; dynamic externally installed modules remain outside this candidate's provenance."
+  ]
+}

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'build/sbom/**'
+      - 'build/dependencies/**'
       - '.github/workflows/native-trace.yml'
       - '.github/workflows/build-brotli.yml'
       - 'cURL.xcodeproj/**'
@@ -16,6 +17,11 @@ on:
       - 'a/**'
       - 'lib/**'
   workflow_dispatch:
+    inputs:
+      proxy-candidate-only:
+        description: 'Only build/test the isolated proxy source candidate (no plugin or release changes)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,7 +31,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  proxy-candidate:
+    name: Isolated proxy candidate (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos-arm64
+          - os: macos-15-intel
+            target: macos-x86_64
+          - os: windows-latest
+            target: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Evidence regression tests
+        run: python -m unittest discover -s build/dependencies
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: libproxy/libproxy
+          ref: e78a5ccfe0a2340f2c73e419767f8492ffc2787a
+          path: proxy-source
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Build candidate and compare exact historical proxy archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/dependencies/build_proxy.py build --source proxy-source \
+            --output "$RUNNER_TEMP/proxy-candidate" --target "${{ matrix.target }}"
+          python build/dependencies/build_proxy.py verify --source proxy-source \
+            --output "$RUNNER_TEMP/proxy-candidate" --target "${{ matrix.target }}"
+          python build/dependencies/inspect_proxy.py "$RUNNER_TEMP/proxy-candidate"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: isolated-proxy-${{ matrix.target }}
+          path: ${{ runner.temp }}/proxy-candidate/
+          if-no-files-found: error
+
   brotli:
+    if: ${{ !inputs.proxy-candidate-only }}
     uses: ./.github/workflows/build-brotli.yml
 
   native:
