@@ -26,18 +26,25 @@ on:
         description: 'Only source prerequisites and baseline curl observations (no plugin or signing)'
         type: boolean
         default: false
+      native-prerequisite-scope:
+        description: 'Isolated prerequisite jobs to run (only applies with native-prerequisites-only)'
+        type: choice
+        options: [all, iconv]
+        default: all
 
 permissions:
   contents: read
 
 concurrency:
-  group: native-trace-${{ github.ref }}
+  group: native-trace-${{ github.ref }}-${{ inputs.native-prerequisite-scope || 'all' }}
   cancel-in-progress: true
 
 jobs:
   native-prerequisites:
     if: ${{ inputs.native-prerequisites-only }}
     uses: ./.github/workflows/native-dependencies.yml
+    with:
+      scope: ${{ inputs.native-prerequisite-scope || 'all' }}
 
   proxy-candidate:
     if: ${{ !inputs.native-prerequisites-only }}

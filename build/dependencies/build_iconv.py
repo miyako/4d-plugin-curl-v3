@@ -302,7 +302,7 @@ def build(archive, output, target, cygwin_root=None):
         env.update({
             "PATH": os.pathsep.join([str(wrapper), str(Path(compiler).parent),
                                     str(cygwin_root / "bin"), env["PATH"]]),
-            "ICONV_TRACE_PYTHON": sys.executable,
+            "ICONV_TRACE_PYTHON": posix(Path(sys.executable)),
             "ICONV_TRACE_SCRIPT": str(ROOT / "build/dependencies/trace_compiler.py"),
             "ICONV_TRACE_DIRECTORY": str(calls), "ICONV_TRACE_COMPILER": compiler,
             "ICONV_TRACE_WINDRES": tool["windres"]["path"],

@@ -125,6 +125,9 @@ providers, not the historical release's archive bytes.
 Before the new workflow exists on the default branch, dispatch the registered
 `native-trace.yml` at this branch with `native-prerequisites-only=true`; its
 isolated reusable-workflow route skips proxy, plugin and packaging jobs.
+For a GNU-only recheck, also set `native-prerequisite-scope=iconv`; scoped
+concurrency keeps that run from canceling an independent in-flight provider/SSH
+matrix. The default remains the full native prerequisite matrix.
 
 ```sh
 python3 build/dependencies/observe_curl.py observe \
@@ -286,6 +289,11 @@ recipe, pending its first native result. It deliberately requests `/MT`, not
 the upstream example's `/MD`; actual compiler settings must prove that choice.
 GNU 1.18's compile closure uses `compat.c` and a Windows resource object,
 not an assumed copy of the 1.16 macOS source list.
+The first Windows experiment measured the old archive independently: 198
+groups/670 aliases, extra encodings enabled, and all nine checks passed.
+Its candidate configure stopped at the Cygwin-to-native Python executable
+path boundary, not a conversion regression; that invocation is corrected for
+the next run. macOS retains its separately observed default-off configuration.
 Shared JSON probe helpers have explicit recipe contracts so earlier curl/SSH
 records remain inspectable with their original delivered recipes.
 

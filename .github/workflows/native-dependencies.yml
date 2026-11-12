@@ -2,13 +2,22 @@ name: Isolated native source prerequisites
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        type: choice
+        options: [all, iconv]
+        default: all
   workflow_call:
+    inputs:
+      scope:
+        type: string
+        default: all
 
 permissions:
   contents: read
 
 concurrency:
-  group: native-dependencies-${{ github.ref }}
+  group: native-dependencies-${{ github.ref }}-${{ inputs.scope || 'all' }}
   cancel-in-progress: true
 
 jobs:
@@ -58,13 +67,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          arguments=()
+          arguments=(--archive "$RUNNER_TEMP/libiconv.tar.gz" --target "${{ matrix.target }}"
+            --output "$RUNNER_TEMP/native-libiconv")
           if [ "$RUNNER_OS" = Windows ]; then
             arguments+=(--cygwin-root "$RUNNER_TEMP/iconv-cygwin/root")
           fi
-          python build/dependencies/build_iconv.py build \
-            --archive "$RUNNER_TEMP/libiconv.tar.gz" --target "${{ matrix.target }}" \
-            --output "$RUNNER_TEMP/native-libiconv" "${arguments[@]}"
+          python build/dependencies/build_iconv.py build "${arguments[@]}"
           python build/dependencies/build_iconv.py inspect "$RUNNER_TEMP/native-libiconv"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -86,6 +94,7 @@ jobs:
           if-no-files-found: warn
 
   http-prerequisites:
+    if: ${{ inputs.scope != 'iconv' }}
     strategy:
       fail-fast: false
       matrix:
@@ -160,6 +169,7 @@ jobs:
           include-hidden-files: true
 
   source-prerequisites:
+    if: ${{ inputs.scope != 'iconv' }}
     strategy:
       fail-fast: false
       matrix:
@@ -225,6 +235,7 @@ jobs:
           include-hidden-files: true
 
   curl-baseline:
+    if: ${{ inputs.scope != 'iconv' }}
     strategy:
       fail-fast: false
       matrix:
