@@ -56,7 +56,7 @@ def verify_tests(path, allow_failed=False):
     expected = {"proxy_behavior", "proxy_url_test", "proxy_url_encode", "proxy_baseline_behavior"}
     if (suite.tag != "testsuite" or suite.get("tests") != "4"
             or len(tests) != 4 or {t.get("name") for t in tests} != expected
-            or any(t.get("status") != "run" or any(
+            or any(t.get("status") != ("fail" if t.find("failure") is not None else "run") or any(
                 t.find(tag) is not None for tag in ("error", "skipped")) for t in tests)):
         raise ValueError("Missing successful native candidate/baseline comparisons")
     failed = sorted(t.get("name") for t in tests if t.find("failure") is not None)

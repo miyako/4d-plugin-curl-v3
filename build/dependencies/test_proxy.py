@@ -153,6 +153,7 @@ class ProxyEvidenceTests(unittest.TestCase):
             inspect_proxy.verify_tests(path)
         suite[-1].remove(suite[-1].find("skipped"))
         ET.SubElement(suite[-1], "failure")
+        suite[-1].set("status", "fail")
         suite.set("failures", "1")
         ET.ElementTree(suite).write(path)
         with self.assertRaisesRegex(ValueError, "compatibility tests failed"):
