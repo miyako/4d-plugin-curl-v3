@@ -323,6 +323,12 @@ latest attempt. Incomplete job enumeration fails. Original records are then
 inspected again; source jobs are skipped and only fresh isolated copies and
 merge/evidence records are produced. No plugin, signing or release job runs.
 
+Run `43286514052` at `2014282` passed this reuse path. Downloaded universal
+macOS and Windows staged archives and normalized records were independently
+compared with all original kits: 12 macOS plus five Windows source/archive
+bindings matched, without running downloaded binaries. This is candidate
+source/copy evidence, not final-plugin selections or production coverage.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \
