@@ -22,6 +22,10 @@ on:
         description: 'Only build/test the isolated proxy source candidate (no plugin or release changes)'
         type: boolean
         default: false
+      native-prerequisites-only:
+        description: 'Only source prerequisites and baseline curl observations (no plugin or signing)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,7 +35,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native-prerequisites:
+    if: ${{ inputs.native-prerequisites-only }}
+    uses: ./.github/workflows/native-dependencies.yml
+
   proxy-candidate:
+    if: ${{ !inputs.native-prerequisites-only }}
     name: Isolated proxy candidate (${{ matrix.target }})
     strategy:
       fail-fast: false
@@ -90,7 +99,7 @@ jobs:
           include-hidden-files: true
 
   brotli:
-    if: ${{ !inputs.proxy-candidate-only }}
+    if: ${{ !inputs.proxy-candidate-only && !inputs.native-prerequisites-only }}
     uses: ./.github/workflows/build-brotli.yml
 
   native:

@@ -44,8 +44,8 @@ selections. `zs.lib` is not selected; Windows uses `zlib.lib` 1.3.1. Additional
 vendor files do not expand migration scope without actual selection evidence.
 The recorded macOS compiler command requests 10.13 (arm64 has the platform's
 11.0 minimum); Windows uses `/MT`. Library search order and local project
-settings are not changed. Runtime curl feature/protocol data and the original
-prebuilt configure arguments are still an explicit baseline gap.
+settings are not changed. Runtime curl feature/protocol recovery is underway;
+the original prebuilt configure arguments remain an explicit baseline gap.
 
 ## Checklist and gates
 
@@ -72,6 +72,112 @@ prebuilt configure arguments are still an explicit baseline gap.
 Never delete old archives/evidence before verified replacement. Historical
 read-only analysis must remain supported. A release/sign/tag/merge requires
 separate authorization; candidate CI has read-only repository permissions.
+
+## Independent source prerequisites and curl observations
+
+`native-sources.json` pins zlib 1.3.2 for both macOS architectures and 1.3.1
+for Windows, preserving the selected versions. These are version-matched new
+builds, not claims about the old archives' exact source commits. The Zlib
+license assertion applies to the compiled core files, not unused `contrib`
+material in the complete source tar.
+
+```sh
+python3 build/dependencies/build_native.py build --library zlib \
+  --target macos-arm64 --source /clean/pinned/zlib --output /fresh/zlib-evidence
+python3 build/dependencies/build_native.py inspect /downloaded/zlib-evidence
+```
+
+Use the target's immutable commit from the lock file and a clean source checkout.
+The source kit retains canonical upstream bytes independently of checkout EOL
+settings. For 1.3.1, the upstream configure-time `zconf.h` to
+`zconf.h.included` rename must preserve exact bytes; all other source mutations
+fail. The installed archive must equal the actual static compiler/archive
+output. The wrapper copies that already indexed archive without CMake's
+additional macOS install-time `ranlib` rewrite. Original compiler, archiver,
+indexer, linker, build-system identities, generated headers, source allowlist,
+commands, maps, probe executables and original test results are recorded.
+Independent inspection rechecks the exact archive selection from each map and,
+on Windows, its corresponding `/VERBOSE:LIB` output.
+
+Five tests exchange raw-deflate, zlib and gzip streams in both directions
+between the candidate and the exact selected old archive, reject truncated
+streams and require full numeric equality of `zlibCompileFlags()` and version.
+Both local macOS targets pass. This does not recover every old compiler option
+or prove older operating-system compatibility. In particular, the linker
+reports old macOS zlib objects built for macOS 26.0 despite the product's
+recorded 10.13 compiler request; that warning is preserved, not reinterpreted
+as evidence that the old objects support 10.13.
+
+The manual-only `native-dependencies.yml` workflow builds/tests all three zlib
+targets and separately observes exact baseline curl archives. It never writes
+the production library directories. Its OpenSSL/Brotli providers reuse the
+existing pinned build/evidence mechanisms; they are rebuilt matching-source
+providers, not the historical release's archive bytes.
+Before the new workflow exists on the default branch, dispatch the registered
+`native-trace.yml` at this branch with `native-prerequisites-only=true`; its
+isolated reusable-workflow route skips proxy, plugin and packaging jobs.
+
+```sh
+python3 build/dependencies/observe_curl.py observe \
+  --target macos-arm64 --openssl-install /matching/openssl/install \
+  --brotli-vendor /matching/brotli/vendor --output /fresh/curl-observation
+python3 build/dependencies/observe_curl.py inspect /downloaded/curl-observation
+```
+
+The standalone public-API probe initializes libcurl only, never the plugin or
+4D, and makes no transfers. It binds exact frozen curl/non-provider archives,
+original provider records and delivered provider archives, actual interface
+headers, probe/recipe bytes, commands, executable, map and runtime JSON.
+The local arm64 observation reports curl 8.21.0, 14 feature names and 21
+protocols: HTTP2, AppleSecTrust, OpenSSL, Brotli, zlib, threaded asynchronous DNS,
+TLS-SRP and Unix sockets are among the enabled features. HTTP3, QUIC and zstd
+are not advertised; selecting an nghttp3 archive is not proof of enabled HTTP3.
+The original configure command is still unknown. Other targets require their
+own persisted observations, not extrapolation from arm64.
+
+## Host-verification prerequisites
+
+Host verification is feasible but has not been performed. A local macOS 26.7
+arm64 machine has an installed universal 4D 21.2 (build 21.100653), including
+`com.apple.security.cs.disable-library-validation = true`. Rosetta execution
+has been demonstrated by the standalone x86_64 tests. Neither fact proves
+that a modified plugin loads, passes Gatekeeper or supports older hosts.
+Windows 4D availability is not established; CI records only a bounded check
+of default installation paths without launching a host.
+
+Once the complete relink kit and modified plugin exist, the host operator needs:
+
+1. A licensed compatible 4D host for each platform, an explicit macOS architecture
+   choice, and a fresh isolated copy of `test/Project/test.4DProject`. Never use
+   an existing user's project/data or modify the installed application.
+2. Exactly one tested cross-platform `.bundle` in `Plugins`, **beside** the
+   copied `Project` directory, as specified by the
+   [4D plugin installation instructions](https://developer.4d.com/docs/Concepts/plug-ins).
+   Quit only the isolated test instance before changing its plugin; retain
+   separate baseline, unmodified-candidate and user-relinked test directories.
+3. A user-controlled signing/trust path. On a copied macOS candidate,
+   `codesign --force --sign - /isolated/Plugins/cURL.bundle` can supply local
+   ad-hoc signing without maintainer credentials. Capture verification output
+   and binary hashes before/after this byte-changing step. This is not
+   notarization or a guarantee of acceptance; preserve any exact trust error
+   and use explicit OS/user approval rather than disabling system policy or
+   blanket-removing quarantine. Windows remains unsigned.
+4. An operator-run launch for each architecture/platform, with isolated data
+   and captured host/plugin-load errors. The supported
+   [4D CLI](https://developer.4d.com/docs/Admin/cli) accepts an explicit project
+   and interpreted opening mode; do not silently reuse a shared running host.
+   Inspect `cURL_VersionInfo` in the debugger and save its JSON alongside host,
+   architecture and final plugin hashes. The existing `TEST_version_info`
+   convenience method overwrites the clipboard; use it only deliberately.
+5. Evidence that an actual modification of the delivered LGPL library survives
+   full-plugin relinking and is observable through that loaded plugin, followed
+   by the affected proxy/protocol tests. The standalone new-function proof is
+   not a substitute. Retain the kit, modification, build and installation logs.
+
+No host action is needed while independent source prerequisites are being
+built. Request the concrete operator-run check when complete materials exist;
+lack of a hosted CI installation must neither waive this gate nor stop the
+independent migration. Analysis tools must not launch or initialize 4D.
 
 ## Measured results and scoped candidate decision
 
@@ -232,8 +338,9 @@ This verifies **library-source** rebuild/relink usability only. It does not
 supply or verify a complete 4D plugin relink kit. That kit still needs every
 selected library's corresponding source/compatible objects, product/SDK build
 materials and resources, followed by both plugin architectures/platform builds.
-The hosted CI runners have no configured 4D host/install test, so modified-plugin
-loading, trust/local-signing and user installation remain unverified. These are
+The hosted CI runners have no configured 4D host/install test. Local host
+availability and the concrete procedure above do not verify modified-plugin
+loading, trust/local-signing or user installation. These remain
 explicit production-adoption gates, not obligations satisfied by this document
 or by the standalone probe.
 

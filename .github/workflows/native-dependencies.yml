@@ -1,0 +1,185 @@
+name: Isolated native source prerequisites
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-dependencies-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  brotli:
+    uses: ./.github/workflows/build-brotli.yml
+
+  source-prerequisites:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos-arm64
+            source: da607da739fa6047df13e66a2af6b8bec7c2a498
+          - os: macos-15-intel
+            target: macos-x86_64
+            source: da607da739fa6047df13e66a2af6b8bec7c2a498
+          - os: windows-latest
+            target: windows-x86_64
+            source: 51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Evidence regression tests
+        run: python -m unittest discover -s build/dependencies
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: madler/zlib
+          ref: ${{ matrix.source }}
+          path: zlib-source
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Build source zlib and compare exact selected baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/dependencies/build_native.py build --library zlib \
+            --source zlib-source --target "${{ matrix.target }}" \
+            --output "$RUNNER_TEMP/native-zlib"
+          python build/dependencies/build_native.py inspect "$RUNNER_TEMP/native-zlib"
+      - name: Record 4D host availability without launching
+        shell: python
+        run: |
+          import json, os, platform
+          from pathlib import Path
+          roots = [Path("/Applications")] if platform.system() == "Darwin" else [
+              Path(os.environ["ProgramFiles"]) / "4D",
+              Path(os.environ["ProgramFiles"]) / "4D SAS"]
+          matches = [str(p) for root in roots if root.exists()
+                     for p in (root.glob("4D*/4D.app") if platform.system() == "Darwin"
+                               else root.glob("*/4D.exe"))]
+          path = Path(os.environ["RUNNER_TEMP"]) / "native-zlib" / "host-availability.json"
+          path.write_text(json.dumps({"platform": platform.platform(),
+              "hostCandidates": matches, "hostInitialized": False,
+              "scope": "bounded default installation-path check, not a host test"}, indent=2))
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: native-zlib-${{ matrix.target }}
+          path: ${{ runner.temp }}/native-zlib/
+          if-no-files-found: error
+          include-hidden-files: true
+
+  curl-baseline:
+    needs: brotli
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos-arm64
+          - os: macos-15-intel
+            target: macos-x86_64
+          - os: windows-latest
+            target: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brotli-${{ runner.os }}
+          path: ${{ runner.temp }}/baseline-brotli
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: openssl/openssl
+          ref: f4dc4d58b48d346a8270183f89acf826d459b0ca # OpenSSL 3.5.8
+          path: openssl-source
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Make missing Windows assembler available
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (!(Get-Command nasm -ErrorAction SilentlyContinue)) {
+            choco install nasm -y --no-progress
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+      - name: Prepare provider evidence directory
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          (Path(os.environ["RUNNER_TEMP"]) / "curl-evidence").mkdir()
+      - name: Rebuild matching OpenSSL macOS provider
+        if: runner.os == 'macOS'
+        shell: bash
+        working-directory: openssl-source
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          arch="${TARGET#macos-}"
+          ./Configure "darwin64-${arch}-cc" no-shared no-tests \
+            -mmacosx-version-min=10.13 --prefix="$PWD/out" \
+            > "$RUNNER_TEMP/curl-evidence/openssl-configure.log" 2>&1
+          if ! make -j3 > "$RUNNER_TEMP/curl-evidence/openssl-build.log" 2>&1; then
+            cat "$RUNNER_TEMP/curl-evidence/openssl-build.log"
+            exit 1
+          fi
+          make install_sw > "$RUNNER_TEMP/curl-evidence/openssl-install.log" 2>&1
+          python ../build/sbom/provenance.py source-record --source . --install out \
+            --target "$TARGET" -- "darwin64-${arch}-cc" no-shared no-tests \
+            -mmacosx-version-min=10.13 --prefix="$PWD/out"
+          python ../build/sbom/provenance.py verify --source . --install out \
+            --target "$TARGET" -- "darwin64-${arch}-cc" no-shared no-tests \
+            -mmacosx-version-min=10.13 --prefix="$PWD/out"
+      - name: Rebuild matching OpenSSL Windows provider
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: openssl-source
+        run: |
+          perl Configure VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out --openssldir=%CD%\out\ssl > "%RUNNER_TEMP%\curl-evidence\openssl-configure.log" 2>&1
+          if errorlevel 1 exit /b 1
+          nmake > "%RUNNER_TEMP%\curl-evidence\openssl-build.log" 2>&1
+          if errorlevel 1 (type "%RUNNER_TEMP%\curl-evidence\openssl-build.log" & exit /b 1)
+          nmake install_sw > "%RUNNER_TEMP%\curl-evidence\openssl-install.log" 2>&1
+          if errorlevel 1 exit /b 1
+          python ..\build\sbom\provenance.py source-record --source . --install out --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out --openssldir=%CD%\out\ssl
+          if errorlevel 1 exit /b 1
+          python ..\build\sbom\provenance.py verify --source . --install out --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out --openssldir=%CD%\out\ssl
+          if errorlevel 1 exit /b 1
+      - name: Observe exact baseline curl without loading the plugin or making transfers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/dependencies/observe_curl.py observe \
+            --target "${{ matrix.target }}" --openssl-install openssl-source/out \
+            --brotli-vendor "$RUNNER_TEMP/baseline-brotli" \
+            --output "$RUNNER_TEMP/curl-evidence/observation"
+          python build/dependencies/observe_curl.py inspect "$RUNNER_TEMP/curl-evidence/observation"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: baseline-curl-${{ matrix.target }}
+          path: ${{ runner.temp }}/curl-evidence/
+          if-no-files-found: error
+          include-hidden-files: true
