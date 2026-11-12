@@ -148,6 +148,9 @@ def read_record(path):
     config = configuration(target, record.get("configure_arguments", []))
     if record.get("platform") != config["platform"]:
         raise ValueError("Recorded Configure platform does not match target")
+    if "buildMaterials" in record:
+        from provider_materials import inspect
+        inspect(path.parent, record)
     return record
 
 

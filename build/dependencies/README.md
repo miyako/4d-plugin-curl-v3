@@ -73,7 +73,7 @@ the original prebuilt configure arguments remain an explicit baseline gap.
   original-object modified-proxy relinks on Mac and Windows.
 - [x] Relocate Mac source/object materials and verify modified delivered proxy
   and GNU iconv sources in both full-plugin slices.
-- [ ] Complete portable Windows materials and Windows GNU modification/relink verification.
+- [x] Verify portable Windows source/object and GNU modification/relink execution.
 - [ ] Run protocol/proxy/TLS/SSH/compression/conversion and deployment/CRT checks.
 - [x] Independently inspect persisted unsigned cross-platform ZIP and DMG outputs.
 - [ ] Require zero opaque selected third-party archives, with explicit exclusions.
@@ -642,6 +642,48 @@ A fresh run and independently inspected downloaded outputs remain required.
 `portable_plugin_windows.py inspect` can recheck delivered bytes, baseline
 normalization and modified exports on another platform without loading a DLL;
 this is not an install/trust or 4D host check.
+
+Run `43317776218` and its independently downloaded kit close that bounded
+Windows execution/delivery check: the complete moved kit passes its manifest,
+the original-object baseline matches within only the existing clock/checksum
+normalization, and the combined modified proxy/GNU plugin contains both defined
+probe exports. GNU 1.18's four compiled objects equal the delivered archive's
+members; all 198 alias groups and nine conversion/rejection cases agree with
+the pristine source candidate. Original rejected uploads remain preserved.
+This is still an internal candidate kit, not completed distribution licensing,
+source-provider strengthening or a 4D host/install result.
+
+### Fresh provider compiler-material experiments
+
+The `providers` prerequisite scope runs `native-provider-materials.yml` without
+building/adopting the plugin, production signing or publishing. It retains the
+existing OpenSSL/Brotli record types and adds independently rechecked
+`buildMaterials` only after fresh builds. It never enriches historical caches.
+Compiler inputs include generated assembly; actual compiled object bytes must
+match every installed archive member. The snapshot includes original sources,
+generated headers, configuration, original logs, recipes and tool identities.
+Unused upstream integration-test gitlinks are explicitly excluded; original
+Git symlink text is delivered as checked text records, not followed outside
+the source tree.
+
+Local arm64 and x86_64 OpenSSL experiments bind respectively 1,011/1,020 crypto
+objects and 94 SSL objects each. Both Brotli targets bind six common, six decoder
+and 23 encoder objects; encoder output remains unused by the plugin.
+The initial arm64 TLS memory-BIO probe agrees with the original curl-observation
+provider kit for authenticated hostname-verified TLS 1.2 and TLS 1.3 application
+data. The receipt-backed probe additionally passes wrong-hostname and untrusted
+certificate rejection on both macOS architectures: six cases per target.
+It retains compiler arguments, exact provider/header/source hashes and original
+outputs, and delivers its executed test source and recipe with the root license.
+It uses ephemeral in-memory identities, not stored keys or a 4D host; it does not
+open a network socket. The isolated provider CI runs the same checks.
+These are separate experiments, not new selected-plugin evidence: the twelve
+original provider bindings remain weaker until fresh native outputs, consumers
+and persisted source records have been verified together.
+Windows provider execution and fresh exact-head native CI remain pending.
+Physical build/install prefixes and compiler-tracer paths are recorded as
+fresh-build configuration, not represented as historical prefix equivalence
+or byte-identical reproduction.
 
 ```sh
 python3 build/dependencies/build_curl.py build \

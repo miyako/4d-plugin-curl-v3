@@ -29,7 +29,7 @@ on:
       native-prerequisite-scope:
         description: 'Isolated prerequisite jobs to run (only applies with native-prerequisites-only)'
         type: choice
-        options: [all, iconv, curl, inventory]
+        options: [all, iconv, curl, inventory, providers]
         default: all
       native-provider-run:
         description: 'Original successful prerequisite producer run for curl/inventory assembly'
@@ -65,10 +65,14 @@ concurrency:
 
 jobs:
   native-prerequisites:
-    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope != 'curl' && inputs.native-prerequisite-scope != 'inventory' }}
+    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope != 'curl' && inputs.native-prerequisite-scope != 'inventory' && inputs.native-prerequisite-scope != 'providers' }}
     uses: ./.github/workflows/native-dependencies.yml
     with:
       scope: ${{ inputs.native-prerequisite-scope || 'all' }}
+
+  source-providers:
+    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope == 'providers' }}
+    uses: ./.github/workflows/native-provider-materials.yml
 
   curl-source:
     if: ${{ inputs.native-prerequisites-only && (inputs.native-prerequisite-scope == 'curl' || inputs.native-prerequisite-scope == 'inventory') }}

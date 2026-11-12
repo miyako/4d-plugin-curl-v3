@@ -27,7 +27,7 @@ def native_path(argument):
 def invocation(compiler, arguments):
     cwd = Path.cwd()
     sources = [native_path(a) for a in arguments
-               if a.endswith((".c", ".rc")) and native_path(a).is_file()]
+               if a.endswith((".c", ".rc", ".s", ".S", ".asm")) and native_path(a).is_file()]
     inputs = [{"path": p.as_posix(), "sha256": digest(p)} for p in sources]
     return {"cwd": cwd.as_posix(), "compiler": compiler, "arguments": arguments,
             "returnCode": None, "inputs": inputs}
@@ -42,8 +42,11 @@ def complete(record, return_code):
         elif argument.startswith(("/Fo", "-Fo")) and len(argument) > 3:
             output = native_path(argument[3:])
     record["returnCode"] = return_code
-    if return_code == 0 and output and output.is_file() and any(
-            a in ("-c", "/c", "--output-format=coff") for a in arguments):
+    nasm = (any(p["path"].endswith(".asm") for p in record["inputs"])
+            and any(a == "-f" and index + 1 < len(arguments) and arguments[index + 1] == "win64"
+                    for index, a in enumerate(arguments)))
+    if return_code == 0 and output and output.is_file() and (nasm or any(
+            a in ("-c", "/c", "--output-format=coff") for a in arguments)):
         record["object"] = {"path": output.as_posix(), "sha256": digest(output)}
     return record
 

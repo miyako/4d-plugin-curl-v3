@@ -114,6 +114,22 @@ class IconvTests(unittest.TestCase):
             record = json.loads(next(root.glob("*.json")).read_text())
             self.assertEqual(record["object"]["sha256"], trace_compiler.digest(output))
 
+    def test_generated_assembly_inputs_and_nasm_objects_are_bound_without_a_c_flag(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            for name, flags in (("generated.S", ["-c"]), ("generated.asm", ["-f", "win64"])):
+                source, output = root / name, root / (name + ".obj")
+                source.write_bytes(b"actual generated assembly")
+                output.write_bytes(b"actual assembled object")
+                record = trace_compiler.invocation("assembler", [*flags, "-o", str(output), str(source)])
+                good = trace_compiler.complete(record, 0)
+                self.assertEqual(good["inputs"], [
+                    {"path": source.as_posix(), "sha256": trace_compiler.digest(source)}])
+                self.assertEqual(good["object"]["sha256"], trace_compiler.digest(output))
+                failed = trace_compiler.complete(trace_compiler.invocation(
+                    "assembler", [*flags, "-o", str(output), str(source)]), 1)
+                self.assertNotIn("object", failed)
+
     @unittest.skipIf(os.name == "nt", "The native Cygwin run covers the Windows shell boundary")
     def test_resource_shell_preserves_quoting_status_and_original_object_record(self):
         with tempfile.TemporaryDirectory() as temporary:
