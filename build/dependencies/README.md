@@ -605,6 +605,17 @@ The experimental combined universal SHA-256 is
 `1edda70a20fcf5bb6bf6888eafd879cdea5717233a662efd45718e52a2ab2dce`.
 This does not establish modified Windows GNU delivery or 4D host behavior.
 
+The source-plugin-only Windows experiment additionally exports the actual
+objects, definition file, source/resources, original GNU/proxy kits and complete
+project library-search files with `portable_plugin_windows.py`. It moves that
+kit before invoking its delivered helpers, rebuilding modified proxy sources
+and attempting the original and modified plugin links. This path requires the
+original MSVC linker and selected SDK/CRT archive hashes; proprietary tools are
+not redistributed. The recorded unused developer search directory must remain
+absent, rather than silently deleting it from the search order. Fresh native
+CI and independent persisted-kit inspection must establish this new delivery
+path before it is treated as verified. It does not initialize the DLL or 4D.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

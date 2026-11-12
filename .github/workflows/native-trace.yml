@@ -535,6 +535,35 @@ jobs:
           name: isolated-full-plugin-relink-Windows
           path: ${{ runner.temp }}/plugin-user-relink/
           if-no-files-found: error
+      - name: Export, move and replay delivered Windows source/object materials
+        if: ${{ inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        shell: python
+        run: |
+          import os, shutil, subprocess, sys
+          from pathlib import Path
+          subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "build/dependencies"], check=True)
+          root = Path(os.environ["RUNNER_TEMP"]) / "portable-plugin"
+          root.mkdir()
+          initial = root / "initial-kit"
+          kit = root / "Moved Windows user kit"
+          subprocess.run([sys.executable, "build/dependencies/portable_plugin_windows.py",
+              "export", "--project", str(Path.cwd()), "--output", str(initial)], check=True)
+          shutil.move(initial, kit)
+          tools = kit / "tools/build/dependencies"
+          modified = root / "rebuilt-proxy"
+          subprocess.run([sys.executable, str(tools / "relink_candidate.py"),
+              "--candidate", str(kit / "library-materials/windows-x86_64/libproxy"),
+              "--output", str(modified)], check=True)
+          subprocess.run([sys.executable, str(tools / "portable_plugin_windows.py"),
+              "replay", "--kit", str(kit), "--output", str(root / "replay"),
+              "--modified-proxy", str(modified / "build/libproxy.lib")], check=True)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
+        with:
+          name: isolated-portable-plugin-Windows
+          path: ${{ runner.temp }}/portable-plugin/
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

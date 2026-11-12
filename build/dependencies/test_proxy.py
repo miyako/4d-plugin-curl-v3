@@ -1,7 +1,7 @@
 import hashlib
 import json
 import io
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import struct
 import subprocess
 import tarfile
@@ -16,6 +16,7 @@ import relink_candidate
 import relink_plugin_macos
 import relink_plugin_windows
 import portable_plugin_macos
+import portable_plugin_windows
 from provenance import digest
 
 
@@ -71,6 +72,25 @@ class ProxyEvidenceTests(unittest.TestCase):
         with mock.patch.object(portable_plugin_macos.platform, "system", return_value="Darwin"):
             with self.assertRaisesRegex(ValueError, "materials changed"):
                 portable_plugin_macos.replay(self.root, self.root.parent / "unused-output", {})
+
+    def test_portable_windows_arguments_preserve_search_and_object_order(self):
+        project = PureWindowsPath("D:/original/project")
+        arguments = [r"C:\tools\link.exe", "/DLL", "/MACHINE:X64",
+                     "/OUT:D:\\original\\cURL.4DX", "/PDB:D:\\original\\cURL.pdb",
+                     "/MAP:D:\\original\\link.map", "/IMPLIB:D:\\original\\cURL.lib",
+                     "/LTCGOUT:D:\\original\\cURL.iobj", "/LIBPATH:lib\\64",
+                     "/LIBPATH:C:\\optional\\lib", "libproxy.lib", "iconv.lib",
+                     "/DEF:.\\4D Plugin API\\4DPluginAPI.def",
+                     str(project / "Objs/b.obj"), str(project / "Objs/a.obj")]
+        recipe, absent = portable_plugin_windows.relocate(arguments, project)
+        self.assertEqual(recipe[0], "${DRIVER}")
+        self.assertEqual(recipe[8:12], arguments[8:12])
+        self.assertEqual(recipe[-2:], [r"${KIT}\project\Objs\b.obj", r"${KIT}\project\Objs\a.obj"])
+        self.assertEqual(absent, [r"C:\optional\lib"])
+        self.assertIn(r"/OUT:${OUTPUT}\baseline\cURL.4DX", recipe)
+        for extra in (r"/LIBPATH:..\escape", r"D:\unaccounted.lib", r"/DEF:D:\outside.def"):
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                portable_plugin_windows.relocate(arguments + [extra], project)
 
     def test_pinned_source_rejects_wrong_revision_and_modified_or_extra_source(self):
         lock = self.checkout()
