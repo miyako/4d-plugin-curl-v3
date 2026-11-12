@@ -731,6 +731,21 @@ the fresh archives. Original-record references feed the existing normalized
 inventory; this option neither adopts production archives nor closes transfer,
 redistribution, user-relink or 4D host gates.
 
+`probe_curl_transfers.py` compares standalone consumers using the candidate
+archives and the exact frozen curl/SSH/HTTP/zlib archives, both against the same
+source-matched TLS/Brotli providers. Local arm64 and Intel/Rosetta runs pass
+eleven cases per variant: HTTP, gzip/deflate/Brotli response decoding, explicit
+HTTP proxy forwarding, and TLS 1.2/1.3 authentication plus hostname and trust
+rejections. This is not a byte-exact released-provider comparison, PAC/SSH
+transfer coverage, an older-OS test or plugin/4D initialization.
+The optional fresh-provider candidate CI also runs these comparisons; Windows
+adds the Schannel cases. Its ephemeral self-signed fixture disables Schannel
+revocation checking only within that standalone test process, without changing
+product defaults or operating-system trust. Private fixture keys never enter
+the delivered receipt tree. Delivered recipes, complete response bytes,
+compiler/archive/interface hashes, maps, executables and original outcomes are
+rechecked by the read-only `inspect_proof` entry point.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \

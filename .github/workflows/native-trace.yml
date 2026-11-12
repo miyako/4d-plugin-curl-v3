@@ -360,6 +360,26 @@ jobs:
           choco install nasm -y --no-progress
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Compare standalone loopback transfers with fresh source providers
+        if: ${{ inputs.native-candidate-plugin-only && inputs.native-materials-provider-run != '' }}
+        shell: python
+        run: |
+          import os, subprocess, sys
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          mac = os.environ["RUNNER_OS"] == "macOS"
+          for target in (("macos-arm64", "macos-x86_64") if mac else ("windows-x86_64",)):
+              subprocess.run([sys.executable, "build/dependencies/probe_curl_transfers.py",
+                "--project", os.environ["PLUGIN_ROOT"], "--baseline", str(Path.cwd()),
+                "--kit", str(root / "candidate-provider-materials" / ("isolated-provider-materials-" + target)),
+                "--target", target, "--output", str(root / "candidate-curl-transfers" / target)], check=True)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() && inputs.native-candidate-plugin-only && inputs.native-materials-provider-run != '' }}
+        with:
+          name: candidate-curl-transfers-${{ runner.os }}
+          path: ${{ runner.temp }}/candidate-curl-transfers/
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Build source OpenSSL Windows static MT
         if: ${{ runner.os == 'Windows' && !inputs.native-candidate-plugin-only }}
         shell: cmd
