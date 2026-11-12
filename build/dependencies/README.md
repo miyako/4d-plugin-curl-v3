@@ -71,7 +71,7 @@ Never delete old archives/evidence before verified replacement. Historical
 read-only analysis must remain supported. A release/sign/tag/merge requires
 separate authorization; candidate CI has read-only repository permissions.
 
-## Measured candidate results and unresolved decision
+## Measured results and scoped candidate decision
 
 [First isolated run 43235756612](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43235756612)
 built all three native targets. Both macOS jobs passed all four test executables;
@@ -101,12 +101,21 @@ after automatic settings. Thus library comparisons are not a claim that the
 4D wrapper retries ordered PAC entries or forcibly disables environment proxy
 settings. Those product behaviors are not changed by this migration.
 
-Do not patch the candidate to reproduce the old bypass failure or turn the
-failing tests into expected passes. Approval choices remain: authorize the
-intentional bypass fix plus a narrowly scoped, reviewed Windows file-URL
-correction and a complete LGPL relink-delivery plan before adoption; or retain
-the current archives while evaluating a different proxy implementation and
-its compatibility/licensing tradeoffs. Neither choice authorizes a release.
+The user selected continued candidate validation with the deliberate bypass
+fix, a narrowly reviewed Windows file-URL correction, and completion of
+LGPL/relink materials before production adoption. This is not adoption or
+release authorization. The current fixture separately asserts the observed
+legacy multi-entry bypass failure and the candidate's corrected behavior;
+`acceptedCandidateChanges` records that scoped decision. All other comparison
+expectations remain intact.
+
+`patches/proxy-windows-file-url.patch` converts Windows drive-letter and UNC
+paths for `file:`/`pac+file:` and uses the converted path for actual PAC reads.
+The source delta is allowlisted by exact before/after hashes. A separate
+candidate-source test covers drive letters, UNC, localhost, both file schemes,
+actual local PAC contents, unchanged HTTP paths and unchanged macOS paths.
+This does not add a Windows PAC interpreter, percent decoding or remote-PAC
+changes.
 
 ## Isolated proxy candidate
 
@@ -141,16 +150,20 @@ three-target comparison. It does not replace vendor archives or build/sign the
 plugin. The same public-API fixture links separately to the exact old archives
 and to newly built candidate archives. Tests inject synthetic macOS preferences
 or process-local Windows registry redirection, not host proxy configuration.
-They cover direct/manual HTTP/HTTPS/SOCKS selection, host/local bypass, invalid
+Five native test executables cover direct/manual HTTP/HTTPS/SOCKS selection, host/local bypass, invalid
 URLs, local macOS PAC ordering and Windows' direct fallback without a built-in PAC runner;
 upstream URL parsing/encoding tests also run. WPAD discovery, real proxy
 authentication, remote PAC fetching and the full plugin remain separate gates.
 
 The builder reuses existing SBOM provenance hash/path helpers. It records
 complete clean-source hashes before/after compilation, immutable commit,
-licenses, patches (currently none), explicit module list, actual compile
+licenses, exact reviewed patches, explicit module list, actual compile
 commands, toolchain executable hashes, CMake compiler metadata, logs, original
-baseline hashes, installed archives and source/recipe tarballs. Existing output
+baseline hashes, installed archives and source/recipe tarballs. Checkout bytes
+are recorded separately from canonical `git archive` source and the actual
+patched compile inputs; line-ending conversions do not erase either record.
+Only the exact reviewed source delta is accepted, and additional staged headers
+or other files fail verification. Existing output
 directories are rejected, not assigned fresh provenance. Verification checks
 the original record and bytes without rebuilding. These **candidate-only**
 records are not release SBOM identities or plugin selection evidence.
@@ -163,6 +176,39 @@ Failed native tests retain a source/archive build record with
 `inspect_proxy.py --allow-failed-tests OUTPUT` supports explicit read-only
 inspection of rejected candidates and reports failed tests, without waiving
 the compatibility/adoption gate.
+
+## Delivered-library user-relink proof
+
+The recipe tar preserves repository-relative paths and includes the required
+SBOM hash/object helpers, root recipe license, patch, test sources and these
+instructions. The source tar contains the actual patched compile inputs,
+including all original notices and license text; the base tar retains the
+canonical immutable upstream source.
+
+```sh
+python3 build/dependencies/relink_candidate.py \
+  --candidate /path/to/downloaded/candidate --output /fresh/user-relink
+python3 build/dependencies/relink_candidate.py --inspect-only \
+  --candidate /path/to/downloaded/candidate --output /path/to/downloaded/relink
+```
+
+The first command verifies the delivered candidate, extracts its delivered
+sources and build recipe into a fresh directory, adds a benign new C function
+to the library source, rebuilds both static libraries and relinks a standalone
+test against that modified library. The probe must return the new value and
+the normal candidate URL/proxy/PAC tests must still pass. The modified archive,
+resulting test executable, source delta and original logs are hash-bound.
+The second command independently inspects persisted bytes without running them.
+CI uploads separate source-candidate and user-relink proof artifacts.
+
+This verifies **library-source** rebuild/relink usability only. It does not
+supply or verify a complete 4D plugin relink kit. That kit still needs every
+selected library's corresponding source/compatible objects, product/SDK build
+materials and resources, followed by both plugin architectures/platform builds.
+The hosted CI runners have no configured 4D host/install test, so modified-plugin
+loading, trust/local-signing and user installation remain unverified. These are
+explicit production-adoption gates, not obligations satisfied by this document
+or by the standalone probe.
 
 ## Static-distribution decision (not a legal-compliance claim)
 

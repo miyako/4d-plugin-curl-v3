@@ -137,8 +137,13 @@ int main(int argc, char** argv) {
         expect("manual-http", "http://destination.invalid/", {"http://proxy.invalid:8080"});
         expect("manual-https", "https://destination.invalid/", {"https://secure.invalid:8443"});
         config.text("ProxyOverride", "bypass.invalid;<local>");
+#ifdef PROXY_BASELINE_OBSERVATION
+        expect("bypass-host-legacy", "http://bypass.invalid/", {"http://proxy.invalid:8080"});
+        expect("bypass-local-legacy", "http://intranet/", {"http://proxy.invalid:8080"});
+#else
         expect("bypass-host", "http://bypass.invalid/", {"direct://"});
         expect("bypass-local", "http://intranet/", {"direct://"});
+#endif
         config.text("ProxyOverride", "<local>");
         expect("bypass-local-only", "http://intranet/", {"direct://"});
         config.clear();
@@ -146,9 +151,7 @@ int main(int argc, char** argv) {
         config.text("ProxyServer", "socks=socks.invalid:1080");
         expect("manual-socks", "http://destination.invalid/", {"socks://socks.invalid:1080"});
         config.clear();
-        std::string local_path = argv[1];
-        require(local_path.size() > 2 && local_path[1] == ':', "expected drive-qualified PAC fixture");
-        config.pac("file://" + local_path.substr(2));
+        config.pac(std::string("file:///") + argv[1]);
         expect("pac-no-builtin-runner", "http://destination.invalid/", {"direct://"});
 #else
         config.number("HTTPEnable", 1);

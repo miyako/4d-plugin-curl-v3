@@ -16,13 +16,15 @@ from native_archive_objects import members
 from provenance import archive_hashes, digest
 
 
-def verify_tar(path, files, extra=None):
+def verify_tar(path, files, extra=None, directories=False):
     expected = {item["path"]: item["sha256"] for item in files}
     if len(expected) != len(files):
         raise ValueError("Duplicate source/recipe file evidence")
     expected.update(extra or {})
     with tarfile.open(path) as archive:
         entries = archive.getmembers()
+        if directories:
+            entries = [e for e in entries if not e.isdir()]
         if (len(entries) != len(expected) or {e.name for e in entries} != set(expected)
                 or any(not e.isfile() for e in entries)):
             raise ValueError("Source/recipe tar has duplicate, missing, extra or non-file members")
@@ -50,12 +52,26 @@ def verify_architecture(path, target):
     return count
 
 
+def verify_source_delta(base, compiled, patches):
+    expected = {a["path"]: a["sha256"] for a in base}
+    actual = {a["path"]: a["sha256"] for a in compiled}
+    if len(expected) != len(base) or len(actual) != len(compiled):
+        raise ValueError("Duplicate source input")
+    for patch in patches:
+        for change in patch["files"]:
+            if expected.get(change["path"]) != change["beforeSha256"]:
+                raise ValueError("Patch base source hash mismatch")
+            expected[change["path"]] = change["afterSha256"]
+    if expected != actual:
+        raise ValueError("Compiled source differs from the exact reviewed patch delta")
+
+
 def verify_tests(path, allow_failed=False):
     suite = ET.parse(path).getroot()
     tests = suite.findall("testcase")
-    expected = {"proxy_behavior", "proxy_url_test", "proxy_url_encode", "proxy_baseline_behavior"}
-    if (suite.tag != "testsuite" or suite.get("tests") != "4"
-            or len(tests) != 4 or {t.get("name") for t in tests} != expected
+    expected = {"proxy_behavior", "proxy_file_url", "proxy_url_test", "proxy_url_encode", "proxy_baseline_behavior"}
+    if (suite.tag != "testsuite" or suite.get("tests") != "5"
+            or len(tests) != 5 or {t.get("name") for t in tests} != expected
             or any(t.get("status") != ("fail" if t.find("failure") is not None else "run") or any(
                 t.find(tag) is not None for tag in ("error", "skipped")) for t in tests)):
         raise ValueError("Missing successful native candidate/baseline comparisons")
@@ -78,6 +94,7 @@ def inspect(output, allow_failed_tests=False):
             or record["source_repository"] != lock["repository"]
             or record["components"] != lock["components"]
             or record["patches"] != lock["patches"]
+            or record["acceptedCandidateChanges"] != lock["acceptedCandidateChanges"]
             or record["status"] != lock["status"]
             or record["modules"] != lock["modules"]["windows" if target.startswith("windows") else "macos"]):
         raise ValueError("Persisted candidate identity/target mismatch")
@@ -85,16 +102,26 @@ def inspect(output, allow_failed_tests=False):
         raise ValueError("Persisted candidate archive mismatch")
     required = {"configure.log", "build.log", "tests.log", "test-results.xml", "install.log",
                 "build/CMakeCache.txt", "build/compile_commands.json", "build/build.ninja",
-                "upstream-source.tar", "candidate-recipe.tar",
+                "upstream-base.tar", "upstream-source.tar", "candidate-recipe.tar",
                 "install/include/proxy.h", "install/share/licenses/libproxy/COPYING"}
     paths = [item["path"] for item in record["buildFiles"]]
     if not required.issubset(paths):
         raise ValueError("Missing original build evidence")
     if record["buildFiles"] != archive_hashes(output, paths):
         raise ValueError("Persisted original build evidence mismatch")
+    verify_tar(output / "upstream-base.tar", record["baseSourceFiles"], directories=True)
     verify_tar(output / "upstream-source.tar", record["sourceFiles"])
-    verify_tar(output / "candidate-recipe.tar", record["recipeFiles"],
-               {"recipe-LICENSE": record["recipeLicenseSha256"]})
+    recipe_files = [{"path": "build/dependencies/" + a["path"], "sha256": a["sha256"]}
+                    for a in record["recipeFiles"]] + record["recipeSupportFiles"]
+    verify_tar(output / "candidate-recipe.tar", recipe_files)
+    support = {a["path"]: a["sha256"] for a in record["recipeSupportFiles"]}
+    if (support.get("LICENSE") != record["recipeLicenseSha256"]
+            or not {"build/sbom/provenance.py", "build/sbom/native_archive_objects.py"}.issubset(support)):
+        raise ValueError("Missing source-kit helper/license materials")
+    recipe = {a["path"]: a["sha256"] for a in record["recipeFiles"]}
+    if any(recipe.get(patch["path"]) != patch["sha256"] for patch in record["patches"]):
+        raise ValueError("Patch bytes differ from the source record")
+    verify_source_delta(record["baseSourceFiles"], record["sourceFiles"], record["patches"])
     source_files = {a["path"]: a["sha256"] for a in record["sourceFiles"]}
     if (record["licenseFile"] != lock["licenseFile"]
             or source_files.get(record["licenseFile"]) != record["licenseFileSha256"]
@@ -114,6 +141,7 @@ def inspect(output, allow_failed_tests=False):
         raise ValueError("Native test status disagrees with original build record")
     return {"target": target, "sourceCommit": record["source_commit"],
             "validationStatus": record["validationStatus"], "failedTests": failed,
+            "acceptedCandidateChanges": [c["id"] for c in record["acceptedCandidateChanges"]],
             "archives": [
                 {**a, "objectMembers": verify_architecture(output / "install" / a["path"], target)}
                 for a in record["archives"]],

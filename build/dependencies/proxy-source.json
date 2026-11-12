@@ -9,7 +9,28 @@
     {"name": "libmodman", "license": "LGPL-2.1-or-later"}
   ],
   "licenseFile": "COPYING",
-  "patches": [],
+  "patches": [
+    {
+      "path": "patches/proxy-windows-file-url.patch",
+      "sha256": "2d9173e6620b52fced2abb6155dba07e04200e03d674529b7f1f487f0072bd6c",
+      "purpose": "Convert Windows file/PAC drive-letter and UNC paths and use them for actual local PAC reads; non-file and macOS paths are unchanged.",
+      "files": [
+        {
+          "path": "libproxy/url.cpp",
+          "beforeSha256": "0d20c9e12246891af1e735e4bdd2103feb32ee733e11a9bcc760e98410e51945",
+          "afterSha256": "05111c73c46399a9b8216dd959ae025129f113cc5e1b984e66c5169a6ccb8221"
+        }
+      ]
+    }
+  ],
+  "acceptedCandidateChanges": [
+    {
+      "id": "windows-proxyoverride-lists",
+      "upstreamCommit": "75e349c6734573fb60f1e0a3c4af3e6e43a289cf",
+      "decision": "Continue the pinned 0.4.17 candidate, validate fixes and complete LGPL/relink materials before production adoption",
+      "scope": "Candidate validation only; old multi-entry bypass failure is deliberately not reproduced. No production or release approval."
+    }
+  ],
   "modules": {
     "macos": ["config_macosx", "ignore_domain", "ignore_hostname", "ignore_ip", "pacrunner_webkit", "wpad_dns_alias"],
     "windows": ["config_w32reg", "ignore_domain", "ignore_hostname", "ignore_ip", "wpad_dns_alias"]

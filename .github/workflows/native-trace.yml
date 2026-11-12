@@ -72,11 +72,19 @@ jobs:
           python build/dependencies/build_proxy.py verify --source proxy-source \
             --output "$RUNNER_TEMP/proxy-candidate" --target "${{ matrix.target }}"
           python build/dependencies/inspect_proxy.py "$RUNNER_TEMP/proxy-candidate"
+          python build/dependencies/relink_candidate.py --candidate "$RUNNER_TEMP/proxy-candidate" \
+            --output "$RUNNER_TEMP/proxy-relink"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: isolated-proxy-${{ matrix.target }}
           path: ${{ runner.temp }}/proxy-candidate/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: isolated-proxy-relink-${{ matrix.target }}
+          path: ${{ runner.temp }}/proxy-relink/
           if-no-files-found: error
 
   brotli:

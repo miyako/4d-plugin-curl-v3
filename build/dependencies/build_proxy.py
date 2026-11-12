@@ -14,7 +14,7 @@ import tarfile
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "sbom"))
 from provenance import archive_hashes, digest, git, write_json
-from inspect_proxy import inspect, verify_architecture
+from inspect_proxy import inspect, verify_architecture, verify_source_delta
 
 
 TARGETS = ("macos-arm64", "macos-x86_64", "windows-x86_64")
@@ -31,7 +31,23 @@ def source_snapshot(source, lock):
 
 def recipe_snapshot():
     return archive_hashes(HERE, ["build_proxy.py", "inspect_proxy.py", "proxy-source.json",
-        "baseline-v4.9.10.json", "proxy/CMakeLists.txt", "proxy/behavior.cpp", "proxy/test.pac"])
+        "baseline-v4.9.10.json", "proxy/CMakeLists.txt", "proxy/behavior.cpp",
+        "proxy/file-url.cpp", "proxy/relink-probe.cpp", "proxy/test.pac",
+        "patches/proxy-windows-file-url.patch", "relink_candidate.py", "README.md"])
+
+
+def support_snapshot():
+    return archive_hashes(HERE.parents[1], ["LICENSE", "build/sbom/provenance.py",
+                                          "build/sbom/native_archive_objects.py"])
+
+
+def staged_snapshot(source, files):
+    paths = [a["path"] for a in files]
+    actual = [p for p in source.rglob("*") if not p.is_dir()]
+    if (any(p.is_symlink() for p in actual)
+            or {p.relative_to(source).as_posix() for p in actual} != set(paths)):
+        raise ValueError("Unexpected staged proxy source inputs")
+    return archive_hashes(source, paths)
 
 
 def baseline_inputs(root, target):
@@ -60,6 +76,33 @@ def run(command, log, check=True):
 def expected_archives(target):
     return (["lib/libproxy.lib", "lib/modman.lib"] if target == "windows-x86_64"
             else ["lib/libmodman.a", "lib/libproxy.a"])
+
+
+def stage_source(source, output, lock, checkout_files):
+    base_tar = output / "upstream-base.tar"
+    subprocess.run(["git", "-C", str(source), "archive", "--format=tar",
+                    "--output=" + str(base_tar), lock["commit"]], check=True)
+    staged = output / "source"
+    with tarfile.open(base_tar) as archive:
+        expected = {a["path"] for a in checkout_files}
+        entries = archive.getmembers()
+        if (any(not e.isfile() and not e.isdir() for e in entries)
+                or {e.name for e in entries if e.isfile()} != expected):
+            raise ValueError("Pinned source archive has unexpected files")
+        for item in checkout_files:
+            path = staged / item["path"]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(archive.extractfile(item["path"]).read())
+    base_files = archive_hashes(staged, [a["path"] for a in checkout_files])
+    for patch in lock["patches"]:
+        path = (HERE / patch["path"]).resolve()
+        if digest(path) != patch["sha256"]:
+            raise ValueError("Reviewed proxy patch hash mismatch")
+        subprocess.run(["git", "apply", "--no-index", "--check", str(path)], cwd=staged, check=True)
+        subprocess.run(["git", "apply", "--no-index", str(path)], cwd=staged, check=True)
+    files = staged_snapshot(staged, checkout_files)
+    verify_source_delta(base_files, files, lock["patches"])
+    return staged, base_files, files
 
 
 def check_commands(output, target, modules, source):
@@ -93,6 +136,7 @@ def build(source, output, target, baseline):
     output = output.resolve()
     before = source_snapshot(source, lock)
     recipe = recipe_snapshot()
+    support = support_snapshot()
     if output.exists():
         raise ValueError("Use a fresh output directory; an old build cannot receive new provenance")
     old = baseline_inputs(baseline, target)
@@ -100,12 +144,13 @@ def build(source, output, target, baseline):
     if windows != (platform.system() == "Windows"):
         raise ValueError("Target requires its native operating system")
     output.mkdir(parents=True)
+    staged, base_files, compiled_files = stage_source(source, output, lock, before)
     platform_key = "windows" if windows else "macos"
     install = output / "install"
     arguments = [
         "cmake", "-S", str(HERE / "proxy"), "-B", str(output / "build"),
         "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-        "-DPROXY_SOURCE=" + source.as_posix(),
+        "-DPROXY_SOURCE=" + staged.as_posix(),
         "-DPROXY_MODULES=" + ";".join(lock["modules"][platform_key]),
         "-DPROXY_MODULE_DIRECTORY=" + lock["moduleDirectory"][platform_key],
         "-DCMAKE_INSTALL_PREFIX=" + install.as_posix(),
@@ -121,22 +166,26 @@ def build(source, output, target, baseline):
          "--output-on-failure", "--output-junit", str(output / "test-results.xml")],
         output / "tests.log", check=False)
     run(["cmake", "--install", str(output / "build")], output / "install.log")
-    check_commands(output, target, lock["modules"][platform_key], source)
-    if before != source_snapshot(source, lock) or recipe != recipe_snapshot():
+    check_commands(output, target, lock["modules"][platform_key], staged)
+    if (before != source_snapshot(source, lock) or recipe != recipe_snapshot()
+            or support != support_snapshot()):
         raise ValueError("Source or recipe changed during compilation")
+    if compiled_files != staged_snapshot(staged, compiled_files):
+        raise ValueError("Patched proxy source changed during compilation")
     if old != baseline_inputs(baseline, target):
         raise ValueError("Baseline archives changed during comparison")
     with tarfile.open(output / "upstream-source.tar", "w") as archive:
-        for item in before:
-            archive.add(source / item["path"], arcname=item["path"])
+        for item in compiled_files:
+            archive.add(staged / item["path"], arcname=item["path"])
     with tarfile.open(output / "candidate-recipe.tar", "w") as archive:
         for item in recipe:
-            archive.add(HERE / item["path"], arcname=item["path"])
-        archive.add(HERE.parents[1] / "LICENSE", arcname="recipe-LICENSE")
+            archive.add(HERE / item["path"], arcname="build/dependencies/" + item["path"])
+        for item in support:
+            archive.add(HERE.parents[1] / item["path"], arcname=item["path"])
     evidence_paths = ["configure.log", "build.log", "tests.log", "test-results.xml", "install.log",
         "build/CMakeCache.txt", "build/compile_commands.json", "build/build.ninja",
         "install/include/proxy.h", "install/share/licenses/libproxy/COPYING",
-        "upstream-source.tar", "candidate-recipe.tar"]
+        "upstream-base.tar", "upstream-source.tar", "candidate-recipe.tar"]
     compiler_files = sorted((output / "build/CMakeFiles").glob("*/CMakeCXXCompiler.cmake"))
     if len(compiler_files) != 1:
         raise ValueError("Expected one CMake compiler identity")
@@ -158,9 +207,12 @@ def build(source, output, target, baseline):
         "target": target, "configure_arguments": arguments,
         "testExitCode": test_exit_code,
         "validationStatus": "passed" if test_exit_code == 0 else "failed",
-        "sourceFiles": before, "recipeFiles": recipe, "patches": lock["patches"],
+        "checkoutFiles": before, "baseSourceFiles": base_files, "sourceFiles": compiled_files,
+        "recipeFiles": recipe, "recipeSupportFiles": support, "patches": lock["patches"],
+        "acceptedCandidateChanges": lock["acceptedCandidateChanges"],
+        "sourceCheckoutHandling": "Clean pinned checkout bytes are recorded separately; git archive supplies canonical source bytes before reviewed patches.",
         "recipeLicenseSha256": digest(HERE.parents[1] / "LICENSE"),
-        "licenseFile": lock["licenseFile"], "licenseFileSha256": digest(source / lock["licenseFile"]),
+        "licenseFile": lock["licenseFile"], "licenseFileSha256": digest(staged / lock["licenseFile"]),
         "modules": lock["modules"][platform_key],
         "baselineArchives": old, "archives": archive_hashes(install, expected_archives(target)),
         "toolchainExecutables": [{"path": str(path.resolve()), "sha256": digest(path)}
@@ -189,22 +241,26 @@ def verify(source, output, target):
             or record["status"] != lock["status"]
             or record["components"] != lock["components"]
             or record["patches"] != lock["patches"]
+            or record["acceptedCandidateChanges"] != lock["acceptedCandidateChanges"]
             or record["licenseFile"] != lock["licenseFile"]
-            or record["licenseFileSha256"] != digest(source / lock["licenseFile"])
+            or record["licenseFileSha256"] != digest(output / "source" / lock["licenseFile"])
             or record["modules"] != lock["modules"]["windows" if target.startswith("windows") else "macos"]):
         raise ValueError("Proxy candidate identity mismatch")
     if [a["path"] for a in record["archives"]] != sorted(expected_archives(target)):
         raise ValueError("Unexpected proxy output archive set")
     for expected, actual in (
-        (record["sourceFiles"], source_snapshot(source, lock)),
+        (record["checkoutFiles"], source_snapshot(source, lock)),
+        (record["sourceFiles"], staged_snapshot(output / "source", record["sourceFiles"])),
         (record["recipeFiles"], recipe_snapshot()),
+        (record["recipeSupportFiles"], support_snapshot()),
         (record["archives"], archive_hashes(output / "install",
                                           [a["path"] for a in record["archives"]])),
         (record["buildFiles"], archive_hashes(output, [a["path"] for a in record["buildFiles"]])),
     ):
         if expected != actual:
             raise ValueError("Proxy source/recipe/output/original-build evidence mismatch")
-    check_commands(output, target, record["modules"], source)
+    verify_source_delta(record["baseSourceFiles"], record["sourceFiles"], lock["patches"])
+    check_commands(output, target, record["modules"], output / "source")
     for tool in record["toolchainExecutables"]:
         if digest(Path(tool["path"])) != tool["sha256"]:
             raise ValueError("Proxy toolchain executable changed")

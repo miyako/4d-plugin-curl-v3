@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 
 import build_proxy
 import inspect_proxy
+import relink_candidate
 from provenance import digest
 
 
@@ -142,8 +143,8 @@ class ProxyEvidenceTests(unittest.TestCase):
 
     def test_native_results_require_all_comparisons_and_no_skips(self):
         path = self.root / "test-results.xml"
-        suite = ET.Element("testsuite", tests="4", failures="0")
-        for name in ("proxy_behavior", "proxy_url_test", "proxy_url_encode", "proxy_baseline_behavior"):
+        suite = ET.Element("testsuite", tests="5", failures="0")
+        for name in ("proxy_behavior", "proxy_file_url", "proxy_url_test", "proxy_url_encode", "proxy_baseline_behavior"):
             ET.SubElement(suite, "testcase", name=name, status="run")
         ET.ElementTree(suite).write(path)
         inspect_proxy.verify_tests(path)
@@ -160,6 +161,41 @@ class ProxyEvidenceTests(unittest.TestCase):
             inspect_proxy.verify_tests(path)
         self.assertEqual(inspect_proxy.verify_tests(path, allow_failed=True),
                          ["proxy_baseline_behavior"])
+
+    def test_patch_delta_rejects_unreviewed_changes_or_wrong_base(self):
+        base = [{"path": "url.cpp", "sha256": "a" * 64}, {"path": "other.cpp", "sha256": "b" * 64}]
+        compiled = [{"path": "url.cpp", "sha256": "c" * 64}, base[1]]
+        patches = [{"files": [{"path": "url.cpp", "beforeSha256": "a" * 64,
+                              "afterSha256": "c" * 64}]}]
+        inspect_proxy.verify_source_delta(base, compiled, patches)
+        with self.assertRaisesRegex(ValueError, "reviewed patch delta"):
+            inspect_proxy.verify_source_delta(base, compiled + [{"path": "injected.h", "sha256": "d" * 64}], patches)
+        patches[0]["files"][0]["beforeSha256"] = "f" * 64
+        with self.assertRaisesRegex(ValueError, "base source hash"):
+            inspect_proxy.verify_source_delta(base, compiled, patches)
+
+    def test_staged_source_is_isolated_and_rejects_extra_inputs(self):
+        lock = self.checkout()
+        lock["patches"] = []
+        before = build_proxy.source_snapshot(self.source, lock)
+        output = self.root / "staging"
+        output.mkdir()
+        staged, base, compiled = build_proxy.stage_source(self.source, output, lock, before)
+        self.assertEqual(base, compiled)
+        self.assertEqual(build_proxy.source_snapshot(self.source, lock), before)
+        (staged / "injected.hpp").write_text("extra input")
+        with self.assertRaisesRegex(ValueError, "Unexpected staged"):
+            build_proxy.staged_snapshot(staged, compiled)
+
+    def test_delivered_relink_material_paths_cannot_escape_the_new_directory(self):
+        path = self.root / "recipe.tar"
+        with tarfile.open(path, "w") as archive:
+            item = tarfile.TarInfo("../escape.cpp")
+            item.size = 1
+            archive.addfile(item, io.BytesIO(b"x"))
+        with self.assertRaisesRegex(ValueError, "Unsafe delivered"):
+            relink_candidate.unpack(path, [{"path": "../escape.cpp", "sha256": "a" * 64}],
+                                    self.root / "relink")
 
 
 if __name__ == "__main__":
