@@ -291,13 +291,146 @@ def stage(output, target, kits):
     return record
 
 
+def stage_project(source, output, target, kits):
+    """Prepare a separate committed-source checkout, never edit the caller's vendor files."""
+    if output.exists():
+        raise ValueError("Plugin candidate staging requires a new output directory")
+    grouped = _read_kits(target, kits)
+    required = set(LIBRARIES) - ({"nghttp3"} if target == "windows-x86_64" else set())
+    if set(grouped) != required:
+        raise ValueError("Plugin staging requires every selected native source candidate")
+    source = source.resolve()
+    if Path(provenance.git(source, "rev-parse", "--show-toplevel")).resolve() != source:
+        raise ValueError("Plugin staging requires the project repository root")
+    if provenance.git(source, "status", "--porcelain", "--untracked-files=no"):
+        raise ValueError("Plugin staging requires committed project source")
+    commit = provenance.git(source, "rev-parse", "HEAD")
+    headers = {}
+    for library, relative in (("curl", "curl"), ("libiconv", "iconv.h"), ("libproxy", "proxy.h")):
+        models = []
+        for architecture in sorted(grouped[library]):
+            path = grouped[library][architecture][3] / "install/include" / relative
+            files = sorted(path.rglob("*")) if path.is_dir() else [path]
+            models.append({p.relative_to(path.parent).as_posix(): (p, provenance.digest(p))
+                           for p in files if not p.is_dir()})
+        if (not models[0] or any({k: v[1] for k, v in model.items()} !=
+                                {k: v[1] for k, v in models[0].items()} for model in models)):
+            raise ValueError("Native public headers differ between architectures: " + library)
+        headers.update(models[0])
+    output.mkdir(parents=True)
+    vendor = output / "vendor"
+    staged = stage(vendor, target, kits)
+    project = output / "project"
+    clone = ["git", "clone", "--shared", "--no-checkout", "--", str(source), str(project)]
+    subprocess.run(clone, check=True)
+    subprocess.run(["git", "-C", str(project), "-c", "core.autocrlf=false",
+                    "checkout", "--detach", commit], check=True)
+
+    def destination(relative):
+        path = project / relative
+        if not path.resolve().is_relative_to(project.resolve()):
+            raise ValueError("Project candidate destination escapes the isolated checkout")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    for row in staged["rebuiltArchiveEvidence"]:
+        for archive in row["archives"]:
+            shutil.copyfile(vendor / archive["path"], destination(archive["path"]))
+    for relative, (path, _) in headers.items():
+        copied = destination("include/" + relative)
+        shutil.copyfile(path, copied)
+        if provenance.digest(copied) != headers[relative][1]:
+            raise ValueError("Copied public header differs from its original source kit")
+    merge_commands = []
+    tool = Path(staged["mergeTool"]["path"]) if staged["mergeTool"] else None
+
+    def merge(originals, relative):
+        copied = destination(relative)
+        if tool:
+            arguments = [str(tool), "-create",
+                         *[str(originals[t]) for t in sorted(originals)],
+                         "-output", str(copied)]
+            subprocess.run(arguments, check=True)
+            merge_commands.append(arguments)
+            provenance.verify_universal_archive(copied, {
+                0x0100000C: originals["macos-arm64"],
+                0x01000007: originals["macos-x86_64"],
+            })
+        else:
+            shutil.copyfile(originals[target], copied)
+            if provenance.digest(copied) != provenance.digest(originals[target]):
+                raise ValueError("Copied provider differs from original archive")
+
+    curls = grouped["curl"]
+    ssl_records = {t: curls[t][3] / "providers/ssh/provider/openssl-build-provenance.json"
+                   for t in sorted(curls)}
+    for name in ("crypto", "ssl"):
+        extension = ".lib" if target.startswith("windows") else ".a"
+        merge({t: p.parent / ("lib/lib" + name + extension) for t, p in ssl_records.items()},
+              ("lib/64/" if target.startswith("windows") else "a/") + "lib" + name + extension)
+    ssl = provenance.combine(list(ssl_records.values()), project, target)
+    ssl["status"] = "not-approved-for-production"
+    provenance.write_json(project / "openssl-provenance.json", ssl)
+    brotli_records = {}
+    for architecture, (_, _, _, kit) in sorted(curls.items()):
+        record_path = kit / "providers/baseline/brotli-provenance.json"
+        original = json.loads(record_path.read_text(encoding="utf-8"))
+        provider = kit / "providers/baseline/rebuilt-providers/Brotli"
+        if original["archives"] != provenance.archive_hashes(
+                provider, [a["path"] for a in original["archives"]]):
+            raise ValueError("Original Brotli provider archives changed")
+        brotli_records[architecture] = (original, provider, provenance.digest(record_path))
+    first = brotli_records[sorted(brotli_records)[0]][0]
+    identity = {k: v for k, v in first.items() if k != "archives"}
+    if any({k: v for k, v in r[0].items() if k != "archives"} != identity
+           for r in brotli_records.values()):
+        raise ValueError("Original Brotli provider source identities disagree")
+    selected = [a["path"] for a in first["archives"]
+                if Path(a["path"]).name in ("libbrotlidec.a", "libbrotlicommon.a",
+                                           "brotlidec.lib", "brotlicommon.lib")]
+    if len(selected) != 2:
+        raise ValueError("Expected the two selected Brotli provider archives")
+    for relative in selected:
+        merge({t: r[1] / relative for t, r in brotli_records.items()}, relative)
+    brotli = {
+        **identity, "target": target, "status": "not-approved-for-production",
+        "archives": provenance.archive_hashes(project, selected),
+        "source_builds": [{"target": t, "originalRecordSha256": r[2], "record": r[0]}
+                          for t, r in brotli_records.items()],
+    }
+    provenance.write_json(project / "brotli-provenance.json", brotli)
+    if collect(project, target, kits) != staged["rebuiltArchiveEvidence"]:
+        raise ValueError("Project candidate copies differ from inspected source staging")
+    record = {
+        "projectCommit": commit, "target": target, "status": "not-approved-for-production",
+        "projectDirectory": "project", "cloneCommand": clone,
+        "nativeSourceKits": [str(Path(p).resolve()) for p in kits],
+        "rebuiltArchiveEvidence": staged["rebuiltArchiveEvidence"],
+        "providerMergeCommands": merge_commands, "mergeTool": staged["mergeTool"],
+        "publicHeaders": [{"path": "include/" + p, "sha256": sha}
+                          for p, (_, sha) in sorted(headers.items())],
+        "limitations": [
+            "Prepared inputs only: no plugin compilation, linker selection or actual 4D host proof.",
+            "OpenSSL/Brotli retain their original source/archive evidence class, not new "
+            "compiler-object closure or retroactive build materials.",
+            "The shared Git clone and externally referenced kits are not a portable LGPL "
+            "source/relink delivery; complete self-contained materials remain required.",
+        ],
+    }
+    provenance.write_json(output / "plugin-candidate-staging.json", record)
+    return record
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", choices=TARGETS, required=True)
     parser.add_argument("--kit", type=Path, action="append", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--project-source", type=Path,
+                        help="Prepare a separate committed project checkout; never replace caller archives")
     args = parser.parse_args()
-    result = stage(args.output, args.target, args.kit)
+    result = (stage_project(args.project_source, args.output, args.target, args.kit)
+              if args.project_source else stage(args.output, args.target, args.kit))
     print(json.dumps({"target": result["target"], "status": result["status"],
                       "libraries": [r["name"] for r in result["rebuiltArchiveEvidence"]]}))

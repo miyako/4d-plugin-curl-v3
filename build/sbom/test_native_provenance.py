@@ -147,6 +147,16 @@ class NativeProvenanceTests(unittest.TestCase):
         self.assertEqual(native_provenance.collect(
             self.vendor, "windows-x86_64", [kit]), result["rebuiltArchiveEvidence"])
 
+    def test_project_staging_never_reuses_output_or_accepts_a_partial_candidate_stack(self):
+        self.vendor.mkdir()
+        with self.assertRaisesRegex(ValueError, "new output directory"):
+            native_provenance.stage_project(self.root, self.vendor, "windows-x86_64", [])
+        output = self.root / "project-candidate"
+        with self.assertRaisesRegex(ValueError, "every selected native"):
+            native_provenance.stage_project(
+                self.root, output, "windows-x86_64", [self.kit("windows-x86_64")])
+        self.assertFalse(output.exists())
+
     def test_duplicate_missing_and_disagreeing_architectures_fail(self):
         arm = self.kit("macos-arm64")
         intel = self.kit("macos-x86_64", version="8.20.0")

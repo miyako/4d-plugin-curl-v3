@@ -387,6 +387,24 @@ complete LGPL corresponding-source/user-relink delivery, operator-run 4D
 installation/trust/behavior checks and representative cross-platform packaging.
 No production archive, signing setting, tag or release was changed.
 
+`native_provenance.py --project-source REPOSITORY --output NEW_DIRECTORY`
+prepares the next isolated full-plugin experiment. It requires the complete
+target's source-candidate stack and clean committed project source, clones that
+commit into `NEW_DIRECTORY/project`, and stages only this separate checkout.
+The normal source candidates and their public curl/iconv/proxy headers are
+rechecked. OpenSSL and the two selected Brotli libraries are bound back to the
+original preserved curl-provider records, with exact Windows copies or verified
+Mac universal slices. Existing OpenSSL combination and shared SBOM ingestion are
+reused; the original weaker provider evidence is not relabeled as compiler-object
+closure. The staging record makes this residual explicit.
+
+This mode does not compile/load a plugin, authorize adoption or provide a
+self-contained LGPL delivery: its shared Git object store and original kits are
+external dependencies. Full compilation/link selection, portable source/relink
+materials, corresponding license obligations and actual host checks remain
+separate gates. The caller's checkout and production archives are never staging
+destinations.
+
 ```sh
 python3 build/dependencies/build_curl.py build \
   --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \
