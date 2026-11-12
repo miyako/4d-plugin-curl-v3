@@ -76,6 +76,16 @@ build-supported member selection, not an invented transitive dependency graph.
 Archive checksums are evidence about archives, not falsely attached as the hash
 of a logical library package.
 
+Known name/version pairs without a source-supported PURL now receive a
+`pkg:generic/NAME@VERSION` identifier from the normalized inventory. This
+preserves suffixes such as `_DEV` and asserts only the evidenced name/version,
+not an upstream source revision, acquisition URL or supplier. Unknown versions
+remain omitted and do not receive a made-up versioned PURL. Source-built
+Brotli/OpenSSL retain GitHub PURLs bound to their actual source commits; SDK
+identity remains commit-bound. Unsupported suppliers and archive licenses are
+still omitted/`NOASSERTION`, not filled from a current upstream project page.
+Both formats identify the generator as `4d-plugin-curl-v3-release-sbom`.
+
 New build records enforce `all-selected-repository-archives-named`: every actual
 repository `candidatePath` plus SHA-256 selected by the linker must occur in a
 standard package's `selectedArchives`. An unused declaration or external/system
@@ -180,6 +190,49 @@ distributed code. ZIP members are read without extraction; DMGs are mounted
 read-only with browsing/auto-opening disabled and detached afterward.
 No binary is uploaded to an analysis service. Schema downloads only fetch
 public, commit-pinned official specifications.
+
+## Final-artifact attestations and release notes
+
+The release build keeps its existing signing/notarization/stapling sequence.
+After final container inspection and sidecar validation, it uploads the ZIP,
+DMG and six sidecars to one immutable Actions artifact. A separate Ubuntu
+attest/publish job downloads those exact files, checks inventory/container
+hashes and matching per-target dependency/binary snapshots while generating
+release notes, then creates GitHub build provenance for all eight files.
+Four SBOM attestations bind each container separately to its own CycloneDX 1.6
+and SPDX 2.3 document. No container or sidecar is changed after attestation.
+
+Only that publication job receives OIDC, attestation-write and contents-write
+permissions. Build jobs use contents-read; the publication job receives no
+production signing secrets. GitHub provenance identifies the workflow/source
+context; it does not reconstruct the build provenance of prebuilt inputs.
+No new signing identity, Windows Authenticode or DMG signing is introduced.
+
+For a future release built with this workflow:
+
+```sh
+gh attestation verify cURL-VERSION.zip --repo miyako/4d-plugin-curl-v3
+gh attestation verify cURL-VERSION.dmg --repo miyako/4d-plugin-curl-v3
+gh attestation verify cURL-VERSION.zip --repo miyako/4d-plugin-curl-v3 \
+  --predicate-type https://cyclonedx.org/bom
+gh attestation verify cURL-VERSION.dmg --repo miyako/4d-plugin-curl-v3 \
+  --predicate-type https://spdx.dev/Document/v2.3
+```
+
+Both SBOM predicates are available for both containers; inspect the verified
+predicate and compare it with the attached sidecar. OIDC verification proves
+the attested subject/predicate/workflow binding, not complete dependency
+coverage or vulnerability absence. Issuance remains untested until a future
+authorized production release. The unsigned trace and historical POC never
+issue release attestations; old releases cannot gain reconstructed
+contemporaneous provenance.
+
+Release notes prepend the evidence-derived per-target version snapshot and
+verification/coverage limits to GitHub's generated change list.
+`.github/release.yml` groups PRs labeled `security` or `dependencies`; unlabeled
+changes are still included. The table is not an invented version delta or a
+vulnerability assessment. See [dependency/security follow-up](SECURITY-REVIEW.md)
+for the flagged libssh2/libiconv versions and remaining repository decisions.
 
 ## Safe manual proof of concept
 

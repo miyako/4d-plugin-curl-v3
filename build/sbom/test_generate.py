@@ -67,6 +67,23 @@ class InventoryTests(unittest.TestCase):
         self.assertNotIn("dependencies", cdx)
         self.assertTrue(all(p["licenseConcluded"] == "NOASSERTION" for p in spdx["packages"]))
 
+    def test_generic_identifiers_do_not_invent_provenance_or_package_hashes(self):
+        inv = generate.inventory(self.path, "4.9.6", {})
+        dependency = inv["targets"][-1]["dependencies"][-1]
+        self.assertEqual(dependency["purl"], "pkg:generic/libssh2@1.11.1_DEV")
+        self.assertNotIn("supplier", dependency)
+        self.assertNotIn("license", dependency)
+        self.assertNotIn("origin", dependency)
+        cdx, spdx = generate.cyclonedx(inv), generate.spdx(inv)
+        for component in cdx["components"]:
+            if component["type"] == "library":
+                self.assertNotIn("hashes", component)
+                self.assertNotIn("supplier", component)
+        for package in spdx["packages"]:
+            if package["name"] == "libssh2":
+                self.assertNotIn("checksums", package)
+                self.assertEqual(package["licenseDeclared"], "NOASSERTION")
+
     def test_version_mismatch_is_error(self):
         with self.assertRaisesRegex(ValueError, "bundle version"):
             generate.inventory(self.path, "0.0.0", {})
@@ -138,6 +155,11 @@ class SchemaTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate.validate_documents(damaged, generate.cyclonedx(damaged),
                                         generate.spdx(damaged), self.path, "4.9.6",
+                                        self.schemas, self.registry)
+        damaged = copy.deepcopy(spdx)
+        damaged["creationInfo"]["creators"] = ["Tool: curl-release-sbom-poc"]
+        with self.assertRaisesRegex(ValueError, "generator identity"):
+            validate.validate_documents(inv, cdx, damaged, self.path, "4.9.6",
                                         self.schemas, self.registry)
 
     def test_build_supported_known_packages_and_relations_in_official_schemas(self):
@@ -301,6 +323,8 @@ class BuildEvidenceTests(unittest.TestCase):
                 record = json.loads(output.read_text())
                 self.assertEqual(record["binarySha256"], generate.sha256(pe()))
                 self.assertEqual(record["rebuiltArchiveEvidence"][0]["version"], "1.2.1")
+                self.assertEqual(record["rebuiltArchiveEvidence"][0]["purl"],
+                                 "pkg:github/google/brotli@" + "a" * 40)
                 missing = [i for i in record["declaredInputs"] if i["status"] == "unresolved-declaration"]
                 self.assertEqual(missing, [{"path": "lib/64/kernel32.lib", "status": "unresolved-declaration"}])
                 snapshot = root / "sources.json"

@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
+from urllib.parse import quote
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -23,6 +24,7 @@ import archives
 
 REPOSITORY = "https://github.com/miyako/4d-plugin-curl-v3"
 SUPPLIER = "Keisuke Miyako"
+GENERATOR = "4d-plugin-curl-v3-release-sbom"
 LIMITATIONS = (
     "Partial inventory, not a complete dependency graph. Binary observations are "
     "identifying strings, not runtime verification or proof of active features. "
@@ -120,7 +122,7 @@ def brotli_provenance(args):
         "versionFile": "c/common/version.h", "versionFileSha256": sha256(header.read_bytes()),
         "license": "MIT", "licenseFile": "LICENSE",
         "licenseFileSha256": sha256(license_path.read_bytes()),
-        "purl": "pkg:github/google/brotli@" + ".".join(parts),
+        "purl": "pkg:github/google/brotli@" + git(args.source, "rev-parse", "HEAD"),
         "archives": [{"path": p.relative_to(args.vendor).as_posix(), "sha256": sha256(p.read_bytes())}
                      for p in archives],
     })
@@ -464,6 +466,16 @@ def inventory(path, version, evidence):
             if record.get("coveragePolicy") == "all-selected-repository-archives-named":
                 from coverage import require_selected_coverage
                 item["selectedArchiveCoverage"] = require_selected_coverage(item)
+        for dependency in item["dependencies"]:
+            if dependency.get("version") and not dependency.get("purl"):
+                dependency["purl"] = (
+                    "pkg:generic/" + quote(dependency["name"], safe="") + "@"
+                    + quote(dependency["version"], safe="")
+                )
+                dependency["purlEvidence"] = (
+                    "Name/version identifier only; not an acquisition URL, upstream "
+                    "source commit, supplier or unmodified upstream release assertion."
+                )
         targets.append(item)
     return {
         "inventoryVersion": 1, "name": "cURL", "version": version,
@@ -533,7 +545,11 @@ def cyclonedx(inv):
     result = {
         "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
         "serialNumber": "urn:uuid:" + str(uuid.uuid4()),
-        "metadata": {"timestamp": inv["created"], "component": root},
+        "metadata": {"timestamp": inv["created"], "component": root,
+                     "tools": {"components": [{"type": "application", "name": GENERATOR,
+                                               "externalReferences": [
+                                                   {"type": "vcs", "url": REPOSITORY + "/tree/main/build/sbom"}
+                                               ]}]}},
         "components": components,
         "compositions": [{"aggregate": "incomplete", "assemblies": ["release"]}],
     }
@@ -594,7 +610,7 @@ def spdx(inv):
         "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT", "name": inv["artifact"]["name"],
         "documentNamespace": REPOSITORY + "/sbom/" + str(uuid.uuid4()),
-        "creationInfo": {"created": inv["created"], "creators": ["Tool: curl-release-sbom-poc"]},
+        "creationInfo": {"created": inv["created"], "creators": ["Tool: " + GENERATOR]},
         "comment": inv["limitations"], "packages": packages,
         "relationships": relations,
     }
