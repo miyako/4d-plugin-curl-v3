@@ -221,6 +221,10 @@ provider paths. The recipe confines those imported configurations to the
 delivered provider and requires actual `/VERBOSE:LIB`/map selections from the
 upstream unit executable as well as the separate API probe. Both corrections
 require fresh native Windows results, not relabeling rejected outputs.
+Run 43269868412 passed the unit/API checks with the delivered provider but
+stopped at record verification because Ninja's `src\libssh2.lib` diagnostic
+was relative. The resolver now requires its explicit original build directory;
+it never substitutes a matching basename or guesses a search directory.
 
 The producer retains source kits, original provider records and installed headers,
 generated configuration, compiler objects, archive-member payload bindings,
@@ -293,7 +297,11 @@ The first Windows experiment measured the old archive independently: 198
 groups/670 aliases, extra encodings enabled, and all nine checks passed.
 Its candidate configure stopped at the Cygwin-to-native Python executable
 path boundary, not a conversion regression; that invocation is corrected for
-the next run. macOS retains its separately observed default-off configuration.
+the next run. The subsequent configure passed; the library build exposed
+GNU 1.18's required `lib/localcharset.h` bootstrap target. The recipe runs that
+upstream target before the library-only build and distinguishes its unused
+helper archive from the four incorporated compiler objects. macOS retains
+its separately observed default-off configuration.
 Shared JSON probe helpers have explicit recipe contracts so earlier curl/SSH
 records remain inspectable with their original delivered recipes.
 

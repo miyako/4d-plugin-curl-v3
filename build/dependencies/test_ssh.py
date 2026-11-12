@@ -54,6 +54,19 @@ class SSHTests(unittest.TestCase):
             self.assertTrue(build_ssh.selections(
                 output, "macos-arm64", {"libssh2": {"path": "/expected/libssh2.a"}})["libssh2"])
 
+    def test_relative_selection_requires_the_explicit_original_linker_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            (output / "probe.map").write_text(
+                "# Arch: arm64\n# Object files:\n[  1] src/libssh2.a(session.o)\n")
+            inputs = {"libssh2": {"path": "/original/build/src/libssh2.a"}}
+            with self.assertRaises(ValueError):
+                build_ssh.selections(output, "macos-arm64", inputs)
+            self.assertTrue(build_ssh.selections(
+                output, "macos-arm64", inputs, working_directory="/original/build")["libssh2"])
+            with self.assertRaises(ValueError):
+                build_ssh.selections(output, "macos-arm64", inputs, working_directory="/wrong/build")
+
 
 if __name__ == "__main__":
     unittest.main()

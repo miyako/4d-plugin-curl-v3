@@ -44,7 +44,7 @@ def pin(target):
                 if p["library"] == "libiconv" and target in p["targets"])
 
 
-def extract(archive, destination, version):
+def extract(archive, destination, version, library="libiconv"):
     if destination.exists():
         raise ValueError("Use a fresh GNU source extraction directory")
     with tarfile.open(archive) as source:
@@ -54,13 +54,13 @@ def extract(archive, destination, version):
             path = PurePosixPath(entry.name)
             if (path.is_absolute() or ".." in path.parts or "\\" in entry.name
                     or ":" in entry.name or not path.parts
-                    or path.parts[0] != "libiconv-" + version
+                    or path.parts[0] != library + "-" + version
                     or path in seen or not (entry.isfile() or entry.isdir())):
                 raise ValueError("Unsafe, duplicate or unexpected GNU source archive member")
             seen.add(path)
         destination.mkdir(parents=True)
         for entry in entries:
-            relative = PurePosixPath(entry.name).relative_to("libiconv-" + version)
+            relative = PurePosixPath(entry.name).relative_to(library + "-" + version)
             path = destination / relative
             if entry.isdir():
                 path.mkdir(parents=True, exist_ok=True)
@@ -147,7 +147,8 @@ def inspect(output):
                 "build/config.h", "build/lib/Makefile", built_archive,
                 "interface/iconv.h", "build/include/iconv.h", "build/config.log"}
     if windows:
-        required.update({"tool-acquisition.json", "tool-installed.db", "tool-setup.log"})
+        required.update({"tool-acquisition.json", "tool-installed.db", "tool-setup.log",
+                         "charset-header.log", "build/lib/localcharset.h"})
         acquisition = json.loads((output / "tool-acquisition.json").read_text())
         tool_pin = json.loads((output / "recipe/build/dependencies/windows-build-tools.json").read_text())["cygwin"]
         if (acquisition["pin"] != tool_pin or acquisition["installerSha256"] != tool_pin["sha256"]
@@ -175,8 +176,8 @@ def inspect(output):
     original_source = record["originalSource"]
     if record["originalCorePaths"] != sorted(original_source + "/" + p for p in core):
         raise ValueError("GNU iconv compiled-source allowlist changed")
-    compiled = [c for c in calls if any(
-        p["path"] in record["originalCorePaths"] for p in c["inputs"])]
+    compiled = [c for c in calls if c["cwd"] == record["originalBuild"] + "/lib"
+                and any(p["path"] in record["originalCorePaths"] for p in c["inputs"])]
     if (compiled != record["compiledSources"] or len(compiled) != len(core)
             or any(c["returnCode"] or "object" not in c for c in compiled)
             or Counter(p["path"] for c in compiled for p in c["inputs"])
@@ -335,6 +336,9 @@ def build(archive, output, target, cygwin_root=None):
     if extra_enabled:
         arguments.append("--enable-extra-encodings")
     execute(arguments, output / "configure.log", cwd=work, env=env)
+    if windows:
+        execute([tool["make"]["path"], "-C", posix(work), "lib/localcharset.h"],
+                output / "charset-header.log", env=env)
     execute([tool["make"]["path"], "-C", posix(work / "lib") if windows else str(work / "lib"), "-j3"],
             output / "build.log", env=env)
     archives = [p for p in (work / "lib/.libs").iterdir()
@@ -359,7 +363,8 @@ def build(archive, output, target, cygwin_root=None):
                                            for p in sorted(calls.glob("*.json"))])
     all_calls = [json.loads((output / p["path"]).read_text()) for p in compiler_calls]
     core_paths = sorted((source / p).as_posix() for p in core_sources(target))
-    compiled = [c for c in all_calls if any(p["path"] in core_paths for p in c["inputs"])]
+    compiled = [c for c in all_calls if c["cwd"] == (work / "lib").as_posix()
+                and any(p["path"] in core_paths for p in c["inputs"])]
     proof = object_evidence(output, built.relative_to(output).as_posix(),
                             [{"output": c["object"]["path"]} for c in compiled], work)
     build_paths = [p.relative_to(output).as_posix() for p in work.rglob("*")
@@ -389,6 +394,7 @@ def build(archive, output, target, cygwin_root=None):
         "baselineArchive": selected, "probeInputs": probe_inputs, "linkSelections": link_proof,
         "validationScope": "ordered encoding aliases and nine old/new conversion/rejection checks; not full-plugin or all upstream tests",
         "exclusions": ["Unused libtool convenience symlinks; their direct archive/configuration targets are hashed.",
+                       "The Windows libcharset header-bootstrap archive is not incorporated; libiconv compiles localcharset.c directly.",
                        "This is not a full-plugin corresponding-source/relink distribution or host validation."],
     }
     write_json(output / "native-build-provenance.json", record)

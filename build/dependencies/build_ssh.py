@@ -92,9 +92,10 @@ def inspect(output):
     if not required.issubset(paths) or record["buildFiles"] != archive_hashes(output, paths):
         raise ValueError("libssh2 original build/validation outputs changed")
     if record["target"].startswith("windows"):
+        build_directory = record["configure_arguments"][record["configure_arguments"].index("-B") + 1]
         if ("unit.map" not in paths or record.get("unitLinkSelections") != selections(
                 output, record["target"], record["probeInputs"],
-                map_name="unit.map", log_name="build.log")):
+                map_name="unit.map", log_name="build.log", working_directory=build_directory)):
             raise ValueError("libssh2 upstream unit test did not select the exact delivered providers")
     installed = output / "install"
     if (record["installFiles"] != tree_files(installed)
@@ -253,7 +254,8 @@ def build(source, output, target, openssl_install, baseline):
     unit_selections = {}
     if windows:
         evidence.append("unit.map")
-        unit_selections = selections(output, target, probe_inputs, map_name="unit.map", log_name="build.log")
+        unit_selections = selections(output, target, probe_inputs, map_name="unit.map", log_name="build.log",
+                                     working_directory=output / "build")
     record = {
         "schema_version": 1, "recipeContractVersion": 2,
         "evidence_type": "isolated-source-build-candidate",

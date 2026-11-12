@@ -145,15 +145,27 @@ def link_selections(output, target, original_build, baseline, archive):
     return result
 
 
-def probe_selections(output, target, inputs, *, map_name="probe.map", log_name="probe-build.log"):
+def probe_selections(output, target, inputs, *, map_name="probe.map", log_name="probe-build.log",
+                     working_directory=None):
     windows = target.startswith("windows")
     text = (output / map_name).read_text(encoding="utf-8-sig", errors="surrogateescape")
     selected, _ = (parse_msvc((output / log_name).read_text(), text) if windows
                    else parse_apple(text, target.removeprefix("macos-")))
     normal = (lambda p: ntpath.normcase(ntpath.normpath(p))) if windows else posixpath.normpath
+    paths = ntpath if windows else posixpath
+    if working_directory is not None and not paths.isabs(str(working_directory)):
+        raise ValueError("Linker working directory must be an explicit absolute path")
+
+    def resolved(path):
+        if working_directory is not None and not paths.isabs(path):
+            path = paths.join(str(working_directory), path)
+        return normal(path)
+
     result = {}
     for name, item in inputs.items():
-        matched = [s for s in selected if normal(s["archive"]) == normal(item["path"])]
+        if not paths.isabs(item["path"]):
+            raise ValueError("Expected archive path must be absolute")
+        matched = [s for s in selected if resolved(s["archive"]) == normal(item["path"])]
         if not matched:
             raise ValueError("Native probe did not select the exact " + name + " archive")
         result[name] = matched
