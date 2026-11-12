@@ -1,0 +1,143 @@
+name: Isolated version-matched curl source
+
+on:
+  workflow_call:
+    inputs:
+      provider-run-id:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  curl-source:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos-arm64
+          - os: macos-15-intel
+            target: macos-x86_64
+          - os: windows-latest
+            target: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: google/brotli
+          ref: db24a98aed38a16de78cc05ca15cdd8dc2a0d92d # Brotli 1.2.1 header source
+          path: brotli-source
+          persist-credentials: false
+      - name: Require successful original prerequisite producers from the same repository and branch
+        shell: python
+        env:
+          PROVIDER_RUN: ${{ inputs.provider-run-id }}
+          TARGET: ${{ matrix.target }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, os, urllib.request
+          from pathlib import Path
+          identifier = os.environ["PROVIDER_RUN"]
+          if not identifier.isascii() or not identifier.isdigit():
+              raise ValueError("An explicit numeric original provider run ID is required")
+          base = os.environ["GITHUB_API_URL"] + "/repos/" + os.environ["GITHUB_REPOSITORY"]
+          def get(path):
+              request = urllib.request.Request(base + path, headers={
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                  "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+          run = get("/actions/runs/" + identifier)
+          if (run["head_repository"]["full_name"] != os.environ["GITHUB_REPOSITORY"]
+                  or run["head_branch"] != os.environ["GITHUB_REF_NAME"]
+                  or run["path"] != ".github/workflows/native-trace.yml"
+                  or run["event"] != "workflow_dispatch"):
+              raise ValueError("Provider run is not an explicitly dispatched same-repository/branch source build")
+          jobs = get("/actions/runs/" + identifier + "/jobs?per_page=100&filter=all")
+          if jobs["total_count"] > 100:
+              raise ValueError("Provider job enumeration requires explicit pagination")
+          producers = []
+          for role in ("curl-baseline", "source-prerequisites", "http-prerequisites"):
+              matches = [j for j in jobs["jobs"]
+                         if j["name"].startswith("native-prerequisites / " + role + " (")
+                         and (", " + os.environ["TARGET"]
+                              + (")" if role == "curl-baseline" else ", ")) in j["name"]
+                         and (role != "http-prerequisites" or ", nghttp2," in j["name"])]
+              attempt = max((j["run_attempt"] for j in matches), default=0)
+              matches = [j for j in matches if j["run_attempt"] == attempt]
+              if len(matches) != 1 or matches[0]["conclusion"] != "success":
+                  raise ValueError("The exact target prerequisite producer must have completed successfully: " + role)
+              producers.append({k: matches[0][k] for k in ("id", "name", "conclusion", "run_attempt")})
+          path = Path(os.environ["RUNNER_TEMP"]) / "provider-run.json"
+          path.write_text(json.dumps({
+              "run": {k: run[k] for k in ("id", "head_sha", "path", "event", "head_branch")},
+              "producers": producers}, indent=2))
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          run-id: ${{ inputs.provider-run-id }}
+          github-token: ${{ github.token }}
+          name: native-libssh2-${{ matrix.target }}
+          path: ${{ runner.temp }}/prerequisites/ssh
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          run-id: ${{ inputs.provider-run-id }}
+          github-token: ${{ github.token }}
+          name: native-zlib-${{ matrix.target }}
+          path: ${{ runner.temp }}/prerequisites/zlib
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          run-id: ${{ inputs.provider-run-id }}
+          github-token: ${{ github.token }}
+          name: native-nghttp2-${{ matrix.target }}
+          path: ${{ runner.temp }}/prerequisites/http
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          run-id: ${{ inputs.provider-run-id }}
+          github-token: ${{ github.token }}
+          name: baseline-curl-${{ matrix.target }}
+          path: ${{ runner.temp }}/prerequisites/baseline
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Preserve acquisition context and acquire the pinned signed-release source bytes
+        shell: python
+        run: |
+          import json, os, shutil, urllib.request
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          observation = root / "prerequisites/baseline/observation"
+          shutil.copyfile(root / "provider-run.json", observation / "provider-acquisition.json")
+          for log in (root / "prerequisites/baseline").glob("*.log"):
+              shutil.copyfile(log, observation / ("provider-" + log.name))
+          pin = next(p for p in json.loads(
+              Path("build/dependencies/native-sources.json").read_text())["sourceArchives"]
+                     if p["library"] == "curl")
+          urllib.request.urlretrieve(pin["url"], root / "curl-source.tar.xz")
+      - name: Build source curl and require the complete measured configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s build/dependencies
+          python build/dependencies/build_curl.py build --target "${{ matrix.target }}" \
+            --archive "$RUNNER_TEMP/curl-source.tar.xz" --output "$RUNNER_TEMP/native-libcurl" \
+            --ssh "$RUNNER_TEMP/prerequisites/ssh" --zlib "$RUNNER_TEMP/prerequisites/zlib" \
+            --http "$RUNNER_TEMP/prerequisites/http" \
+            --baseline "$RUNNER_TEMP/prerequisites/baseline/observation" --brotli-source brotli-source
+          python build/dependencies/build_curl.py inspect "$RUNNER_TEMP/native-libcurl"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: native-libcurl-${{ matrix.target }}
+          path: ${{ runner.temp }}/native-libcurl/
+          include-hidden-files: true
+          if-no-files-found: warn

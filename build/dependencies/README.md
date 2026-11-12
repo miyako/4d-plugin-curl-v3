@@ -225,6 +225,11 @@ Run 43269868412 passed the unit/API checks with the delivered provider but
 stopped at record verification because Ninja's `src\libssh2.lib` diagnostic
 was relative. The resolver now requires its explicit original build directory;
 it never substitutes a matching basename or guesses a search directory.
+The fresh Windows SSH output from
+[run 43272822829](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43272822829)
+was downloaded and independently inspected successfully: 26 source-bound
+archive objects, `/MT`, the delivered OpenSSL provider selected by both
+executables, upstream `test_simple`, and exact ordered algorithm equality.
 
 The producer retains source kits, original provider records and installed headers,
 generated configuration, compiler objects, archive-member payload bindings,
@@ -241,7 +246,48 @@ python3 build/dependencies/build_ssh.py build \
 python3 build/dependencies/build_ssh.py inspect /downloaded/ssh-evidence
 ```
 
-The project COPYING text is BSD-3-Clause, but it does not erase embedded
+### Isolated curl source reconstruction
+
+`build_curl.py` consumes the SHA-pinned, signed-release curl 8.21.0 source
+archive and independently validated original SSH, zlib, nghttp2 and curl-baseline
+kits. It preserves those kits rather than assigning new provenance to reused
+archives. Brotli public headers and LICENSE are separately staged from the
+same immutable source commit as the original provider; that header-only
+closure is not a new claim of complete Brotli build provenance.
+
+The producer retains acquired sources, original recipes, generated configuration,
+actual compiler/object/archive bindings, delivered interfaces, tool/SDK records,
+exact selected provider archives and the standalone executable/map/runtime
+outputs. Every measured field must match the target baseline, including feature
+bits, ordered protocols, both Windows TLS backends and all SSH algorithm lists.
+Only the descriptive host string may differ; both values are explicitly recorded.
+Original configure arguments remain unknown: this is a matching reconstruction,
+not retroactive provenance for the old archives.
+
+Local source experiments on both macOS architectures each built 192 objects
+with matching measured configuration. The reusable producer has also passed
+the arm64 original-record inspector. Native three-target validation is a
+separate gate, as are transfer behavior, full-plugin relinking and host loading.
+
+```sh
+python3 build/dependencies/build_curl.py build \
+  --target macos-arm64 --archive /verified/curl-8.21.0.tar.xz \
+  --ssh /original/ssh-evidence --zlib /original/zlib-evidence \
+  --http /original/nghttp2-evidence --baseline /original/curl-observation \
+  --brotli-source /clean/pinned/brotli --output /fresh/curl-evidence
+python3 build/dependencies/build_curl.py inspect /downloaded/curl-evidence
+```
+
+Dispatch `native-trace.yml` with `native-prerequisites-only=true`,
+`native-prerequisite-scope=curl` and `native-provider-run=<original-run-id>`.
+Only original successful target-specific producer jobs from an explicitly
+dispatched same-repository/branch run are accepted; partial reruns use the latest
+attempt of each producer. Unrelated failed jobs do not turn a successful original
+prerequisite into a new build record. Source, object, archive and runtime checks
+still apply after download. This route has read-only contents/actions permissions
+and never builds, signs, packages or publishes the plugin.
+
+libssh2's COPYING text is BSD-3-Clause, but it does not erase embedded
 BSD-2-Clause, public-domain or ISC-style notices. In particular,
 `bcrypt_pbkdf.c` contains ISC-style permission terms despite its upstream `MIT`
 SPDX comment. These original file notices are retained and explicitly inventoried;

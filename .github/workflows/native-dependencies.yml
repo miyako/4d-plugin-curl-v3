@@ -74,13 +74,30 @@ jobs:
           fi
           python build/dependencies/build_iconv.py build "${arguments[@]}"
           python build/dependencies/build_iconv.py inspect "$RUNNER_TEMP/native-libiconv"
+      - name: Stage GNU evidence without dereferencing inaccessible libtool convenience aliases
+        if: always()
+        shell: python
+        run: |
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          source = root / "native-libiconv"
+          omitted = []
+          def aliases(directory, names):
+              ignored = [n for n in names
+                         if Path(directory).name == ".libs" and n.endswith(".la")]
+              omitted.extend((Path(directory) / n).relative_to(source).as_posix() for n in ignored)
+              return ignored
+          if source.exists():
+              shutil.copytree(source, root / "iconv-evidence-upload", ignore=aliases)
+              (root / "iconv-evidence-upload/omitted-libtool-aliases.json").write_text(
+                  json.dumps({"paths": sorted(omitted),
+                              "scope": "unused libtool aliases; direct metadata and original build logs retained"}, indent=2))
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: native-libiconv-${{ matrix.target }}
-          path: |
-            ${{ runner.temp }}/native-libiconv/
-            !${{ runner.temp }}/native-libiconv/build/**/.libs/*.la
+          path: ${{ runner.temp }}/iconv-evidence-upload/
           if-no-files-found: error
           include-hidden-files: true
       - name: Preserve Windows tool acquisition diagnostics without distributing tool binaries

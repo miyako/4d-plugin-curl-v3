@@ -116,6 +116,7 @@ class IconvTests(unittest.TestCase):
             env = dict(os.environ, ICONV_TRACE_PYTHON=sys.executable,
                        ICONV_TRACE_SCRIPT=str(Path(trace_compiler.__file__).resolve()),
                        ICONV_TRACE_DIRECTORY=str(calls), ICONV_TRACE_WINDRES=str(compiler),
+                       ICONV_TRACE_WINDRES_EXECUTABLE=str(compiler),
                        ARGUMENTS=str(root / "arguments.json"))
             for code in (0, 7):
                 result = subprocess.run(["/bin/sh", str(

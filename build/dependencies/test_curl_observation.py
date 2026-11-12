@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 import observe_curl
+import build_curl
 
 
 class CurlObservationTests(unittest.TestCase):
@@ -73,6 +74,26 @@ class CurlObservationTests(unittest.TestCase):
                         dict(info, tlsBackends=["openssl"])):
             with self.subTest(info=changed), self.assertRaises(ValueError):
                 observe_curl.validate_observations(changed, selected, "windows-x86_64")
+
+    def test_source_reconstruction_allows_only_the_recorded_host_difference(self):
+        baseline = dict(self.info, host="original-apple-darwin", tlsBackends=["openssl"],
+                        sshAlgorithms={name: ["one", "two"] for name in observe_curl.SSH_METHODS},
+                        ares=None)
+        candidate = dict(baseline, host="current-apple-darwin")
+        self.assertEqual(build_curl.compare(candidate, baseline, "macos-arm64"), {
+            "candidate": candidate["host"], "baseline": baseline["host"]})
+        variants = [dict(candidate, featuresMask=2), dict(candidate, protocols=["http", "https"]),
+                    dict(candidate, host=""), dict(candidate, unexpected=None)]
+        for field in ("version", "ares", "tlsBackends", "sshAlgorithms"):
+            missing = dict(candidate)
+            del missing[field]
+            variants.append(missing)
+        changed = copy.deepcopy(candidate)
+        changed["sshAlgorithms"]["kex"].reverse()
+        variants.append(changed)
+        for changed in variants:
+            with self.subTest(info=changed), self.assertRaises(ValueError):
+                build_curl.compare(changed, baseline, "macos-arm64")
 
 
 if __name__ == "__main__":

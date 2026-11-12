@@ -1,6 +1,6 @@
 #!/bin/sh
 record=$("$ICONV_TRACE_PYTHON" "$ICONV_TRACE_SCRIPT" --begin "$ICONV_TRACE_DIRECTORY" "$ICONV_TRACE_WINDRES" "$@") || exit "$?"
-"$ICONV_TRACE_WINDRES" "$@"
+"$ICONV_TRACE_WINDRES_EXECUTABLE" "$@"
 status=$?
 "$ICONV_TRACE_PYTHON" "$ICONV_TRACE_SCRIPT" --finish "$record" "$status" || exit "$?"
 exit "$status"

@@ -65,11 +65,11 @@ def verify_layout(before, after, renames):
         raise ValueError("Source changed beyond the reviewed configure-time renames")
 
 
-def stage(source, output, commit, checkout):
+def stage(source, output, commit, checkout, paths=()):
     path = output / "upstream-source.tar"
     subprocess.run(["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf",
                     "-C", str(source), "archive", "--format=tar",
-                    "--output=" + str(path), commit], check=True)
+                    "--output=" + str(path), commit, *paths], check=True)
     staged = output / "source"
     with tarfile.open(path) as archive:
         entries = archive.getmembers()

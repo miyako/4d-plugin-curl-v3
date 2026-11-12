@@ -313,6 +313,7 @@ def build(archive, output, target, cygwin_root=None):
             "ICONV_TRACE_SCRIPT": str(ROOT / "build/dependencies/trace_compiler.py"),
             "ICONV_TRACE_DIRECTORY": str(calls), "ICONV_TRACE_COMPILER": compiler,
             "ICONV_TRACE_WINDRES": tool["windres"]["path"],
+            "ICONV_TRACE_WINDRES_EXECUTABLE": posix(Path(tool["windres"]["path"])),
             "CC": shlex.join([posix(source / "build-aux/compile"), posix(wrapper / "cl"), "-nologo"]),
             "CFLAGS": "-O2 -MT", "CPPFLAGS": "", "LDFLAGS": "",
             "LD": "link", "NM": shlex.join([posix(Path(tool["dumpbin"]["path"])), "-symbols"]),
