@@ -66,9 +66,10 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 - [x] Isolated source-build curl 8.21.0 against verified prerequisites without losing features.
 - [x] Consolidate source records with existing OpenSSL/Brotli ingestion and check
   actual ftpparse/SDK compile inputs; do not introduce a second release SBOM model.
-- [ ] Strengthen the twelve original OpenSSL/Brotli bindings' compiler/object/build materials.
+- [x] Replace the twelve isolated OpenSSL/Brotli bindings with fresh verified
+  compiler/object/build materials; do not upgrade historical records.
 - [x] Enforce source/patch/toolchain/configuration/output/selection/binary bindings
-  for the twenty-three migrated candidate inputs in safe isolated CI, retaining original records.
+  for all thirty-five candidate selections in safe isolated CI, retaining original records.
 - [x] Verify actual all-target source-candidate plugin selections and full
   original-object modified-proxy relinks on Mac and Windows.
 - [x] Relocate Mac source/object materials and verify modified delivered proxy
@@ -76,7 +77,8 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 - [x] Verify portable Windows source/object and GNU modification/relink execution.
 - [ ] Run protocol/proxy/TLS/SSH/compression/conversion and deployment/CRT checks.
 - [x] Independently inspect persisted unsigned cross-platform ZIP and DMG outputs.
-- [ ] Require zero opaque selected third-party archives, with explicit exclusions.
+- [x] Verify zero opaque selected repository archives in the isolated measured-provider
+  candidate; production adoption and redistribution/compatibility gates remain open.
 
 Never delete old archives/evidence before verified replacement. Historical
 read-only analysis must remain supported. A release/sign/tag/merge requires
@@ -757,6 +759,53 @@ product defaults or operating-system trust. Private fixture keys never enter
 the delivered receipt tree. Delivered recipes, complete response bytes,
 compiler/archive/interface hashes, maps, executables and original outcomes are
 rechecked by the read-only `inspect_proof` entry point.
+
+### Fresh providers reach final unsigned candidates
+
+[Run 43332411256](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43332411256)
+at `da1fc87` consumes the successful original providers from `43330282753`.
+All persisted outputs were downloaded and independently inspected: ZIP and DMG
+contain the same seven complete cross-platform bundle files. Their inventories,
+CycloneDX and SPDX documents pass the official schemas, real binary/slice
+bindings, independently parsed link-map/log selections and standard-field checks.
+Coverage is 12/12 source-bound archive positions on each Mac architecture and
+11/11 on Windows, with 32 supported versions in total; bundled libmodman's
+numeric release version remains unknown.
+
+The twelve provider positions now match the complete original source/compiler/
+object records, not just package labels. Independent reconstruction of the four
+universal provider archives from retained original thin archives reproduces the
+exact selected archive hashes; the selected Windows provider bytes also match
+the relocated object kit. The other twenty-three identities are exactly the
+previously independently verified compiler-closed bindings. This establishes
+35 source/compiler/archive-closed candidate positions and zero opaque selected
+repository archives, not retroactive provenance for the production archives.
+The opt-in measured-provider CI path additionally requires source coverage for
+every actual selection, complete native original-build references and measured
+provider compiler/object summaries. Missing or weaker provider records fail;
+historical read-only and earlier experimental paths retain their existing scope.
+
+Persisted transfer receipts pass eleven cases per variant on each Mac target
+and seventeen per variant on Windows, including both OpenSSL and Schannel.
+Their exact candidate archive inputs match the final plugin selections, and
+their fixture-tool hashes match the original source-provider outputs. Windows'
+moved object kit again reproduces the baseline and links both actual modified
+proxy and GNU iconv archives with the defined probes present. No plugin is loaded.
+The ZIP SHA-256 is
+`1a199fad539bea836db49a424c31c574222db6c5d65f72b9f3124b98c8f40822`;
+the DMG SHA-256 is
+`260ba7df2d5394a93db65d459f03e9b09ca921dafd738933a725d9d6c173c6c1`.
+
+These are internal validation outputs, not distribution-ready LGPL materials.
+Current object kits retain unused search-path archives to replay the unchanged
+explicit link recipes, and original library audit kits retain baseline probe
+executables incorporating historical archives. Those bytes must not silently
+become a redistribution deliverable. A separately identified delivery must
+exclude those inputs, retain the original audit evidence elsewhere, provide the
+corresponding sources/patches/notices/build materials, and prove its derived
+baseline and modified full-plugin links. Complete terms, broader SSH/PAC
+transfers, older-platform behavior and operator-run 4D installation/trust gates
+remain open. Production archives, signing, release assets and adoption are unchanged.
 
 ```sh
 python3 build/dependencies/build_curl.py build \

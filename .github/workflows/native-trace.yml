@@ -704,9 +704,12 @@ jobs:
         shell: python
         env:
           SOURCE_CANDIDATE: ${{ inputs.native-candidate-plugin-only }}
+          MATERIALS_RUN: ${{ inputs.native-materials-provider-run }}
         run: |
-          import json, os
+          import json, os, sys
           from pathlib import Path
+          sys.path.insert(0, "build/sbom")
+          from coverage import require_selected_source_coverage
           source_candidate = os.environ["SOURCE_CANDIDATE"] == "true"
           manifest = json.loads(Path("build/sbom/native-archives.json").read_text())
           zlib_archive = next(a for a in manifest["archives"] if a["path"] == "lib/64/zlib.lib")
@@ -714,6 +717,8 @@ jobs:
           for path in Path("sbom").glob("*.inventory.json"):
               inventory = json.loads(path.read_text())
               for target in inventory["targets"]:
+                  if source_candidate and os.environ["MATERIALS_RUN"]:
+                      require_selected_source_coverage(target)
                   coverage = target["selectedArchiveCoverage"]
                   if coverage["uncoveredArchives"] or coverage["namedPackageArchives"] != coverage["selectedRepositoryArchives"]:
                       raise RuntimeError(f"{target['id']}: selected archive/package coverage regressed")
