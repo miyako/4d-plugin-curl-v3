@@ -507,6 +507,26 @@ jobs:
               shutil.copyfile("../plugin-candidate-staging.json", "native-trace/plugin-candidate-staging.json")
               for name in ("candidate-inventory-acquisition.json", "candidate-source-acquisition.json"):
                   shutil.copyfile(Path(os.environ["RUNNER_TEMP"]) / name, Path("native-trace") / name)
+      - name: Snapshot evaluated Windows toolchain library inputs before link
+        if: runner.os == 'Windows'
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        shell: python
+        run: |
+          import json, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, "build/sbom")
+          import external_windows
+          names = "LibraryPath,VCToolsInstallDir,VCToolsVersion,WindowsSdkDir,WindowsTargetPlatformVersion,UCRTVersion"
+          result = subprocess.run(["msbuild", "cURL.vcxproj",
+              "/p:Configuration=Release", "/p:Platform=x64", "/p:PlatformToolset=v143",
+              "/p:WindowsTargetPlatformVersion=10.0",
+              f"/p:ForceImportAfterCppTargets={Path.cwd() / 'build/sbom/diagnostics.props'}",
+              f"/p:NativeTraceDirectory={Path.cwd() / 'native-trace'}",
+              "/nologo", "-getProperty:" + names], check=True, capture_output=True, text=True)
+          properties = json.loads(result.stdout)["Properties"]
+          snapshot = external_windows.snapshot(properties, Path.cwd())
+          Path("native-trace/external-windows-snapshot.json").write_text(
+              json.dumps(snapshot, indent=2) + "\n")
       - name: Build actual plugin unsigned macOS and capture per-architecture maps
         if: runner.os == 'macOS'
         working-directory: ${{ env.PLUGIN_ROOT }}
@@ -586,7 +606,8 @@ jobs:
                   command.extend(["--link-map", f"macos-{arch}=native-trace/cURL-{arch}.map"])
           else:
               command.extend(["--link-map", "windows-x86_64=native-trace/cURL-x64.map",
-                              "--link-log", "native-trace/msbuild.log"])
+                              "--link-log", "native-trace/msbuild.log",
+                              "--external-archive-snapshot", "native-trace/external-windows-snapshot.json"])
           if os.environ["SOURCE_CANDIDATE"] == "true":
               import json
               from pathlib import Path
@@ -998,6 +1019,13 @@ jobs:
                   if (coverage["selectedRepositoryArchives"], coverage["versionedPackageArchives"]) != (expected_selected, expected_versioned):
                       raise RuntimeError(f"{target['id']}: actual selected/versioned archive counts changed")
                   print(f"{path.name}: {target['id']}: {coverage}")
+                  if target["id"] == "windows-x86_64":
+                      external = target.get("externalArchiveCoverage", {})
+                      if (not external.get("selectedExternalArchives") or external.get("unclassifiedArchives")
+                              or external["namedStaticLibraryArchives"] + len(external["importOnlyArchives"])
+                              != external["selectedExternalArchives"]):
+                          raise RuntimeError("Windows external code/import coverage is incomplete")
+                      print(f"{path.name}: external Windows archive coverage: {external}")
                   packages = {p["name"]: p for p in target["dependencies"]}
                   for name in ("Brotli", "OpenSSL"):
                       package = packages[name]

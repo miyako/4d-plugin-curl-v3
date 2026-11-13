@@ -291,6 +291,14 @@ def collect(args):
             trace["archives"] = selections
             record["linkEvidence"][target] = compact_link_evidence(trace)
         record["evidenceType"] = "build-derived-resolved-linker-inputs"
+    external = getattr(args, "external_archive_snapshot", None)
+    if external:
+        if args.target != "windows-x86_64" or not record.get("linkEvidence"):
+            raise ValueError("External archive inspection requires actual Windows diagnostics")
+        import external_windows
+        record["externalArchiveEvidence"] = external_windows.collect(
+            record["linkEvidence"]["windows-x86_64"],
+            json.loads(external.read_text(encoding="utf-8")), args.binary)
     write_json(args.output, record)
 
 
@@ -495,6 +503,11 @@ def inventory(path, version, evidence):
             if record.get("coveragePolicy") == "all-selected-repository-archives-named":
                 from coverage import require_selected_coverage
                 item["selectedArchiveCoverage"] = require_selected_coverage(item)
+            if record.get("externalArchiveEvidence"):
+                import external_windows
+                external, coverage = external_windows.dependencies(record, target)
+                item["externalDependencies"] = external
+                item["externalArchiveCoverage"] = coverage
         for dependency in item["dependencies"]:
             if dependency.get("version") and not dependency.get("purl"):
                 dependency["purl"] = (
@@ -524,7 +537,7 @@ def component_rows(inv):
             "description": json.dumps({k: v for k, v in target.items() if k != "dependencies"},
                                       sort_keys=True),
         }
-        for dep in target["dependencies"]:
+        for dep in [*target["dependencies"], *target.get("externalDependencies", [])]:
             name_id = dep["name"]
             if not re.fullmatch(r"[A-Za-z0-9.-]+", name_id):
                 name_id = re.sub(r"[^A-Za-z0-9.-]", "-", name_id) + "-" + sha256(dep["name"].encode())[:8]
@@ -533,8 +546,8 @@ def component_rows(inv):
                 "target": ident,
                 "version": dep.get("version"), "kind": "library",
                 "description": json.dumps({"target": ident, **dep}, sort_keys=True),
-                **{key: dep[key] for key in ("license", "licenseEvidence", "purl", "origin") if dep.get(key)},
-                "buildSupported": bool(dep.get("selectedArchives")),
+                **{key: dep[key] for key in ("license", "licenseEvidence", "purl", "origin", "identityReference") if dep.get(key)},
+                "buildSupported": bool(dep.get("selectedArchives") or dep.get("externalSelectedArchives")),
                 "sourceSupported": dep.get("evidenceType") == "build-derived-embedded-source",
             }
 
@@ -573,6 +586,9 @@ def cyclonedx(inv):
             item["purl"] = row["purl"]
         if row.get("origin"):
             item["externalReferences"] = [{"type": "vcs", "url": row["origin"]}]
+        if row.get("identityReference"):
+            item.setdefault("externalReferences", []).append({
+                "type": "documentation", "url": row["identityReference"]})
         components.append(item)
     result = {
         "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
@@ -624,9 +640,14 @@ def spdx(inv):
             item["licenseDeclared"] = row["license"]
         if row.get("origin"):
             item["homepage"] = row["origin"]
+        if row.get("identityReference"):
+            item.setdefault("externalRefs", []).append({
+                "referenceCategory": "OTHER", "referenceType": "documentation",
+                "referenceLocator": row["identityReference"]})
         if row.get("purl"):
-            item["externalRefs"] = [{"referenceCategory": "PACKAGE-MANAGER",
-                                     "referenceType": "purl", "referenceLocator": row["purl"]}]
+            item.setdefault("externalRefs", []).append({
+                "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl",
+                "referenceLocator": row["purl"]})
         packages.append(item)
         relations.append({
             "spdxElementId": "SPDXRef-" + (row["target"] if row["kind"] == "library" else "release"),
@@ -680,6 +701,8 @@ def main():
     inputs.add_argument("--embedded-sources", action="store_true",
                         help="Capture actual checked-out third-party source inputs on the build runner")
     inputs.add_argument("--embedded-source-snapshot", type=Path)
+    inputs.add_argument("--external-archive-snapshot", type=Path,
+                        help="Pre-link effective Windows toolchain archive hashes")
     sources = commands.add_parser("sources", help="Snapshot third-party source inputs before compilation")
     sources.add_argument("--root", type=Path, default=Path("."))
     sources.add_argument("--target", choices=["macos-universal", "windows-x86_64"], required=True)

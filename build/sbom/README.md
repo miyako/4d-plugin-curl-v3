@@ -1,5 +1,32 @@
 # Release SBOMs and native dependency traceability
 
+## Windows external static-library coverage
+
+The next bounded improvement starts from the actual Windows selections, not a
+list of libraries usually supplied by Visual Studio. The unsigned native path
+now snapshots the effective MSBuild library directories before linking and
+joins selected external archive hashes to that snapshot after linking. It
+inspects name-matching AMD64 COFF members without executing or distributing
+Microsoft archives or object payloads.
+
+Native static-library inputs become ordinary target-scoped components/packages
+in both formats. Short DLL imports and import descriptors remain explicit
+import-only exclusions, not claims that the corresponding Windows DLL ships
+inside the plugin. Unsupported object formats or missing/changed selections
+fail coverage rather than silently disappearing.
+
+The normalized inventory separates `externalDependencies` and
+`externalArchiveCoverage` from the existing repository-source dependencies and
+35-position source/relink contract. MSBuild toolchain versions are context,
+**not independently verified runtime-library release versions**. Without
+package-specific evidence, versions/suppliers remain omitted and licenses remain
+`NOASSERTION`; Microsoft documentation references establish the library roles,
+not archive acquisition provenance or a redistribution permission.
+
+Historical records without fresh external-inspection receipts retain their
+original read-only scope. This work neither edits v4.9.11 assets nor authorizes
+a new release, signing, dependency upgrades or manual 4D testing. and native dependency traceability
+
 The release workflow adds three **sidecars per final distributed container**:
 `cURL-VERSION.zip.cdx.json` (CycloneDX 1.6 JSON),
 `cURL-VERSION.zip.spdx.json` (SPDX 2.3 JSON), and
