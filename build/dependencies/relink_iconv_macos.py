@@ -12,7 +12,9 @@ import shutil
 import subprocess
 import sys
 
+sys.dont_write_bytecode = True
 import build_iconv as iconv
+from iconv_relink_delivery import inspect_candidate
 from provenance import archive_hashes, digest, write_json
 
 
@@ -26,7 +28,7 @@ def rebuild(candidate, output):
     target = original["target"]
     if target not in ("macos-arm64", "macos-x86_64"):
         raise ValueError("Both input and native toolchain must be for macOS")
-    iconv.inspect(candidate)
+    inspect_candidate(candidate)
     if output.exists() or any(c.isspace() for c in str(output)):
         raise ValueError("Use a fresh GNU build directory without whitespace")
     output.mkdir(parents=True)
@@ -68,7 +70,7 @@ def rebuild(candidate, output):
     iconv.execute(make_arguments, output / "build.log", env=env)
     archive = work / "lib/.libs/libiconv.a"
     iconv.verify_architecture(archive, target)
-    if digest(archive) == digest(candidate / original["builtArchive"]):
+    if digest(archive) == digest(candidate / "install" / original["archives"][0]["path"]):
         raise ValueError("GNU user modification did not change the library")
     probe = output / "probe.c"
     probe.write_text(
@@ -97,6 +99,8 @@ def rebuild(candidate, output):
     record = {
         "schemaVersion": 1, "status": "not-approved-for-production", "target": target,
         "candidateRecordSha256": digest(candidate / "native-build-provenance.json"),
+        "deliveryManifestSha256": (digest(candidate / iconv.DELIVERY_MANIFEST)
+                                  if (candidate / iconv.DELIVERY_MANIFEST).exists() else None),
         "deliveredSourceSha256": digest(candidate / "upstream-source.tar.gz"),
         "modification": {"path": "lib/iconv.c", "dateUtc": date,
                          "beforeSha256": next(a["sha256"] for a in original["sourceFiles"]
@@ -121,12 +125,15 @@ def rebuild(candidate, output):
 
 
 def inspect(candidate, output):
-    iconv.inspect(candidate)
+    inspect_candidate(candidate)
     original = json.loads((candidate / "native-build-provenance.json").read_text())
     record = json.loads((output / "iconv-user-relink-proof.json").read_text())
     if (record["schemaVersion"] != 1 or record["status"] != "not-approved-for-production"
             or record["target"] != original["target"]
             or record["candidateRecordSha256"] != digest(candidate / "native-build-provenance.json")
+            or record.get("deliveryManifestSha256") != (
+                digest(candidate / iconv.DELIVERY_MANIFEST)
+                if (candidate / iconv.DELIVERY_MANIFEST).exists() else None)
             or record["deliveredSourceSha256"] != digest(candidate / "upstream-source.tar.gz")
             or record["files"] != archive_hashes(output, [a["path"] for a in record["files"]])):
         raise ValueError("GNU modified-source proof or delivered input binding changed")
@@ -147,7 +154,8 @@ def inspect(candidate, output):
     iconv.verify_architecture(archive, record["target"])
     if (record["modifiedArchiveSha256"] != digest(archive)
             or record["conversionProbeSha256"] != digest(output / "probe")
-            or record["modifiedArchiveSha256"] == digest(candidate / original["builtArchive"])):
+            or record["modifiedArchiveSha256"] == digest(
+                candidate / "install" / original["archives"][0]["path"])):
         raise ValueError("GNU modified archive/probe bytes changed")
     closure = iconv.object_evidence(
         output, archive.relative_to(output).as_posix(),

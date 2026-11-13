@@ -592,8 +592,37 @@ The native candidate workflow performs and retains the same experiment for
 all three targets. Python entry points disable bytecode-cache writes before
 importing delivered helpers so execution does not mutate the closed source-kit
 file set. An earlier cache-mutated local attempt remains rejected and preserved.
-This closes neither GNU source-delivery derivation nor the product's unselected
-archive, complete redistribution-terms, full-plugin installation or host gates.
+Run [43339511871](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43339511871)
+executed and persisted all three relocated proxy source-only rebuilds. Independent
+download inspection matched each unchanged original record to the selected
+archives, checked all five tests per target and rechecked both actual unsigned
+containers with all 35 selected archive positions source/compiler/archive-bound.
+This closes neither the product's unselected archive, complete redistribution
+terms, full-plugin installation nor host gates.
+
+`iconv_relink_delivery.py` similarly derives a distinct GNU source/relink kit
+from an original successful producer. It retains complete pinned upstream source,
+original recipes, license/interface files and comparison JSON, plus exactly the
+known-source original libiconv archive needed for the Windows before/after rebuild.
+It omits historical probe executables and original build objects/log trees.
+The unchanged producer record is a reference, not a claim that omitted original
+evidence accompanies this delivery. Its strict manifest rejects additional files;
+the complete-original producer inspector must reject this derived kit.
+
+```sh
+python3 build/dependencies/iconv_relink_delivery.py export \
+  --candidate /preserved/original-iconv-kit --output /fresh/iconv-source-kit
+python3 /fresh/iconv-source-kit/tools/build/dependencies/relink_iconv_macos.py \
+  --candidate /fresh/iconv-source-kit --output /fresh/modified-iconv-rebuild
+```
+
+Both relocated Mac GNU kits have rebuilt dated modified sources using only
+delivered tools, with all nine conversion/rejection checks, ordered aliases and
+compiler-object/archive closure inspected. Source-kit paths may contain spaces;
+GNU build output paths must not. The native candidate workflow performs the
+same checks on both Macs and uses the delivered Windows tools and source kit
+for its modified GNU build and combined full-plugin replay. These are isolated
+candidate checks, not completed licensing, installation or host verification.
 
 Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy

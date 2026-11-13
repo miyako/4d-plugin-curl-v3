@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tarfile
 
+sys.dont_write_bytecode = True
 from build_native import ROOT, RECIPES, tree_files, object_evidence, probe_selections as selections
 from inspect_proxy import verify_architecture, verify_tar
 from observe_curl import baseline
@@ -33,6 +34,8 @@ WINDOWS_RECIPES = ["build/dependencies/prepare_cygwin.py",
                    "build/dependencies/windows-build-tools.json",
                    "build/dependencies/native/msvc-trace/cl",
                    "build/dependencies/native/msvc-trace/windres"]
+DELIVERY_MANIFEST = "iconv-relink-delivery.json"
+DELIVERY_INSPECTOR = "build/dependencies/iconv_relink_delivery.py"
 
 
 def modified_source(original, date):
@@ -46,7 +49,11 @@ def user_baseline(base):
     original = json.loads((base / "native-build-provenance.json").read_text())
     if original["schema_version"] != 1:
         raise ValueError("A user rebuild must derive directly from a pristine source candidate")
-    inspect(base)
+    if (base / DELIVERY_MANIFEST).exists():
+        from iconv_relink_delivery import inspect as inspect_delivery
+        inspect_delivery(base)
+    else:
+        inspect(base)
     archive = original["archives"][0]
     return {"name": "libiconv", "version": original["version"],
             "path": "user-base/install/" + archive["path"], "sha256": archive["sha256"]}
@@ -137,6 +144,10 @@ def inspect(output):
         if record.get("userBaseRecordSha256") != digest(base / "native-build-provenance.json"):
             raise ValueError("GNU user rebuild original source record changed")
         selected_base = user_baseline(base)
+        manifest = base / DELIVERY_MANIFEST
+        if record.get("userBaseDeliveryManifestSha256") != (
+                digest(manifest) if manifest.exists() else None):
+            raise ValueError("GNU user rebuild derived source delivery changed")
         original = json.loads((base / "native-build-provenance.json").read_text())
         modification = record["userModification"]
         source = output / "source/lib/iconv.c"
@@ -176,8 +187,10 @@ def inspect(output):
     verify_tar(output / "upstream-source.tar.gz",
                [{"path": prefix + p["path"], "sha256": p["sha256"]} for p in before_sources],
                directories=True)
+    delivery = user and (base / DELIVERY_MANIFEST).exists()
     if (set(p["path"] for p in record["recipeFiles"])
-            != set(ICONV_RECIPES + (WINDOWS_RECIPES if windows else []))
+            != set(ICONV_RECIPES + (WINDOWS_RECIPES if windows else [])
+                   + ([DELIVERY_INSPECTOR] if delivery else []))
             or record["recipeFiles"] != archive_hashes(
                 output / "recipe", [p["path"] for p in record["recipeFiles"]])):
         raise ValueError("GNU iconv original recipe changed")
@@ -315,7 +328,9 @@ def build(archive, output, target, cygwin_root=None, user_candidate=None):
         path.write_bytes(modified_source(path.read_bytes(), date))
         modification["afterSha256"] = digest(path)
         files = tree_files(source)
-    recipe_paths = ICONV_RECIPES + (WINDOWS_RECIPES if windows else [])
+    delivery = user_candidate and (user_candidate / DELIVERY_MANIFEST).exists()
+    recipe_paths = (ICONV_RECIPES + (WINDOWS_RECIPES if windows else [])
+                    + ([DELIVERY_INSPECTOR] if delivery else []))
     recipes = archive_hashes(ROOT, recipe_paths)
     for item in recipes:
         destination = output / "recipe" / item["path"]
@@ -490,6 +505,8 @@ def build(archive, output, target, cygwin_root=None, user_candidate=None):
     if user_candidate:
         record.update({"userModification": modification, "originalSourceFiles": original_files,
                        "userBaseRecordSha256": digest(output / "user-base/native-build-provenance.json")})
+        if delivery:
+            record["userBaseDeliveryManifestSha256"] = digest(output / "user-base" / DELIVERY_MANIFEST)
     write_json(output / "native-build-provenance.json", record)
     return inspect(output)
 
