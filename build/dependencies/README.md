@@ -1503,6 +1503,61 @@ loading, trust/local-signing or user installation. These remain
 explicit production-adoption gates, not obligations satisfied by this document
 or by the standalone probe.
 
+## Inventory-bound candidate notice delivery
+
+`license_materials.py` verifies recovered notice inputs against the **existing
+normalized inventory**, then delivers unchanged input bytes and a human-readable
+`NOTICES.txt`. It does not discover package identities, assign unknown versions,
+change either SBOM emitter or approve production distribution.
+
+```sh
+python3 build/dependencies/license_materials.py \
+  --inventory /path/to/unsigned-native.zip.inventory.json \
+  --materials /path/to/recovered-notice-inputs --output /fresh/notice-delivery
+python3 build/dependencies/license_materials.py --inspect-only \
+  --inventory /path/to/original/unsigned-native.zip.inventory.json \
+  --output /path/to/notice-delivery
+```
+
+The input `notice-materials.json` binds the original inventory hash and artifact
+reference to target-scoped existing component identities, exact selected archive
+records and an exact file/hash index. Every source-built archive dependency needs
+its recorded primary license and additional notice files; embedded SDK/ftpparse
+and extracted SSH notices must equal the inventory's actual reviewed text.
+Supplemental source notice context must match a delivered original build record
+whose hash is already referenced by the inventory. Source-distribution context
+must match a regular member of the delivered, inventory-pinned source archive.
+Missing target coverage, unexplained files, changed archive bindings and silently
+substituted line endings fail. The output inspector additionally regenerates the
+human-readable document from its retained inputs, rather than trusting its hash
+alone.
+
+The independently inspected candidate snapshot uses the original inventory from
+[run 43351736712](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43351736712)
+and retained provider sources from
+[run 43330282753](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43330282753).
+It covers **14 distinct existing component identities, 16 target-scoped notice
+variants, 42 notice inputs and all 35 selected archive bindings**. Both raw
+Windows provider license variants were recovered from actual delivered sources;
+they have distinct recorded hashes and independently confirmed CRLF-only
+differences from their Mac counterparts. Neither raw variant was normalized.
+The corpus also retains the complete proxy Red Hat/Mozilla alternative notices,
+the original SDK license and ftpparse dedication, SSH's additional terms, and GNU
+source-distribution `COPYING` files with their exact original source archives.
+Those source-distribution terms are not newly assigned to the linked library.
+
+The input manifest SHA-256 is
+`e110f74771a5b0b5264fdca03bb0e9407a765c321e08f22ab40b74b5efdf8c66`;
+the verified delivery manifest is
+`ce292e2faacb965b198209fb240cc2e77d399d003de2c80834fb14284e1dfa83`.
+A separate reader, without importing this generator, re-read persisted notice
+files and all 35 actual selected-kit archives against the original inventory.
+This is **notice delivery only**: final combined source/object/relink assembly,
+ancillary tool/CRT/SDK/host terms and operator installation/trust verification
+remain separate adoption gates. Recovery receipts and rejected intermediate
+assemblies are preserved with the staged evidence, not substituted for original
+producer records or historical release provenance.
+
 ## Static-distribution decision (not a legal-compliance claim)
 
 Both libraries' compiled source notices say LGPL 2.1 or later; the pinned
