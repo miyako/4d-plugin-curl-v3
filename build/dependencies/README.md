@@ -570,6 +570,31 @@ Baseline replay requires exact original thin-plugin bytes; modified replay
 requires actual defined probe code in both slices and a changed binary.
 The helper never initializes the plugin, signs it or installs it in 4D.
 
+`proxy_source_delivery.py` derives a separately identified proxy/modman
+source-only kit from a successful compiler-bound original. It retains the
+unchanged producer record as a reference, canonical base/patched source tars,
+reviewed patches and recipes, complete upstream source/license files, public
+header and a bounded set of executable Python tools. It excludes historical
+baseline/candidate executables, original compiler objects and all binary archives.
+Its distinct manifest and reader do not pretend that the omitted original
+build evidence is present. The original full audit kit remains unchanged.
+
+```sh
+python3 build/dependencies/proxy_source_delivery.py export \
+  --candidate /preserved/original-proxy-kit --output /fresh/proxy-source-kit
+python3 /fresh/proxy-source-kit/tools/build/dependencies/relink_candidate.py \
+  --candidate /fresh/proxy-source-kit --output /fresh/modified-proxy-rebuild
+```
+
+Both relocated Mac source-only kits have executed all five modified-source
+tests using only their delivered tools, including Intel under Rosetta.
+The native candidate workflow performs and retains the same experiment for
+all three targets. Python entry points disable bytecode-cache writes before
+importing delivered helpers so execution does not mutate the closed source-kit
+file set. An earlier cache-mutated local attempt remains rejected and preserved.
+This closes neither GNU source-delivery derivation nor the product's unselected
+archive, complete redistribution-terms, full-plugin installation or host gates.
+
 Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy
 sources before linking their changes into both full-plugin slices. This closes

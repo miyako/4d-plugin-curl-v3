@@ -12,8 +12,10 @@ import tarfile
 import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(HERE.parent / "sbom"))
-from inspect_proxy import inspect, verify_architecture
+from inspect_proxy import verify_architecture
+from proxy_source_delivery import inspect_candidate as inspect, MANIFEST
 from provenance import archive_hashes, digest, write_json
 
 
@@ -110,6 +112,8 @@ def relink(candidate, output):
     proof = {
         "schemaVersion": 1, "target": target,
         "candidateRecordSha256": digest(candidate / "proxy-build-provenance.json"),
+        "deliveredMaterialManifestSha256": (digest(candidate / MANIFEST)
+                                           if (candidate / MANIFEST).exists() else None),
         "deliveredSourceSha256": digest(candidate / "upstream-source.tar"),
         "deliveredRecipeSha256": digest(candidate / "candidate-recipe.tar"),
         "modification": {"path": "libproxy/url.cpp", "beforeSha256": before,
@@ -134,6 +138,8 @@ def inspect_relink(candidate, output):
     inspection = inspect(candidate)
     if (proof["target"] != inspection["target"]
             or proof["candidateRecordSha256"] != digest(candidate / "proxy-build-provenance.json")
+            or proof.get("deliveredMaterialManifestSha256") != (
+                digest(candidate / MANIFEST) if (candidate / MANIFEST).exists() else None)
             or proof["deliveredSourceSha256"] != digest(candidate / "upstream-source.tar")
             or proof["deliveredRecipeSha256"] != digest(candidate / "candidate-recipe.tar")):
         raise ValueError("User-relink proof does not bind the delivered candidate")

@@ -541,6 +541,55 @@ jobs:
               for record in staging.get("providerSourceRecords", []):
                   command.extend(["--provider-source-record", record])
           subprocess.run(command, check=True)
+      - name: Rebuild derived proxy sources without historical binaries
+        if: ${{ inputs.native-candidate-plugin-only }}
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        shell: python
+        run: |
+          import json, os, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, "build/dependencies")
+          import proxy_source_delivery as delivery
+          from provenance import digest
+          stage = json.loads(Path("../plugin-candidate-staging.json").read_text())
+          evidence = json.loads(Path("native-trace/build-evidence.json").read_text())
+          binding = next(p for p in evidence["rebuiltArchiveEvidence"] if p["name"] == "libproxy")
+          root = Path(os.environ["RUNNER_TEMP"]) / "proxy-source-delivery"
+          targets = set()
+          for name in stage["nativeSourceKits"]:
+              candidate = Path(name)
+              original = candidate / delivery.RECORD
+              if not original.is_file():
+                  continue
+              record = json.loads(original.read_text())
+              target = record["target"]
+              if target in targets or not any(
+                      r["target"] == target and r["sha256"] == digest(original)
+                      for r in binding["originalBuildRecords"]):
+                  raise RuntimeError("Proxy source delivery does not match the selected original build")
+              targets.add(target)
+              original_output = root / target / "original-source-delivery"
+              delivery.export(candidate, original_output)
+              moved = root / target / "Moved proxy source"
+              original_output.rename(moved)
+              command = [
+                  sys.executable, str(moved / "tools/build/dependencies/relink_candidate.py"),
+                  "--candidate", str(moved), "--output", str(root / target / "rebuilt"),
+              ]
+              subprocess.run(command, check=True)
+              subprocess.run(command + ["--inspect-only"], check=True)
+          expected = ({"windows-x86_64"} if os.environ["RUNNER_OS"] == "Windows"
+                      else {"macos-arm64", "macos-x86_64"})
+          if targets != expected:
+              raise RuntimeError("Missing or unexpected native proxy source-delivery targets")
+      - name: Retain derived proxy sources and original modification receipts
+        if: ${{ always() && inputs.native-candidate-plugin-only }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: isolated-proxy-source-delivery-${{ runner.os }}
+          path: ${{ runner.temp }}/proxy-source-delivery/
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Upload unsigned macOS build and ingestion evidence
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
