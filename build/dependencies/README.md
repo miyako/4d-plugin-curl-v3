@@ -694,8 +694,8 @@ For general edits, extract the complete library source and retain its notices;
 make dated, identified changes in that working copy. Use the delivered native
 recipe and recorded configure arguments/environment, adjusting working paths
 and output prefixes rather than silently changing target, CRT or deployment
-settings. GNU rebuild receipts expose `configureArguments`, `makeArguments`
-and `compilerEnvironment`; proxy receipts expose `configureArguments`, with
+settings. GNU rebuild receipts expose `configure_arguments`, `compilerEnvironment`
+and retained configure/build logs; proxy receipts expose `configureArguments`, with
 the CMake recipe and module configuration delivered alongside the source.
 Library-only targets avoid building unrelated upstream command-line tools.
 
@@ -728,6 +728,34 @@ to the actual modified archive. The resulting slice hashes are
 (Intel). This demonstrates marker-free Mac feasibility, not equivalent Windows
 verification, completed user-facing licensing delivery, installation or host
 behavior. No plugin was initialized.
+
+`user_relink_windows.py` provides a separate general-user raw-link path, not a
+mode that relaxes the fixed demonstrations. With the recorded MSVC/SDK/CRT
+environment active, use a pristine **selected-only** Windows kit and a fresh
+external output directory:
+
+```powershell
+python build/dependencies/user_relink_windows.py replay `
+  --kit "C:/materials/Moved selected plugin kit" --output "C:/user/new link" `
+  --replace "lib/64/iconv.lib=C:/user/my edited conversion.lib"
+python build/dependencies/user_relink_windows.py inspect `
+  --kit "C:/materials/Moved selected plugin kit" --output "C:/user/new link"
+```
+
+Repeat `--replace` for additional selected repository archive paths. This copies
+the user archives, verifies the unchanged original baseline, preserves original
+link/search order, checks the recorded linker/system inputs and retains the
+original plugin entry points. It adds no fixed exports or forced symbols.
+User results have a distinct evidence class; the tool does not infer their
+source identity, CRT suitability, compatibility or licensing. Source edits and
+build materials must still be retained separately.
+
+The manual unsigned `windows-user-relink` prerequisite scope exercises a
+marker-free active-function edit against the verified native producer
+43351736712: one native `iconv.c` recompile and three hash-verified unchanged
+object reuses, nine conversion checks and the complete raw object link.
+This incremental experiment deliberately does not claim to rerun GNU configure,
+recompile the resource/unchanged objects, or establish host behavior.
 
 Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy
