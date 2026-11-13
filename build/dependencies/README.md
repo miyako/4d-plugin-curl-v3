@@ -1099,9 +1099,24 @@ the verified source-built OpenSSL/Brotli providers.
 The existing unsigned `curl-http2` scope now runs these comparisons alongside
 HTTP/2 without changing production inputs or signing.
 
-Local arm64 and Rosetta Intel comparisons pass all sixteen transfers. Native
-Windows and fresh all-target CI remain required before reporting this stage
-as verified across all targets. Initial fixture failures are retained: curl's
+Run [43364771399](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43364771399),
+at `7efb801be52cce4ea682c58d048f144a9b786ebf`, passes all 24 native proxy/PAC
+transfers and all 30 HTTP/2 transfers across both Mac architectures and Windows.
+Downloaded outputs were independently reopened and checked against native CPU
+headers, exact pinned/current-producer source bytes (retaining actual Windows
+CRLF variants), raw member selections and the original plugin joins. Candidate
+inputs bind to eleven selected plugin archive positions per Mac target and ten
+on Windows. Both Windows cohorts fetch each PAC once but return DIRECT without
+executing it; the bypass comparison instead demonstrates actual proxy traffic
+with the old list failure and actual direct traffic with the candidate fix.
+Both Mac cohorts fetch/evaluate the PAC and preserve the last-non-DIRECT route.
+Local arm64 and Rosetta Intel comparisons also pass all sixteen transfers.
+
+The first native run retained successful traffic but rejected Windows'
+unexpected linker-generated `.lib`/`.exp` outputs. The exact auxiliary filenames
+are now required and hash-bound alongside the executable/object; they are
+outputs, not additional selected third-party archives.
+Initial fixture failures are retained: curl's
 macOS global initialization itself queries SystemConfiguration, so synthetic
 settings must exist before it and outlive cleanup. An immutable short
 `127.0.0.1` CFString also yielded DIRECT with both observed archive cohorts;
@@ -1522,8 +1537,9 @@ Before any adoption/release, review an LGPL 2.1 section 6(a) delivery approach:
    maintainer's signing credentials; document local signing/trust requirements.
    Do not assume the 4D host accepts the resulting modified plugin.
 
-Candidate artifacts include source and recipe material to support review, but
-are **not a complete plugin relink kit**. Upstream defects, configuration
+Candidate artifacts now demonstrate selected-only full-plugin relinking and
+user source edits, but are **not a complete redistribution-ready delivery or
+verified host installation**. Upstream defects, configuration
 differences, feature coverage and any remaining redistribution/licensing
 questions must be resolved explicitly before a single actionable adoption
 decision is sought. Historical archive versions/licenses stay unknown.
