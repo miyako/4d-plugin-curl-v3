@@ -869,6 +869,48 @@ the delivered receipt tree. Delivered recipes, complete response bytes,
 compiler/archive/interface hashes, maps, executables and original outcomes are
 rechecked by the read-only `inspect_proof` entry point.
 
+### Standalone SSH transfers
+
+`probe_curl_ssh.py` adds actual SFTP and SCP downloads/uploads plus rejected
+host keys, rejected passwords and missing remote files: seven cases per archive
+variant. Both Mac clients have passed locally (Intel under Rosetta); Windows and
+fresh measured-provider all-target execution require the new unsigned CI run.
+This comparison deliberately shares candidate TLS/Brotli providers; it does not
+reconstruct the released providers or establish historical archive provenance.
+
+The fixture runs in a separate Python 3.12 environment. Install only the
+hash-locked binary wheels in `ssh-fixture-requirements.txt`; these development
+tools are not plugin dependencies. Its reviewed fixture hosts are macOS arm64
+and Windows x64; the arm64 fixture also serves the Intel product client.
+For example, from `build/dependencies`, with absolute paths:
+
+```sh
+"/fixture-python/bin/python" -m pip --isolated install --only-binary=:all: \
+  --require-hashes -r /repository/build/dependencies/ssh-fixture-requirements.txt
+"/fixture-python/bin/python" -m probe_curl_ssh \
+  --project /isolated-candidate/project --baseline /repository \
+  --target macos-arm64 --output /fresh/ssh-proof
+python3 -m probe_curl_ssh --inspect-only --output /downloaded/ssh-proof
+```
+
+The loopback-only server uses in-memory files and ephemeral RSA private keys;
+only public known-host entries enter receipts. It never uses an OS shell,
+changes host SSH/accounts or loads the plugin. Exact client output, actual
+server-received upload bytes, bounded public server observations, recipes,
+compiler/archive/interface hashes and fixture metadata are retained. The strict
+reader rejects extra files, changed upload bytes and inconsistent server/auth
+observations. CI additionally binds every candidate probe archive to the actual
+matching plugin linker selection and resulting binary hash.
+
+SCP framing is observed rather than idealized: the fixture accepts only the
+exact download (`-f`/timestamp-preserving `-pf`) and upload (`-t`) commands and
+records a final acknowledgement versus peer-close, and a NUL upload terminator
+versus EOF. Full payload equality is mandatory; early/truncated payloads fail.
+Successful byte transfers do not establish strict SCP framing compliance or
+interoperability with every real SSH server. The rejected fixture-development
+runs remain preserved; no product archive was patched to accommodate the server.
+HTTP2, PAC-to-curl integration, older systems and operator-run 4D gates remain.
+
 ### Fresh providers reach final unsigned candidates
 
 [Run 43332411256](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43332411256)

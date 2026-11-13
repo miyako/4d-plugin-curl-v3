@@ -73,7 +73,7 @@ def verify_inputs(project, model):
         raise ValueError("Curl transfer compiler, archives or interface changed")
 
 
-def build_probe(project, output, target, provider_project):
+def build_probe(project, output, target, provider_project, source=None):
     windows = target.startswith("windows")
     selected = observe_curl.baseline(target)
     paths = []
@@ -88,8 +88,8 @@ def build_probe(project, output, target, provider_project):
                 if provenance.digest(path) != row["sha256"]:
                     raise ValueError("The comparison must use the exact frozen non-provider archive")
             paths.append(path)
-    binary = output / ("curl-transfer.exe" if windows else "curl-transfer")
-    source = ROOT / "build/dependencies/native/curl-transfer.c"
+    source = source or ROOT / "build/dependencies/native/curl-transfer.c"
+    binary = output / (source.stem + (".exe" if windows else ""))
     output.mkdir(parents=True)
     compiler = shutil.which("cl") if windows else "/usr/bin/cc"
     if not compiler:
@@ -97,7 +97,7 @@ def build_probe(project, output, target, provider_project):
     if windows:
         command = [compiler, "/nologo", "/W4", "/O2", "/MT", "/DCURL_STATICLIB",
                    "/I" + str(project / "include"), str(source),
-                   "/Fo" + str(output / "curl-transfer.obj"), "/Fe" + str(binary),
+                   "/Fo" + str(output / (source.stem + ".obj")), "/Fe" + str(binary),
                    *map(str, paths), "/link", "/MAP:" + str(output / "transfer.map"),
                    "ws2_32.lib", "crypt32.lib", "bcrypt.lib", "secur32.lib", "wldap32.lib",
                    "advapi32.lib", "normaliz.lib", "user32.lib", "iphlpapi.lib"]

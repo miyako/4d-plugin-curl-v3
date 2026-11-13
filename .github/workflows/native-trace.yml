@@ -380,6 +380,36 @@ jobs:
           path: ${{ runner.temp }}/candidate-curl-transfers/
           include-hidden-files: true
           if-no-files-found: error
+      - name: Compare standalone SSH transfers in an isolated hash-locked fixture environment
+        if: ${{ inputs.native-candidate-plugin-only && inputs.native-materials-provider-run != '' }}
+        shell: python
+        run: |
+          import os, subprocess, sys
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          mac = os.environ["RUNNER_OS"] == "macOS"
+          environment = root / "curl-ssh-fixture-python"
+          outputs = root / "candidate-curl-ssh-transfers"
+          outputs.mkdir()
+          subprocess.run([sys.executable, "-m", "venv", str(environment)], check=True)
+          python = environment / ("bin/python" if mac else "Scripts/python.exe")
+          with (outputs / "fixture-install.log").open("w") as stream:
+              subprocess.run([str(python), "-m", "pip", "--isolated", "--disable-pip-version-check",
+                "install", "--index-url", "https://pypi.org/simple", "--only-binary=:all:",
+                "--require-hashes", "-r", "build/dependencies/ssh-fixture-requirements.txt"],
+                stdout=stream, stderr=subprocess.STDOUT, check=True)
+          for target in (("macos-arm64", "macos-x86_64") if mac else ("windows-x86_64",)):
+              subprocess.run([str(python), "-m", "probe_curl_ssh",
+                "--project", os.environ["PLUGIN_ROOT"], "--baseline", str(Path.cwd()),
+                "--target", target, "--output", str(outputs / target)],
+                cwd=Path.cwd() / "build/dependencies", check=True)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() && inputs.native-candidate-plugin-only && inputs.native-materials-provider-run != '' }}
+        with:
+          name: candidate-curl-ssh-transfers-${{ runner.os }}
+          path: ${{ runner.temp }}/candidate-curl-ssh-transfers/
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Build source OpenSSL Windows static MT
         if: ${{ runner.os == 'Windows' && !inputs.native-candidate-plugin-only }}
         shell: cmd
@@ -541,6 +571,23 @@ jobs:
               for record in staging.get("providerSourceRecords", []):
                   command.extend(["--provider-source-record", record])
           subprocess.run(command, check=True)
+      - name: Bind SSH compatibility inputs to the actual plugin selections
+        if: ${{ inputs.native-candidate-plugin-only && inputs.native-materials-provider-run != '' }}
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        shell: python
+        run: |
+          import os, sys
+          from pathlib import Path
+          sys.path.insert(0, "build/dependencies")
+          from probe_curl_ssh import bind_plugin_selection
+          from provenance import write_json
+          root = Path(os.environ["RUNNER_TEMP"]) / "candidate-curl-ssh-transfers"
+          targets = (("macos-arm64", "arm64"), ("macos-x86_64", "x86_64")) if (
+              os.environ["RUNNER_OS"] == "macOS") else (("windows-x86_64", "x64"),)
+          for target, suffix in targets:
+              write_json(Path("native-trace") / ("ssh-selection-" + suffix + ".json"),
+                         bind_plugin_selection(root / target,
+                                               Path("native-trace") / ("link-" + suffix + ".json")))
       - name: Rebuild derived proxy sources without historical binaries
         if: ${{ inputs.native-candidate-plugin-only }}
         working-directory: ${{ env.PLUGIN_ROOT }}
