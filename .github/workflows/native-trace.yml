@@ -1,6 +1,17 @@
 name: Unsigned native linker trace
 
 on:
+  workflow_call:
+    inputs:
+      native-candidate-plugin-only:
+        type: boolean
+        default: true
+      native-candidate-inventory-run:
+        type: string
+        required: true
+      native-materials-provider-run:
+        type: string
+        required: true
   pull_request:
     paths:
       - 'build/sbom/**'

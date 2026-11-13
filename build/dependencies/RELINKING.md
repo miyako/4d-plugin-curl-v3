@@ -1,9 +1,10 @@
 # Candidate source and user-relink materials
 
-**Review delivery only: not approved for production or certified legally compliant.**
-This directory is not a new product release. `inventory.json` still describes
+**Original source/relink evidence, not a legal-compliance certification.**
+When supplied with a release, `../release-binding.json` joins that release to
+these unchanged original materials. `inventory.json` still describes
 its exact original unsigned ZIP, not the hash or contents of this source kit.
-Production archives, signing, release tags and published assets are unchanged.
+Release authorization does not retroactively change original producer records.
 
 ## What is delivered
 
@@ -135,11 +136,12 @@ proxy PAC source's full alternative notice and chosen LGPL route rather than
 discarding the alternative text. Do not blanket-relicense the plugin's
 third-party inputs under the root MIT license.
 
-## Operator-only installation and trust gate
+## Optional operator-run installation and trust checks
 
 No automation in this delivery loads 4D or the plugin. Native link/conversion
 evidence is not host-installation, older-OS, ABI or application behavior proof.
-Production adoption remains gated on a human-operated isolated test.
+Manual 4D testing is not a release gate. Automated source/archive/link/container
+checks remain mandatory; they do not establish host-runtime or older-OS behavior.
 
 Use a licensed compatible 64-bit 4D host and a disposable copy of the repository
 test project, never a production database. The test project file is
@@ -164,4 +166,4 @@ Record host/OS versions, install location, local signing/trust steps, loaded
 candidate hash, loader result and narrowly selected functional results.
 `TEST_version_info` overwrites the clipboard; do not run it unintentionally.
 An operator must deliberately choose safe test methods and preserve the report.
-This gate has not been run or waived by the delivery's inspectors.
+The delivery's inspectors never claim these optional host checks passed.

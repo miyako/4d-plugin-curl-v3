@@ -1,17 +1,5 @@
-# Builds the plugin for Windows (x64) first, then macOS as a universal
-# (arm64 + x86_64) binary, merges both into the single cross-platform
-# .bundle, codesigns + notarizes the mac binary, and publishes a GitHub
-# Release with the zip and dmg attached.
-#
-# OpenSSL (libssl/libcrypto) is built from source on each runner rather
-# than vendored as prebuilt static libs. It's compiled as a static lib
-# and dropped into the exact repo-relative paths the project files
-# already search (lib\64 on Windows, ./a on macOS), so cURL.vcxproj and
-# project.pbxproj need no changes. Brotli is also rebuilt from pinned
-# patched source; other dependencies remain vendored.
-#
-# Run Build manually on the selected branch. Version comes from source, not a tag input.
-
+# Build the measured source-backed plugin without secrets first; only then use
+# the existing Developer ID/notarization and guarded publication path.
 name: Build
 
 on:
@@ -21,40 +9,16 @@ permissions:
   contents: read
 
 env:
-  # ---- edit these per-project, everything else is generic ----
   PRODUCT_NAME: cURL
-  XCODE_PROJECT: cURL.xcodeproj
-  VCX_SOLUTION: cURL.sln
-  MACOS_DEPLOYMENT_TARGET: '10.13'
-  # OpenSSL source to build. Use the official tag naming scheme
-  # ("openssl-<version>"). Pinned to the 3.5 LTS line (supported into
-  # 2030, not the shorter-lived 3.6 feature line) rather than the
-  # exact 3.6.3 vcpkg happened to resolve when the vendored libcurl
-  # was rebuilt. This is safe: OpenSSL guarantees API/ABI stability
-  # within the 3.x series (unlike the 3.x->4.0 jump, which removed
-  # ENGINE and added ECH - the actual source of every mismatch this
-  # workflow has hit), so curl built against 3.6.3 headers links fine
-  # against a separately-built 3.5.x libssl/libcrypto. Windows already
-  # proved this pairing works (vcpkg-vendored libcurl.lib linked clean
-  # against a from-source 3.5.8 here). Bump the patch version as new
-  # 3.5.x releases land.
-  OPENSSL_GIT_TAG: openssl-3.5.8
-  # --------------------------------------------------------------
 
 concurrency:
   group: release-publication
   cancel-in-progress: false
 
 jobs:
-
-  brotli:
-    needs: version
-    uses: ./.github/workflows/build-brotli.yml
-
   version:
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.set.outputs.tag }}
       version: ${{ steps.set.outputs.version }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -67,292 +31,55 @@ jobs:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 .github/scripts/release_version.py preflight --sha "$GITHUB_SHA" --ref "$GITHUB_REF"
 
-  build-windows:
-    name: Build Windows (x64)
-    needs: [version, brotli]
-    runs-on: windows-latest
+  source-native:
+    needs: version
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/native-trace.yml
+    with:
+      native-candidate-plugin-only: true
+      native-candidate-inventory-run: '43302769645'
+      native-materials-provider-run: '43330282753'
+
+  build-macos:
+    name: Bind source materials, sign, notarize and package
+    needs: [version, source-native]
+    runs-on: macos-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
-
-      # Use the same immutable workflow revision for SBOM tooling.
-      - name: checkout SBOM tooling from the workflow revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.workflow_sha }}
-          path: sbom-tools
-          sparse-checkout: build/sbom
           persist-credentials: false
-
-      - name: setup MSBuild
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
-
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
-
-      - name: download patched Brotli libraries
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: brotli-Windows
-          path: .
-
-      # ---- Build OpenSSL (static, /MT, x64) from source ----
-      # Strawberry Perl ships on windows-latest already; we only need
-      # NASM (for the asm-optimized crypto routines) and a VC dev
-      # environment matching the toolset/arch the plugin itself builds
-      # with (v143 / x64), so the CRT linkage lines up.
-      - name: install NASM
-        run: choco install nasm -y --no-progress
-
-      - name: add NASM to PATH
-        shell: pwsh
-        run: echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: setup MSVC dev environment (x64)
-        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+          pattern: unsigned-native-*
+          path: release-inputs
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          arch: x64
-
-      - name: checkout OpenSSL source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+          pattern: isolated-selected-plugin-delivery-*
+          path: release-inputs
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          repository: openssl/openssl
-          ref: ${{ env.OPENSSL_GIT_TAG }}
-          path: openssl-src
-
-      - name: cache OpenSSL build (windows x64)
-        id: cache-openssl-win
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: openssl-src\out-win64
-          # v2 caches build-time evidence alongside the installed archives.
-          key: openssl-${{ env.OPENSSL_GIT_TAG }}-win64-mt-provenance-v2-${{ hashFiles('sbom-tools/build/sbom/provenance.py') }}
-
-      # -MT matches this project's Release|x64 RuntimeLibrary=MultiThreaded,
-      # so the plugin and OpenSSL agree on which CRT they're statically
-      # linking. no-shared gives us .lib static archives instead of a
-      # DLL + import lib. no-tests skips building/running OpenSSL's own
-      # test suite, which we don't need.
-      - name: build OpenSSL (static, /MT, x64)
-        if: steps.cache-openssl-win.outputs.cache-hit != 'true'
-        shell: cmd
-        working-directory: openssl-src
-        run: |
-          perl Configure VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
-          if errorlevel 1 exit /b 1
-          nmake
-          if errorlevel 1 exit /b 1
-          nmake install_sw
-          if errorlevel 1 exit /b 1
-          python ..\sbom-tools\build\sbom\provenance.py source-record --source . --install out-win64 --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
-
-      - name: verify OpenSSL source, configuration and installed archives
-        shell: cmd
-        working-directory: openssl-src
-        run: |
-          python ..\sbom-tools\build\sbom\provenance.py verify --source . --install out-win64 --target windows-x86_64 -- VC-WIN64A no-shared no-tests -MT --release --prefix=%CD%\out-win64 --openssldir=%CD%\out-win64\ssl
-
-      - name: copy OpenSSL libs into vendor path
-        shell: cmd
-        run: |
-          if not exist lib\64 mkdir lib\64
-          copy /Y openssl-src\out-win64\lib\libssl.lib lib\64\libssl.lib || exit /b 1
-          copy /Y openssl-src\out-win64\lib\libcrypto.lib lib\64\libcrypto.lib || exit /b 1
-          python sbom-tools\build\sbom\provenance.py combine --record openssl-src\out-win64\openssl-build-provenance.json --vendor . --target windows-x86_64
-      # ---- end OpenSSL build ----
-
-      # GitHub-hosted windows-latest ships VS2022 (v143 toolset) but not the
-      # legacy v140 toolset the project is pinned to, so we override it on
-      # the command line rather than requiring an extra VS component install.
-      #
-      # The project also hardcodes WindowsTargetPlatformVersion=8.1 in
-      # TZ.vcxproj (<PropertyGroup Label="Globals">), and the Windows 8.1 SDK
-      # is no longer installed on current windows-latest images, which fails
-      # with MSB8036 ("The Windows SDK version 8.1 was not found"). Same class
-      # of fix as the toolset override above: override it on the command line
-      # rather than editing the vcxproj (which applies to all 4
-      # Debug/Release x Win32/x64 configurations, not just the one this job
-      # builds). "10.0" lets MSBuild resolve to whatever full 10.0.xxxxx.x SDK
-      # is actually installed on the runner, rather than pinning an exact
-      # build number that may not match the image.
-      - name: build x64
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force native-linker | Out-Null
-          python sbom-tools/build/sbom/generate.py sources --target windows-x86_64 --output native-linker/embedded-sources.json
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          msbuild "${{ env.VCX_SOLUTION }}" /p:Configuration=Release /p:Platform=x64 `
-            /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /m `
-            "/p:ForceImportAfterCppTargets=$PWD\sbom-tools\build\sbom\diagnostics.props" `
-            "/p:NativeTraceDirectory=$PWD\native-linker" `
-            /fl "/flp:logfile=$PWD\native-linker\msbuild.log;verbosity=normal;encoding=UTF-8"
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-
-      - name: upload windows binaries
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: windows-binaries
-          path: |
-            test/Plugins/${{ env.PRODUCT_NAME }}.bundle/Contents/Windows64/${{ env.PRODUCT_NAME }}.4DX
-          if-no-files-found: error
-
-      - name: capture Windows SBOM build evidence
-        shell: pwsh
-        run: |
-          python sbom-tools/build/sbom/generate.py inputs --target windows-x86_64 `
-            --binary "test/Plugins/${{ env.PRODUCT_NAME }}.bundle/Contents/Windows64/${{ env.PRODUCT_NAME }}.4DX" `
-            --brotli-provenance brotli-provenance.json `
-            --openssl-provenance openssl-provenance.json `
-            --manifest sbom-tools/build/sbom/native-archives.json --embedded-sources `
-            --embedded-source-snapshot native-linker/embedded-sources.json `
-            --link-map windows-x86_64=native-linker/cURL-x64.map `
-            --link-log native-linker/msbuild.log --output sbom-windows.json
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: sbom-windows-evidence
-          path: sbom-windows.json
-          if-no-files-found: error
-
-      - name: retain native linker diagnostics
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: release-windows-linker-evidence
-          path: |
-            native-linker/
-            openssl-provenance.json
-            sbom-windows.json
-          if-no-files-found: warn
-
-  build-macos:
-    name: Build macOS, package, sign, notarize & release
-    needs: [version, brotli, build-windows]
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.sha }}
-
-      - name: checkout SBOM tooling from the workflow revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.workflow_sha }}
-          path: sbom-tools
-          sparse-checkout: build/sbom
-          persist-credentials: false
-
-      - name: download windows binaries
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: windows-binaries
-          path: winbuild
-
-      - name: download patched Brotli libraries and headers
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: brotli-macOS
-          path: .
-
-      - name: download Windows SBOM build evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: sbom-windows-evidence
-          path: sbom-evidence
-
-      # ---- Build OpenSSL (static, universal arm64+x86_64) from source ----
-      # OpenSSL's Configure targets a single arch at a time, so we build
-      # arm64 and x86_64 into separate checkouts and lipo them together,
-      # same shape as the "build macOS plugin (universal)" step below.
-      - name: checkout OpenSSL source (arm64)
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          repository: openssl/openssl
-          ref: ${{ env.OPENSSL_GIT_TAG }}
-          path: openssl-arm64
-
-      - name: checkout OpenSSL source (x86_64)
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          repository: openssl/openssl
-          ref: ${{ env.OPENSSL_GIT_TAG }}
-          path: openssl-x86_64
-
-      - name: cache OpenSSL build (macOS universal)
-        id: cache-openssl-mac
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            openssl-arm64/out
-            openssl-x86_64/out
-          # Older caches have no verifiable build-time source/configuration.
-          key: openssl-${{ env.OPENSSL_GIT_TAG }}-macos-universal-${{ env.MACOS_DEPLOYMENT_TARGET }}-provenance-v2-${{ hashFiles('sbom-tools/build/sbom/provenance.py') }}
-
-      - name: build OpenSSL (arm64)
-        if: steps.cache-openssl-mac.outputs.cache-hit != 'true'
-        working-directory: openssl-arm64
+          run-id: '43330282753'
+          github-token: ${{ github.token }}
+          pattern: isolated-provider-materials-*
+          path: provider-inputs
+      - name: Verify and assemble corresponding sources, relink objects and notices
         run: |
           set -euo pipefail
-          ./Configure darwin64-arm64-cc no-shared no-tests \
-            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" \
-            --prefix="$PWD/out"
-          make -j"$(sysctl -n hw.ncpu)"
-          make install_sw
-          python ../sbom-tools/build/sbom/provenance.py source-record \
-            --source . --install out --target macos-arm64 -- \
-            darwin64-arm64-cc no-shared no-tests \
-            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/out"
-
-      - name: build OpenSSL (x86_64)
-        if: steps.cache-openssl-mac.outputs.cache-hit != 'true'
-        working-directory: openssl-x86_64
-        run: |
-          set -euo pipefail
-          ./Configure darwin64-x86_64-cc no-shared no-tests \
-            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" \
-            --prefix="$PWD/out"
-          make -j"$(sysctl -n hw.ncpu)"
-          make install_sw
-          python ../sbom-tools/build/sbom/provenance.py source-record \
-            --source . --install out --target macos-x86_64 -- \
-            darwin64-x86_64-cc no-shared no-tests \
-            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/out"
-
-      - name: verify OpenSSL sources, configurations and installed archives
-        run: |
-          set -euo pipefail
-          python sbom-tools/build/sbom/provenance.py verify \
-            --source openssl-arm64 --install openssl-arm64/out --target macos-arm64 -- \
-            darwin64-arm64-cc no-shared no-tests \
-            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/openssl-arm64/out"
-          python sbom-tools/build/sbom/provenance.py verify \
-            --source openssl-x86_64 --install openssl-x86_64/out --target macos-x86_64 -- \
-            darwin64-x86_64-cc no-shared no-tests \
-            -mmacosx-version-min="${{ env.MACOS_DEPLOYMENT_TARGET }}" --prefix="$PWD/openssl-x86_64/out"
-
-      - name: merge into universal libs & copy into vendor path
-        run: |
-          set -euo pipefail
-          mkdir -p a
-          lipo -create \
-            openssl-arm64/out/lib/libssl.a \
-            openssl-x86_64/out/lib/libssl.a \
-            -output a/libssl.a
-          lipo -create \
-            openssl-arm64/out/lib/libcrypto.a \
-            openssl-x86_64/out/lib/libcrypto.a \
-            -output a/libcrypto.a
-          lipo -info a/libssl.a
-          lipo -info a/libcrypto.a
-          python sbom-tools/build/sbom/provenance.py combine \
-            --record openssl-arm64/out/openssl-build-provenance.json \
-            --record openssl-x86_64/out/openssl-build-provenance.json \
-            --vendor . --target macos-universal
-      # ---- end OpenSSL build ----
+          python .github/scripts/release_materials.py prepare \
+            --inputs "$PWD/release-inputs" --providers "$PWD/provider-inputs" \
+            --output "$RUNNER_TEMP/release-materials"
+          BUNDLE="$PWD/release-inputs/unsigned-native-build-macOS/test/Plugins/cURL.bundle"
+          cp "$BUNDLE/Contents/MacOS/cURL" "$RUNNER_TEMP/unsigned-cURL"
+          echo "BUNDLE_PATH=$BUNDLE" >> "$GITHUB_ENV"
 
       - name: import Developer ID certificate
         env:
@@ -363,18 +90,14 @@ jobs:
           set -euo pipefail
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           CERT_PATH="$RUNNER_TEMP/certificate.p12"
-
           echo -n "$CERT_BASE64" | base64 --decode -o "$CERT_PATH"
-
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security import "$CERT_PATH" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
-
       - name: store notarytool credentials
         env:
           APPLE_ID: ${{ secrets.NOTARYTOOL_APPLE_ID }}
@@ -382,113 +105,58 @@ jobs:
           APP_PASSWORD: ${{ secrets.NOTARYTOOL_PASSWORD }}
         run: |
           xcrun notarytool store-credentials "notarytool-profile" \
-            --apple-id "$APPLE_ID" \
-            --team-id "$TEAM_ID" \
-            --password "$APP_PASSWORD" \
+            --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APP_PASSWORD" \
             --keychain "$KEYCHAIN_PATH"
-
-      - name: build macOS plugin (universal)
-        run: |
-          set -euo pipefail
-          mkdir -p native-linker
-          python sbom-tools/build/sbom/generate.py sources --target macos-universal --output native-linker/embedded-sources.json
-          xcodebuild -project "${{ env.XCODE_PROJECT }}" \
-            -target "${{ env.PRODUCT_NAME }}" \
-            -configuration Default \
-            ARCHS="arm64 x86_64" \
-            ONLY_ACTIVE_ARCH=NO \
-            MACOSX_DEPLOYMENT_TARGET="${{ env.MACOS_DEPLOYMENT_TARGET }}" \
-            LD_GENERATE_MAP_FILE=YES \
-            'LD_MAP_FILE_PATH=$(PROJECT_DIR)/native-linker/$(CURRENT_ARCH).map' \
-            CODE_SIGNING_ALLOWED=NO \
-            build
-
-      - name: verify universal binary
-        run: |
-          set -euo pipefail
-          BIN="test/Plugins/${{ env.PRODUCT_NAME }}.bundle/Contents/MacOS/${{ env.PRODUCT_NAME }}"
-          lipo -info "$BIN"
-          lipo -info "$BIN" | grep -q "arm64" && lipo -info "$BIN" | grep -q "x86_64"
-
-      - name: merge Windows binaries into the bundle
-        run: |
-          set -euo pipefail
-          BUNDLE="test/Plugins/${{ env.PRODUCT_NAME }}.bundle"
-          mkdir -p "$BUNDLE/Contents/Windows64"
-          cp "winbuild/${{ env.PRODUCT_NAME }}.4DX" "$BUNDLE/Contents/Windows64/${{ env.PRODUCT_NAME }}.4DX"
-          echo "BUNDLE_PATH=$BUNDLE" >> "$GITHUB_ENV"
-
       - name: codesign
         run: |
           set -euo pipefail
           IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
             | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)".*/\1/')
-          echo "Signing with: $IDENTITY"
           codesign --verbose --deep --timestamp --force --options=runtime \
             --sign "$IDENTITY" "$BUNDLE_PATH"
           codesign --verify --deep --strict --verbose=2 "$BUNDLE_PATH"
-
-      - name: package, notarize & staple
-        run: |
-          set -euo pipefail
-          VERSION="${{ needs.version.outputs.version }}"
-          ZIP_PATH="${{ env.PRODUCT_NAME }}-${VERSION}.zip"
-          DMG_PATH="${{ env.PRODUCT_NAME }}-${VERSION}.dmg"
-
-          # zip: cross-platform bundle (win + mac binaries together), what most users grab
-          ditto -c -k --keepParent "$BUNDLE_PATH" "$ZIP_PATH"
-
-          # dmg: mac-friendly, and the only format Apple lets us staple a ticket to
-          hdiutil create -format UDBZ -volname "${{ env.PRODUCT_NAME }}" -srcfolder "$BUNDLE_PATH" "$DMG_PATH"
-
-          xcrun notarytool submit "$ZIP_PATH" --keychain-profile "notarytool-profile" --keychain "$KEYCHAIN_PATH" --wait
-          xcrun notarytool submit "$DMG_PATH" --keychain-profile "notarytool-profile" --keychain "$KEYCHAIN_PATH" --wait
-          xcrun stapler staple "$DMG_PATH"
-
-          echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
-          echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
-
-      - name: generate and validate release-specific SBOM sidecars
+          python .github/scripts/release_materials.py rebind \
+            --unsigned "$RUNNER_TEMP/unsigned-cURL" --signed "$BUNDLE_PATH/Contents/MacOS/cURL" \
+            --evidence release-inputs/unsigned-native-build-macOS/native-trace/build-evidence.json \
+            --output "$RUNNER_TEMP/signed-build-evidence.json"
+      - name: package, notarize and staple
         env:
           RELEASE_VERSION: ${{ needs.version.outputs.version }}
         run: |
           set -euo pipefail
-          python3 -m venv "$RUNNER_TEMP/sbom-venv"
-          "$RUNNER_TEMP/sbom-venv/bin/pip" install -q -r sbom-tools/build/sbom/requirements.txt
-          PYTHON="$RUNNER_TEMP/sbom-venv/bin/python"
-          "$PYTHON" sbom-tools/build/sbom/generate.py inputs --target macos-universal \
-            --binary "$BUNDLE_PATH/Contents/MacOS/${{ env.PRODUCT_NAME }}" \
-            --brotli-provenance brotli-provenance.json \
-            --openssl-provenance openssl-provenance.json \
-            --manifest sbom-tools/build/sbom/native-archives.json --embedded-sources \
-            --embedded-source-snapshot native-linker/embedded-sources.json \
-            --link-map macos-arm64=native-linker/arm64.map \
-            --link-map macos-x86_64=native-linker/x86_64.map \
-            --output sbom-evidence/sbom-macos.json
-          "$PYTHON" sbom-tools/build/sbom/generate.py generate --version "$RELEASE_VERSION" --output sbom \
-            --evidence sbom-evidence/sbom-windows.json --evidence sbom-evidence/sbom-macos.json \
+          ZIP_PATH="${PRODUCT_NAME}-${RELEASE_VERSION}.zip"
+          DMG_PATH="${PRODUCT_NAME}-${RELEASE_VERSION}.dmg"
+          ditto -c -k --keepParent "$BUNDLE_PATH" "$ZIP_PATH"
+          hdiutil create -format UDBZ -volname "$PRODUCT_NAME" -srcfolder "$BUNDLE_PATH" "$DMG_PATH"
+          xcrun notarytool submit "$ZIP_PATH" --keychain-profile "notarytool-profile" --keychain "$KEYCHAIN_PATH" --wait
+          xcrun notarytool submit "$DMG_PATH" --keychain-profile "notarytool-profile" --keychain "$KEYCHAIN_PATH" --wait
+          xcrun stapler staple "$DMG_PATH"
+          echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
+          echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
+      - name: generate and validate final SBOMs and complete release source delivery
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python -m pip install -q -r build/sbom/requirements.txt
+          python build/sbom/generate.py generate --version "$RELEASE_VERSION" --output sbom \
+            --evidence "$RUNNER_TEMP/signed-build-evidence.json" \
+            --evidence release-inputs/unsigned-native-build-Windows/native-trace/build-evidence.json \
             "$ZIP_PATH" "$DMG_PATH"
-          "$PYTHON" sbom-tools/build/sbom/validate.py --version "$RELEASE_VERSION" --output sbom \
+          python build/sbom/validate.py --version "$RELEASE_VERSION" --output sbom \
             --schema-dir "$RUNNER_TEMP/sbom-schemas" "$ZIP_PATH" "$DMG_PATH"
-
-      - name: retain native linker diagnostics
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: release-macos-linker-evidence
-          path: |
-            native-linker/
-            openssl-provenance.json
-            sbom-evidence/sbom-macos.json
-          if-no-files-found: warn
-
-      - name: retain finalized release containers and validated sidecars
+          python .github/scripts/release_materials.py finalize \
+            --source "$RUNNER_TEMP/release-materials/release/corresponding-source" \
+            --output "${PRODUCT_NAME}-${RELEASE_VERSION}-sources.zip" --version "$RELEASE_VERSION" \
+            "sbom/${ZIP_PATH}.inventory.json" "sbom/${DMG_PATH}.inventory.json"
+      - name: Retain final containers, sidecars and corresponding source delivery
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: finalized-release
           path: |
             ${{ env.ZIP_PATH }}
             ${{ env.DMG_PATH }}
+            cURL-*-sources.zip
             sbom/*.json
           if-no-files-found: error
 
@@ -517,7 +185,7 @@ jobs:
             --output "$RUNNER_TEMP/release-notes.md" \
             "final/sbom/${PRODUCT_NAME}-${RELEASE_VERSION}.zip.inventory.json" \
             "final/sbom/${PRODUCT_NAME}-${RELEASE_VERSION}.dmg.inventory.json"
-      - name: attest provenance of final containers and sidecars
+      - name: attest provenance of final containers, source delivery and sidecars
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |

@@ -237,8 +237,10 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn("  push:", build)
         self.assertNotIn("inputs:", build)
         self.assertIn('preflight --sha "$GITHUB_SHA" --ref "$GITHUB_REF"', build)
-        self.assertEqual(build.count("ref: ${{ github.sha }}"), 4)
-        self.assertIn("needs: version\n    uses:", build)
+        self.assertEqual(build.count("ref: ${{ github.sha }}"), 3)
+        source = build.split("  source-native:", 1)[1].split("  build-macos:", 1)[0]
+        self.assertIn("needs: version", source)
+        self.assertIn("uses: ./.github/workflows/native-trace.yml", source)
         self.assertIn("release_version.py publish", build)
         self.assertNotIn("softprops/action-gh-release", build)
         self.assertIn("release_version.py bump", bump)

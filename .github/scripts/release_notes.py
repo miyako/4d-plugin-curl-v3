@@ -42,6 +42,7 @@ def render(paths, version):
                 "binarySha256": targets[target]["binarySha256"],
                 "analyzedSha256": targets[target]["analyzedSha256"],
                 "dependencies": dependencies,
+                "selectedCoverage": targets[target].get("selectedArchiveCoverage"),
             }
         snapshots.append(snapshot)
     if snapshots[0] != snapshots[1]:
@@ -57,7 +58,7 @@ def render(paths, version):
         "",
         "Both containers ship the same cross-platform bundle. The table is a scoped",
         "snapshot, not a claim that every dependency changed in this release.",
-        "See the generated change list below for merged security/dependency updates.",
+        "See the generated change list below for repository changes.",
         "",
         "| Component | macOS arm64 | macOS x86_64 | Windows x64 |",
         "| --- | --- | --- | --- |",
@@ -88,6 +89,37 @@ def render(paths, version):
         "No Windows Authenticode or additional code-signing coverage is asserted.",
         "",
     ]
+    inventories = json.loads(paths[0].read_text(encoding="utf-8"))["targets"]
+    selected = [a for target in inventories for p in target["dependencies"]
+                for a in p.get("archiveIdentities", [])]
+    coverage = [snapshot[target]["selectedCoverage"] for target in TARGETS]
+    if (all(coverage) and len(selected) == sum(c["selectedRepositoryArchives"] for c in coverage)
+            and all(a["identity"]["evidenceType"] == "source-build-and-selected-archive"
+                    for a in selected)):
+        lines += [
+            "## Source provenance and relinking",
+            "",
+            str(len(selected)) + " selected repository archive bindings are source-built; "
+            + str(sum(c["versionedPackageArchives"] for c in coverage))
+            + " have verified versions. libmodman's numeric version remains unknown.",
+            "The accompanying `cURL-" + version + "-sources.zip` contains the exact library",
+            "sources/patches, applicable notices, build records and application source/object",
+            "materials for user relinking without a maintainer signing key.",
+            "Its release binding connects unchanged original unsigned records to the final",
+            "signed containers; historical prebuilt archive origins remain unknown.",
+            "",
+            "Manual 4D testing is not a release gate and is not claimed passed on all hosts.",
+            "Older-OS/Windows host-runtime compatibility is not established by static evidence.",
+            "The source/relink delivery is not a universal legal-compliance certification.",
+            "",
+        ]
+        if all(snapshot[target]["dependencies"].get("libproxy") == "0.4.17" for target in TARGETS):
+            lines += [
+                "The pinned proxy replacement includes the intentional Windows ProxyOverride",
+                "bypass fix and the narrowly reviewed file-URL correction; these are not",
+                "attempts to reproduce the historical bypass failure.",
+                "",
+            ]
     return "\n".join(lines)
 
 

@@ -1,8 +1,30 @@
 # Native source-provenance migration
 
-This is the authoritative migration checklist. Production linking, signing,
-release assets and the historical identity rules are unchanged. The isolated
-proxy candidate is **not approved for production**.
+This is the authoritative migration checklist. The latest user direction
+authorizes a new source-backed release and removes manual 4D testing from
+release gating. Earlier candidate-only outcomes below retain their historical
+scope; they do not retroactively establish old archive identities.
+
+The manual `Build` workflow now reuses the measured unsigned native pipeline
+before any signing. All 35 actual repository archive selections must have
+source/compiler/archive evidence, with libmodman's numeric version still
+unknown. It assembles the complete corresponding-source/application-object
+relink delivery and notices, preserves the existing macOS Developer ID and
+notarization path, verifies that signature-removed pre/post-signing executables
+are identical, and generates both SBOM formats after final packaging/stapling.
+A versioned sources ZIP binds the original unsigned source/object reference to
+the final release containers without rewriting original producer records.
+Windows remains unsigned. ZIP and DMG retain one identical cross-platform
+bundle; the source kit is a separate accompanying asset.
+
+Local 4D 21.2 on macOS 26.7 returned the version API on arm64 and Rosetta x86_64;
+both also converted a loopback FTP Latin-1 filename successfully. One direct
+Rosetta launch failed before the method ran because macOS's temporary
+code-signing clone lacked 4D's own Kernel.framework; LaunchServices succeeded.
+This is not an OOM diagnosis or Windows/older-OS/GUI compatibility proof.
+The user subsequently requested no further manual gating; the additional
+visible-conversion source-edit experiment was stopped, not recorded as passed.
+No more 4D launches are part of release automation.
 
 ## Frozen baseline
 
@@ -57,7 +79,7 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 - [x] Build/test the proxy candidate against exact baseline archives on all three targets.
 - [x] Rebuild delivered library sources with a user modification and relink a
   standalone consumer on all three targets; independently inspect persisted proofs.
-- [ ] Adopt only after an explicit replacement decision and plugin compatibility checks.
+- [x] Obtain explicit release authorization; manual host checks are no longer a gate.
 - [x] Isolated source-build selected prerequisites: zlib (1.3.2 macOS / 1.3.1 Windows),
   libiconv (1.16 / 1.18), nghttp2 1.70.0, macOS nghttp3 1.15.0, libssh2.
 - [x] Preserve the libssh2 `1.11.1_DEV` observation; establish the candidate's actual
@@ -1416,7 +1438,8 @@ Once the complete relink kit and modified plugin exist, the host operator needs:
 No host action is needed while independent source prerequisites are being
 built. Request the concrete operator-run check when complete materials exist;
 lack of a hosted CI installation must neither waive this gate nor stop the
-independent migration. Analysis tools must not launch or initialize 4D.
+independent migration. Analysis tools must not launch or initialize 4D. Manual host testing is no
+longer a release gate; this historical procedure remains optional troubleshooting.
 
 ## Combined source/object/notice review delivery
 
