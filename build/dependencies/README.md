@@ -1552,6 +1552,15 @@ the verified delivery manifest is
 `ce292e2faacb965b198209fb240cc2e77d399d003de2c80834fb14284e1dfa83`.
 A separate reader, without importing this generator, re-read persisted notice
 files and all 35 actual selected-kit archives against the original inventory.
+Code head `4178e06ac5feb30f7e3434e9e4ccd8885ac656b9` also passed
+[isolated native run 43368225626](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43368225626):
+105 dependency regressions on each Mac architecture and Windows, followed by
+candidate behavior and library-source user-relink checks. All six resulting
+native artifacts were downloaded and independently inspected. This run does not
+claim a new complete-plugin, combined-delivery or host-installation proof.
+The notice recovery, rejected intermediates, tool snapshot and native outputs
+are independently re-read in an external backup with SHA-256
+`72622a3ef7416251fc19f3818a0eb49d6332ebfdb0740c51cadb5e911451667b`.
 This is **notice delivery only**: final combined source/object/relink assembly,
 ancillary tool/CRT/SDK/host terms and operator installation/trust verification
 remain separate adoption gates. Recovery receipts and rejected intermediate
