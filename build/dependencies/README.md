@@ -1519,6 +1519,54 @@ their original hashes or exact link targets. Historical archive identities and
 original evidence remain unchanged. Production archives, Developer ID and
 notarization configuration, Windows signing, tags and releases remain untouched.
 
+### Final user-test container sidecars and loader observations
+
+The final ad-hoc user-test ZIP and DMG above also have their **own** normalized
+inventories, CycloneDX 1.6 and SPDX 2.3 sidecars, generated after packaging with
+the existing generator. Both containers passed official-schema and actual
+container/binary/slice validation. A separate reader independently reread every
+one of their ten bundle files, parsed both Mach-O CPU slices and the x64 PE,
+checked actual version-marker bytes and mapped all standard packages through
+the independent persisted-document checker.
+
+These are deliberately **observation-only** sidecars: four identifying-string
+observations per target, twelve per container. They do not inherit the unchanged
+reference build's selected-archive/source claims. Their empty archive-coverage
+tables mean selection was not remeasured for these modified user binaries,
+**not** zero opaque archives or complete source coverage. The complete reference
+inventory and separate source/compiler/user-relink proofs remain unchanged.
+
+Static inspection compared the actual hash-frozen published v4.9.10 ZIP with
+the final user-test ZIP. Both Mac slices retain their original deployment
+metadata (arm64 11.0, x86_64 10.13) and exact dynamic-library name sets. Windows
+normal and delay-load library/function import tables are identical; its OS and
+subsystem version fields remain 6.0 and DLL characteristics are unchanged.
+These header fields are not an older-OS support claim.
+
+Each Mac slice has five added undefined symbols, retained explicitly in the
+report. `__availability_version_check` and `dispatch_once_f` are weak imports;
+the additional required symbols are `CFBundleGetVersionNumber`,
+`SecTrustEvaluate` and libc++'s `std::string::insert(size_t, const char*)`.
+Current SDK declarations identify `SecTrustEvaluate` as available since 10.3
+and `dispatch_once_f` since 10.6. The actual user link map selects the Apple
+toolchain's `os_version_check.c.o`; it is a system/toolchain input, not a newly
+selected repository package. Original SDK header/runtime hashes are recorded
+without redistributing those proprietary files. Presence of the new required
+libc++ import on older runtimes remains an explicit verification item; unchanged
+load commands and current SDK declarations do not establish it.
+
+The report/sidecar transport is `user-container-evidence-598a14a.zip` (43 files),
+SHA-256 `8fde5e17e69c85023e410640d6f4eb2f5fa09e01018e31313bdcd03061a62de0`.
+The original outputs, schemas, readers, inspected binaries and rejected reader
+intermediate are independently preserved in
+`user-container-sboms-and-deployment-598a14a-verified.tar.gz`,
+SHA-256 `9809309ca790e6de08aa035a112446b1dd1a78cc2de9719c253ffc23890b5a5e`
+(123 files). Every transport/backup member was independently reread.
+No application/plugin was initialized and no adoption gate was waived.
+Native CI already exercises both Mac CPUs and Windows; registering a
+self-hosted runner does not substitute for the operator-only licensed 4D
+install/trust/API and affected runtime checks.
+
 ## Measured results and scoped candidate decision
 
 Checkpoint `d93ab29` passed all five candidate/baseline test executables and
