@@ -55,6 +55,19 @@ class PersistedTLSProofTests(unittest.TestCase):
     def test_complete_receipt_and_six_cases(self):
         self.assertEqual(self.inspect(self.receipt)["results"], self.lines)
 
+    def test_windows_uppercase_headers_survive_case_sensitive_inspection(self):
+        self.target = "windows-x86_64"
+        for name in provenance.expected_archives(self.target):
+            (self.install / name).write_text(name)
+        header = self.install / "include/openssl/__DECC_INCLUDE_PROLOGUE.H"
+        header.write_text("Windows-installed uppercase interface fixture")
+        (self.output / "tls-probe.exe").write_bytes((self.output / "tls-probe").read_bytes())
+        self.receipt["target"] = self.target
+        self.receipt["providerInputs"] = tls.provider_inputs(self.install, self.target)
+        self.assertIn(header.relative_to(self.install).as_posix(),
+                      [item["path"] for item in self.receipt["providerInputs"]])
+        self.inspect(self.receipt)
+
     def test_omitting_original_bound_inputs_fails(self):
         for key in ("providerInputs", "recipeInputs", "files"):
             with self.subTest(key=key):

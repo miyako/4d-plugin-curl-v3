@@ -722,6 +722,18 @@ macros with NMAKE's `/E`; actual compiler flags/object deployment still must
 pass. The untraced Windows build's passing standalone TLS cases do not upgrade
 its incomplete compiler record.
 
+All three fresh native providers pass in
+[run 43330282753](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43330282753)
+at `5e43bd5`, with downloaded original materials independently inspected.
+Crypto/SSL member counts are 1,011/94 (arm64), 1,020/94 (Intel) and 1,021/94
+(Windows); each Brotli build binds 6 common, 6 decoder and 23 encoder objects.
+The encoder is not thereby selected by the plugin. Every target passes all six
+standalone TLS cases. Windows inspection preserves the original uppercase
+`.H` names rather than relying on the inspecting filesystem's glob casing.
+Repeated `/MT`/`-MT` requests are the same release-static mode; missing, dynamic,
+debug or conflicting CRT modes still fail. These producer results alone do not
+replace selected plugin archives.
+
 Candidate-plugin runs may explicitly supply `native-materials-provider-run`.
 Every latest target producer must succeed. Staging then requires complete
 measured native provider kits and their independently inspected TLS receipts,

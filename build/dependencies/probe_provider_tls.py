@@ -19,7 +19,8 @@ RECIPES = ["LICENSE", "build/dependencies/probe_provider_tls.py",
 def provider_inputs(install, target):
     return provenance.archive_hashes(install, [
         provenance.RECORD, *provenance.expected_archives(target),
-        *[p.relative_to(install).as_posix() for p in (install / "include").rglob("*.h")]])
+        *[p.relative_to(install).as_posix() for p in (install / "include").rglob("*")
+          if p.is_file() and p.suffix.lower() == ".h"]])
 
 
 def validate_results(lines):
