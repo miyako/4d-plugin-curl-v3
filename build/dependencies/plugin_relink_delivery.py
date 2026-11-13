@@ -4,7 +4,7 @@
 import argparse
 import copy
 import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import shutil
 import sys
 
@@ -144,6 +144,36 @@ def inspect(kit):
 def verify_if_derived(kit, record):
     if record.get("evidenceType") == TYPE or (kit / MANIFEST).exists():
         inspect(kit)
+
+
+def bind_probe_inputs(kit, target, project, archives):
+    selected = inspect(kit)
+    if target not in ("macos-arm64", "macos-x86_64", "windows-x86_64"):
+        raise ValueError("Unsupported native probe target")
+    windows = target.startswith("windows")
+    if selected["target"] != ("windows-x86_64" if windows else "macos-universal"):
+        raise ValueError("Probe and selected plugin delivery targets differ")
+    manifest = PORTABLE[selected["target"]]
+    record = json.loads((kit / manifest).read_text())
+    paths = PureWindowsPath if windows else PurePosixPath
+    inputs = []
+    for item in archives:
+        relative = "project/" + paths(item["path"]).relative_to(paths(project)).as_posix()
+        if selected["selectedArchives"].get(relative) != item["sha256"]:
+            raise ValueError("Probe input differs from actual selected plugin archives")
+        inputs.append({"path": relative, "sha256": item["sha256"]})
+    if not inputs or len({p["path"] for p in inputs}) != len(inputs):
+        raise ValueError("Empty or repeated probe archive bindings")
+    slice_hash = None
+    if not windows:
+        architectures = [a for a in record["architectures"] if a["target"] == target]
+        if len(architectures) != 1:
+            raise ValueError("Missing or repeated original plugin slice")
+        slice_hash = architectures[0]["originalSliceSha256"]
+    return {"target": target, "kitManifestSha256": digest(kit / manifest),
+            "deliveryManifestSha256": selected["deliveryManifestSha256"],
+            "binarySha256": record["originalBinarySha256"], "sliceSha256": slice_hash,
+            "inputs": inputs}
 
 
 def export(original, output):

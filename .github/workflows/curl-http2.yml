@@ -1,4 +1,4 @@
-name: Isolated HTTP2 native compatibility
+name: Isolated HTTP2 and proxy native compatibility
 
 on:
   workflow_dispatch:
@@ -71,7 +71,7 @@ jobs:
           path: ${{ runner.temp }}/http2-selected-inputs
           run-id: ${{ env.ORIGINAL_RUN }}
           github-token: ${{ github.token }}
-      - name: Exercise real HTTP2 HPACK, flow control, TLS ALPN and gzip
+      - name: Exercise real HTTP2 and synthetic OS proxy routes through curl
         shell: python
         run: |
           import os, platform, shutil, subprocess, sys, urllib.request
@@ -81,6 +81,7 @@ jobs:
           from build_curl import pin
           from provenance import write_json
           import probe_curl_http2
+          import probe_curl_proxy
           temporary = Path(os.environ["RUNNER_TEMP"])
           archive = temporary / "http2-curl-source.tar.xz"
           with urllib.request.urlopen(pin()["url"]) as response, archive.open("wb") as stream:
@@ -95,6 +96,8 @@ jobs:
                          check=True)
           subprocess.run([str(python), "-m", "unittest", "discover", "-s",
                           "build/dependencies", "-p", "test_http2.py"], check=True)
+          subprocess.run([str(python), "-m", "unittest", "discover", "-s",
+                          "build/dependencies", "-p", "test_curl_proxy.py"], check=True)
           openssl = shutil.which("openssl")
           if openssl is None:
               raise FileNotFoundError("An explicit OpenSSL-compatible fixture certificate tool is required")
@@ -109,6 +112,16 @@ jobs:
                              cwd=root / "build/dependencies", check=True)
               write_json(output / ("plugin-selection-" + target + ".json"),
                          probe_curl_http2.bind_plugin(kit, destination))
+              proxy_output = output / "proxy" / target
+              subprocess.run([str(python), "-m", "probe_curl_proxy",
+                              "--project", str(kit / "project"), "--baseline", str(root),
+                              "--proxy-header", str(kit / "library-materials" / target /
+                                                    "libproxy/install/include/proxy.h"),
+                              "--curl-source", str(archive), "--target", target,
+                              "--output", str(proxy_output)],
+                             cwd=root / "build/dependencies", check=True)
+              write_json(output / ("proxy-plugin-selection-" + target + ".json"),
+                         probe_curl_proxy.bind_plugin(kit, proxy_output))
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

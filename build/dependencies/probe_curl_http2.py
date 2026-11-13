@@ -172,29 +172,9 @@ def inspect_proof(output):
 
 def bind_plugin(kit, output):
     proof = inspect_proof(output)
-    selected = plugin_relink_delivery.inspect(kit)
-    manifest = ("portable-windows-object-kit.json" if proof["target"].startswith("windows")
-                else "portable-object-kit.json")
-    record = json.loads((kit / manifest).read_text())
-    paths = PureWindowsPath if proof["target"].startswith("windows") else PurePosixPath
-    inputs = []
-    for item in proof["compile"]["candidate"]["archives"]:
-        relative = "project/" + paths(item["path"]).relative_to(paths(proof["project"])).as_posix()
-        if selected["selectedArchives"].get(relative) != item["sha256"]:
-            raise ValueError("HTTP/2 compiler input differs from actual selected plugin archives")
-        inputs.append({"path": relative, "sha256": item["sha256"]})
-    if not inputs or len({p["path"] for p in inputs}) != len(inputs):
-        raise ValueError("Empty or repeated HTTP/2 archive bindings")
-    slice_hash = None
-    if not proof["target"].startswith("windows"):
-        architectures = [a for a in record["architectures"] if a["target"] == proof["target"]]
-        if len(architectures) != 1:
-            raise ValueError("Missing or repeated original plugin slice")
-        slice_hash = architectures[0]["originalSliceSha256"]
-    return {"target": proof["target"], "kitManifestSha256": digest(kit / manifest),
-            "deliveryManifestSha256": selected["deliveryManifestSha256"],
-            "binarySha256": record["originalBinarySha256"], "sliceSha256": slice_hash,
-            "proofSha256": digest(output / "curl-http2-proof.json"), "inputs": inputs,
+    binding = plugin_relink_delivery.bind_probe_inputs(
+        kit, proof["target"], proof["project"], proof["compile"]["candidate"]["archives"])
+    return {**binding, "proofSha256": digest(output / "curl-http2-proof.json"),
             "scope": "Probe archive inputs bound to actual selected plugin archive positions; "
                      "not a claim that every input contributes live code to this probe."}
 

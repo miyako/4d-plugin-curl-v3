@@ -1069,6 +1069,51 @@ not plugin components. This does not establish PAC integration, HTTP/3,
 all HTTP/2 server/proxy behavior, other TLS backends, older-system runtime
 or host compatibility.
 
+### Standalone OS-proxy/PAC-to-curl routes
+
+`probe_curl_proxy.py` links the actual curl, proxy and module-manager archives
+into a standalone C++ client. It reuses the existing synthetic settings fixture:
+executable-only macOS SystemConfiguration interposition, or Windows HKCU
+redirection inside that process to a temporary private test key. It neither
+reads/changes real proxy preferences nor loads the plugin or 4D.
+Reserved test hostnames resolve only to the loopback origin through an explicit
+curl DNS fixture; the forwarding proxy permits only that exact destination.
+
+Four comparisons per cohort cover manual HTTP proxying, a multi-entry bypass
+list, PAC-selected proxying and PAC-selected DIRECT. The Mac PAC proxy branch
+returns two proxy entries followed by DIRECT. Actual traffic must use the last
+non-DIRECT entry, preserving the product's existing AUTOPROXY loop rather than
+adding fallback or treating the final DIRECT as an override. The retained
+`4DPlugin-cURL.cpp` is a control-flow reference, not a compiled/initialized input.
+Windows has no built-in PAC runner in either cohort: its PAC cases must retain
+DIRECT fallback. Its old multi-entry ProxyOverride case must use the proxy;
+the candidate deliberately bypasses it, as authorized for candidate validation.
+This is an intentional behavioral correction, not an equivalence assertion.
+
+Receipts retain complete response bytes, raw proxy lists, listener observations,
+original compiler commands/maps/logs, actual selected proxy/module-manager
+members and both public curl interfaces. Separate joins bind candidate inputs
+to the actual selected plugin archives and original binary/slice hashes.
+The comparison uses exact frozen non-provider archives; both cohorts share
+the verified source-built OpenSSL/Brotli providers.
+The existing unsigned `curl-http2` scope now runs these comparisons alongside
+HTTP/2 without changing production inputs or signing.
+
+Local arm64 and Rosetta Intel comparisons pass all sixteen transfers. Native
+Windows and fresh all-target CI remain required before reporting this stage
+as verified across all targets. Initial fixture failures are retained: curl's
+macOS global initialization itself queries SystemConfiguration, so synthetic
+settings must exist before it and outlive cleanup. An immutable short
+`127.0.0.1` CFString also yielded DIRECT with both observed archive cohorts;
+the candidate backend requests a direct C-string pointer unavailable for that
+tagged representation. Mutable string storage exercises the actual manual
+proxy route without patching either library. That shared limitation is not
+silently treated as successful proxying or fixed in production.
+
+These are bounded loopback comparisons, not proof of arbitrary PAC scripts,
+installed dynamic modules, real desktop proxy settings, older systems or 4D
+host behavior. Redistribution delivery and operator-only host gates remain.
+
 ### Fresh providers reach final unsigned candidates
 
 [Run 43332411256](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43332411256)

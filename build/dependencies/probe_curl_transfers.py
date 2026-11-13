@@ -74,8 +74,7 @@ def verify_inputs(project, model):
         raise ValueError("Curl transfer compiler, archives or interface changed")
 
 
-def build_probe(project, output, target, provider_project, source=None, interface_project=None):
-    windows = target.startswith("windows")
+def probe_archives(project, target, provider_project):
     selected = observe_curl.baseline(target)
     paths = []
     for name in ("curl", "libssh2", "nghttp2", "nghttp3", "OpenSSL", "zlib", "Brotli"):
@@ -89,6 +88,12 @@ def build_probe(project, output, target, provider_project, source=None, interfac
                 if provenance.digest(path) != row["sha256"]:
                     raise ValueError("The comparison must use the exact frozen non-provider archive")
             paths.append(path)
+    return paths
+
+
+def build_probe(project, output, target, provider_project, source=None, interface_project=None):
+    windows = target.startswith("windows")
+    paths = probe_archives(project, target, provider_project)
     source = source or ROOT / "build/dependencies/native/curl-transfer.c"
     interface_project = interface_project or project
     binary = output / (source.stem + (".exe" if windows else ""))
