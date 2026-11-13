@@ -42,7 +42,7 @@ class SigningBindingTests(unittest.TestCase):
     def test_changed_code_rejected_not_silently_restamped(self):
         with patch.object(release.subprocess, "run"), patch.object(
                 release, "normalized_code", side_effect=["old-code", "different-code"]):
-            with self.assertRaisesRegex(ValueError, "more than"):
+            with self.assertRaisesRegex(ValueError, "outside bounded"):
                 release.rebind(self.unsigned, self.signed, self.evidence, self.output)
         self.assertFalse(self.output.exists())
 
@@ -75,6 +75,28 @@ class ReleasePipelineTests(unittest.TestCase):
                         workflow.index("notarytool submit"))
         self.assertLess(workflow.index("release_materials.py finalize"),
                         workflow.index("  publish:"))
+
+
+class CodeCanonicalizationTests(unittest.TestCase):
+    @staticmethod
+    def image(vmsize=4096, payload=b"abc", protection=1):
+        header = struct.pack("<8I", 0xFEEDFACF, 0x01000007, 3, 6, 2, 144, 0, 0)
+        text = struct.pack("<II16sQQQQiiII", 0x19, 72, b"__TEXT", 0, 4096,
+                           0, 4096, 5, 5, 0, 0)
+        links = struct.pack("<II16sQQQQiiII", 0x19, 72, b"__LINKEDIT", 4096, vmsize,
+                            4096, len(payload), protection, protection, 0, 0)
+        return (header + text + links).ljust(4096, b"\0") + payload
+
+    def test_only_bounded_signer_linkedit_allocation_is_normalized(self):
+        original, signed = self.image(), self.image(vmsize=65536)
+        self.assertEqual(release.canonical_code(original, original),
+                         release.canonical_code(signed, signed))
+        changed = self.image(vmsize=65536, payload=b"abd")
+        self.assertNotEqual(release.canonical_code(original, original),
+                            release.canonical_code(changed, changed))
+        for invalid in (self.image(vmsize=1 << 30), self.image(protection=5)):
+            with self.assertRaises(ValueError):
+                release.canonical_code(invalid, invalid)
 
 
 class FinalSourceBindingTests(unittest.TestCase):

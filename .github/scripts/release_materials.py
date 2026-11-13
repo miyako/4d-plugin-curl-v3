@@ -130,13 +130,65 @@ def has_signature(data):
 
 
 def normalized_code(path, destination):
+    original = generate.mac_slices(path.read_bytes())
     shutil.copyfile(path, destination)
     if has_signature(destination.read_bytes()):
         subprocess.run(["/usr/bin/codesign", "--remove-signature", str(destination)],
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if has_signature(destination.read_bytes()):
         raise ValueError("Code-signature normalization left signature bytes")
-    return digest(destination)
+    normalized = generate.mac_slices(destination.read_bytes())
+    if normalized.keys() != original.keys():
+        raise ValueError("Signature removal changed CPU slices")
+    return {target: canonical_code(data, original[target]) for target, data in normalized.items()}
+
+
+def linkedit(data):
+    count, size = struct.unpack_from("<II", data, 16)
+    cursor, end, result, segments = 32, 32 + size, None, []
+    if end > len(data):
+        raise ValueError("Truncated Mach-O load commands")
+    for _ in range(count):
+        if cursor + 8 > end:
+            raise ValueError("Truncated Mach-O load command")
+        command, length = struct.unpack_from("<II", data, cursor)
+        if length < 8 or cursor + length > end:
+            raise ValueError("Invalid Mach-O load command")
+        if command == 0x19:
+            if length < 72:
+                raise ValueError("Truncated Mach-O segment")
+            vmaddr, vmsize, offset, amount, maximum, initial, sections, flags = struct.unpack_from(
+                "<QQQQiiII", data, cursor + 24)
+            segments.append((vmaddr, vmsize, cursor))
+            if data[cursor + 8:cursor + 24] == b"__LINKEDIT".ljust(16, b"\0"):
+                if (result is not None or length != 72 or sections or flags
+                        or (maximum, initial) != (1, 1)
+                        or offset < end or not amount or offset + amount != len(data)):
+                    raise ValueError("Unsupported read-only LINKEDIT layout")
+                result = {"commandOffset": cursor, "vmaddr": vmaddr, "vmsize": vmsize,
+                          "fileoff": offset, "filesize": amount}
+        cursor += length
+    if result is None or cursor != end or any(
+            position != result["commandOffset"] and start + amount > result["vmaddr"]
+            for start, amount, position in segments):
+        raise ValueError("LINKEDIT is missing or is not the final nonoverlapping segment")
+    return result
+
+
+def canonical_code(normalized, original):
+    before, after = linkedit(original), linkedit(normalized)
+    if before["vmaddr"] != after["vmaddr"] or before["fileoff"] != after["fileoff"]:
+        raise ValueError("Signature removal moved LINKEDIT")
+    rounding = lambda size: {(size + page - 1) // page * page
+                             for page in (4096, 16384, 65536)}
+    if (before["vmsize"] not in rounding(before["filesize"])
+            or after["vmsize"] not in rounding(before["filesize"]) | rounding(after["filesize"])):
+        raise ValueError("LINKEDIT VM size is not bounded signing/page-allocation rounding")
+    # codesign removes the signature but retains its page-rounded VM allocation.
+    # Canonicalize only that read-only, sectionless final segment's allocation.
+    data = bytearray(normalized)
+    struct.pack_into("<Q", data, after["commandOffset"] + 32, after["filesize"])
+    return generate.sha256(data)
 
 
 def rebind(unsigned, signed, evidence, output):
@@ -150,19 +202,24 @@ def rebind(unsigned, signed, evidence, output):
         before = normalized_code(unsigned, folder / "before")
         after = normalized_code(signed, folder / "after")
     if before != after:
-        raise ValueError("Signing changed more than removable code-signature data")
+        raise ValueError("Signing changed code or metadata outside bounded signature normalization")
     derived = copy.deepcopy(record)
     derived["binarySha256"] = digest(signed)
     derived["codeSigningEvidence"] = {
-        "evidenceType": "verified-signature-only-derived-binary-binding",
+        "evidenceType": "verified-code-signing-derived-binary-binding",
         "originalUnsignedEvidenceSha256": digest(evidence),
         "originalUnsignedBinarySha256": digest(unsigned),
         "signedBinarySha256": digest(signed),
-        "signatureRemovedBinarySha256": before,
+        "canonicalCodeSliceSha256": before,
         "normalizer": "/usr/bin/codesign --remove-signature",
         "normalizerSha256": digest(Path("/usr/bin/codesign")),
-        "scope": "Original producer/build records are unchanged; both temporary "
-                 "signature-removed executables must be byte-identical.",
+        "bindingScriptSha256": digest(Path(__file__)),
+        "additionalNormalization": "Only the read-only, sectionless final __LINKEDIT "
+            "segment's vmsize, bounded by 4/16/64 KiB rounding of its signed/unsigned "
+            "file extent. All other normalized bytes must match per CPU slice.",
+        "scope": "Original producer/build records are unchanged. Signatures and bounded "
+                 "signer allocation metadata are normalized; application code, data, "
+                 "other commands and all remaining metadata must be byte-identical per slice.",
     }
     write_json(output, derived)
     return derived

@@ -10,8 +10,12 @@ before any signing. All 35 actual repository archive selections must have
 source/compiler/archive evidence, with libmodman's numeric version still
 unknown. It assembles the complete corresponding-source/application-object
 relink delivery and notices, preserves the existing macOS Developer ID and
-notarization path, verifies that signature-removed pre/post-signing executables
-are identical, and generates both SBOM formats after final packaging/stapling.
+notarization path, verifies pre/post-signing code identity per CPU slice, and
+generates both SBOM formats after final packaging/stapling. Besides removable
+signature data, only the read-only, sectionless final `__LINKEDIT` segment's
+page-rounded VM allocation is canonicalized; all other normalized bytes must
+match. This accommodates the measured Xcode-to-codesign allocation change
+without ignoring changed code, data, other load commands or unbounded mappings.
 A versioned sources ZIP binds the original unsigned source/object reference to
 the final release containers without rewriting original producer records.
 Windows remains unsigned. ZIP and DMG retain one identical cross-platform
