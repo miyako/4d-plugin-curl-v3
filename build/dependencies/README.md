@@ -725,9 +725,9 @@ to the actual modified archive. The resulting slice hashes are
 `468022e5107867e0c0bfc71c4ae5eb0bec69bfaa284f54075dee1153bf80ba27`
 (arm64) and
 `149c8ed57f04e4e652ea99a0c1259f32c0d095f79280c288458001c531a53c42`
-(Intel). This demonstrates marker-free Mac feasibility, not equivalent Windows
-verification, completed user-facing licensing delivery, installation or host
-behavior. No plugin was initialized.
+(Intel). This demonstrates marker-free Mac feasibility, not completed
+user-facing licensing delivery, installation or host behavior. The separate
+Windows result below uses an incremental native compile. No plugin was initialized.
 
 `user_relink_windows.py` provides a separate general-user raw-link path, not a
 mode that relaxes the fixed demonstrations. With the recorded MSVC/SDK/CRT
@@ -757,16 +757,40 @@ object reuses, nine conversion checks and the complete raw object link.
 This incremental experiment deliberately does not claim to rerun GNU configure,
 recompile the resource/unchanged objects, or establish host behavior.
 
+Run [43357373142](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43357373142),
+at `0827402ec84e182ab65ae08296f64270b0098dea`, passed this Windows gate.
+Independent read-only inspection of its downloaded outputs verifies the actual
+MSVC source/object receipt, all four archive members, the changed active
+`libiconv_close` machine code and raw map attribution, all 198 unchanged alias
+groups and nine conversion/rejection checks. The final x64 plugin changes
+without either fixed probe symbol or forced exports/includes, retaining the
+original export set. Its SHA-256 is
+`351749e1d47cd6a770cd9c0a671105dfa3db3509f20580f6dca197fbfb99e9a9`;
+the user archive SHA-256 is
+`ef6d37ed1ab9810b8a177b4946f8deef2b9d139c018eb509769c9dfa643bbced`.
+Actual native tool hashes and the separately reviewed LF/CRLF checkout
+variants are retained, not normalized away.
+
+The first attempt was correctly rejected by the complete-source-tree gate:
+Windows case-insensitive `*.lib` filtering also omitted `COPYING.LIB` license
+texts. The working-copy helper now preserves every source file without
+extension filtering and removes only the explicitly recorded old built archive
+from the separate working build. Both license texts, the rejected output and
+the successful corrected output are preserved. Original materials were never
+modified.
+
 Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy
 sources before linking their changes into both full-plugin slices. This closes
 the Mac object-link relocation issue, not the whole LGPL delivery gate.
-Portable Windows materials and Windows GNU modification/relink verification,
-complete notices and remaining-library distribution terms, maintainer-key-free
-install/trust and operator-run 4D checks remain open. Unselected search-path
-files are retained for link fidelity, not assigned source identities or
-declared safe to redistribute; these internal experimental kits are not
-release-ready compliance packages.
+Windows general-user source modification/raw linking is now also demonstrated.
+Complete notices and remaining-library distribution terms, final user-facing
+package assembly, maintainer-key-free install/trust and operator-run 4D checks
+remain open. Original audit kits retain unused search-path files; selected-only
+derived kits omit reviewed unused copies without changing actual selections.
+Those audit files are not assigned source identities or declared safe to
+redistribute; these internal experimental kits are not release-ready compliance
+packages.
 
 The delivered `tools/build/dependencies/relink_iconv_macos.py` also rebuilds
 GNU iconv from each original delivered source archive with a dated benign
