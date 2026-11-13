@@ -780,6 +780,31 @@ native runners and retains the existing Windows active-source experiment.
 Final combined licensing delivery and operator-only host/install/trust checks
 remain separate open gates.
 
+Run [43372837307](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43372837307),
+at `1d72a61799ded614e00b411ff6e013f577fb41fc`, passed both native Mac jobs
+and the Windows regression. Use the existing manual `native-trace.yml` entry
+with `native-prerequisites-only=true` and the legacy
+`native-prerequisite-scope=windows-user-relink` name to invoke all three;
+the feature-branch reusable workflow is not independently registered on main.
+Each Mac job freshly compiles three GNU objects and replaces its native CPU's
+archive while retaining the other slice. Both relocated kit/experiment pairs
+pass read-only inspection. Windows recompiles one active source and reuses
+three hash-verified objects; all nine conversions and 198 alias groups match
+baseline and all 152 plugin exports remain unchanged.
+
+Separate inspection of all three downloaded artifacts verifies the source
+delta, actual compiler/object/archive joins and user revision inside the
+**actual linked close-function machine code**, not merely an extra export or
+changed whole-file hash. Both Mac user outputs retain universal structure.
+No application/plugin was loaded. The original producer records and strict
+replay remain immutable; this is user-work evidence, not adoption or completed
+license compliance. The independently reread external backup
+`user-relink-1d72a61-verified-native-and-local.tar.gz` has SHA-256
+`badab68319a96479a5f9dd2cdf7cee0948b960c0d1eb85346b28f64f4b3652d6`
+(12,542 files and one retained scoped GNU libtool link). It also preserves
+the six exact original OpenSSL/Brotli source-material joins to the existing
+normalized selected inventory, without creating new provider identities.
+
 `user_relink_windows.py` provides a separate general-user raw-link path, not a
 mode that relaxes the fixed demonstrations. With the recorded MSVC/SDK/CRT
 environment active, use a pristine **selected-only** Windows kit and a fresh
