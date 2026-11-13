@@ -75,6 +75,8 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 - [x] Relocate Mac source/object materials and verify modified delivered proxy
   and GNU iconv sources in both full-plugin slices.
 - [x] Verify portable Windows source/object and GNU modification/relink execution.
+- [x] Compare actual standalone password-auth SFTP/SCP payloads and SSH
+  host-key/password/missing-file rejection on all three targets.
 - [ ] Run protocol/proxy/TLS/SSH/compression/conversion and deployment/CRT checks.
 - [x] Independently inspect persisted unsigned cross-platform ZIP and DMG outputs.
 - [x] Verify zero opaque selected repository archives in the isolated measured-provider
@@ -679,6 +681,54 @@ libmodman versions remain unknown; historical archive identities are unchanged.
 These results provide neither complete notices/redistribution terms,
 install/trust nor 4D host proof, and do not authorize production adoption.
 
+### General user edits versus fixed demonstration checks
+
+The dated-probe drivers deliberately recognize only their reviewed test edits.
+Their success is not a restriction on library modification, and their
+inspectors must not be weakened to label arbitrary edits as original producer
+evidence. Keep the delivered manifests, original records and pristine source
+archives unchanged; put user sources, patches, builds and outputs in a separate
+working directory.
+
+For general edits, extract the complete library source and retain its notices;
+make dated, identified changes in that working copy. Use the delivered native
+recipe and recorded configure arguments/environment, adjusting working paths
+and output prefixes rather than silently changing target, CRT or deployment
+settings. GNU rebuild receipts expose `configureArguments`, `makeArguments`
+and `compilerEnvironment`; proxy receipts expose `configureArguments`, with
+the CMake recipe and module configuration delivered alongside the source.
+Library-only targets avoid building unrelated upstream command-line tools.
+
+The portable records also retain the original **raw object-link arguments**,
+separately from demonstration replay:
+`portable-object-kit.json` has per-architecture `arguments` and `objects`;
+`portable-windows-object-kit.json` has `arguments` and its toolchain/system
+bindings. Resolve the documented `${KIT}`, `${OUTPUT}`, `${DRIVER}` and Mac
+`${SDK}` placeholders to the verified local paths. On Mac, write the object
+file list from the retained `objects` paths and replace the recorded `-filelist`
+operand. Substitute only the desired selected library argument with the
+user-built archive, preserving the remaining argument/search order and system
+inputs. Do not append the fixed drivers' forced probe symbols. The recorded
+compiler/SDK/CRT prerequisites still apply; those proprietary tools are not
+redistributed. Retain the actual user source delta, commands, archive hashes,
+maps and output hashes as user-created results, not original source-build
+attestations. The fixed demonstration inspectors are expected to reject them.
+
+A separate local Mac experiment exercised this path without either fixed
+probe: a dated local volatile revision was inserted inside the existing
+`iconv_close` function, then both GNU libraries were rebuilt from pristine
+delivered sources. Each archive has three source/compiler-bound objects and
+passes all nine unchanged conversion/rejection checks. Both complete plugin
+slices linked using the raw selected-only recipes, without forced probe
+symbols; independent parsing attributes the active `_libiconv_close` symbol
+to the actual modified archive. The resulting slice hashes are
+`468022e5107867e0c0bfc71c4ae5eb0bec69bfaa284f54075dee1153bf80ba27`
+(arm64) and
+`149c8ed57f04e4e652ea99a0c1259f32c0d095f79280c288458001c531a53c42`
+(Intel). This demonstrates marker-free Mac feasibility, not equivalent Windows
+verification, completed user-facing licensing delivery, installation or host
+behavior. No plugin was initialized.
+
 Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy
 sources before linking their changes into both full-plugin slices. This closes
@@ -873,8 +923,15 @@ rechecked by the read-only `inspect_proof` entry point.
 
 `probe_curl_ssh.py` adds actual SFTP and SCP downloads/uploads plus rejected
 host keys, rejected passwords and missing remote files: seven cases per archive
-variant. Both Mac clients have passed locally (Intel under Rosetta); Windows and
-fresh measured-provider all-target execution require the new unsigned CI run.
+variant. Both Mac clients have passed locally (Intel under Rosetta).
+[Run 43351736712](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43351736712)
+at `a15e87c` also passed both Mac targets and Windows with fresh measured
+providers. All 19 artifacts were downloaded; independent inspection verified
+all 42 transfer/rejection cases, actual native client CPU identities and every
+candidate probe input against actual plugin selections in both container
+inventories (nine inputs per Mac target, eight on Windows). The existing 78
+HTTP/proxy/TLS/compression cases, 35 source/compiler/archive bindings, derived
+source/full-plugin relinks and identical seven-file ZIP/DMG contents also pass.
 This comparison deliberately shares candidate TLS/Brotli providers; it does not
 reconstruct the released providers or establish historical archive provenance.
 
@@ -905,7 +962,11 @@ matching plugin linker selection and resulting binary hash.
 SCP framing is observed rather than idealized: the fixture accepts only the
 exact download (`-f`/timestamp-preserving `-pf`) and upload (`-t`) commands and
 records a final acknowledgement versus peer-close, and a NUL upload terminator
-versus EOF. Full payload equality is mandatory; early/truncated payloads fail.
+versus EOF. All three native targets observed the same close behavior for both
+variants: a peer-close instead of the final download ACK and EOF instead of the
+upload NUL terminator. Host-key and cipher selection also match: RSA SHA-256 and
+AES-256-GCM in these fixtures. Full payload equality is mandatory;
+early/truncated payloads fail.
 Successful byte transfers do not establish strict SCP framing compliance or
 interoperability with every real SSH server. The rejected fixture-development
 runs remain preserved; no product archive was patched to accommodate the server.
