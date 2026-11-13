@@ -69,11 +69,12 @@ def verify_inputs(project, model):
             for item in model["archives"]]
             or model["compiler"]["sha256"] != provenance.digest(Path(model["compiler"]["path"]))
             or model["interface"] != provenance.archive_hashes(
-                project, [item["path"] for item in model["interface"]])):
+                Path(model.get("interfaceProject", project)),
+                [item["path"] for item in model["interface"]])):
         raise ValueError("Curl transfer compiler, archives or interface changed")
 
 
-def build_probe(project, output, target, provider_project, source=None):
+def build_probe(project, output, target, provider_project, source=None, interface_project=None):
     windows = target.startswith("windows")
     selected = observe_curl.baseline(target)
     paths = []
@@ -89,6 +90,7 @@ def build_probe(project, output, target, provider_project, source=None):
                     raise ValueError("The comparison must use the exact frozen non-provider archive")
             paths.append(path)
     source = source or ROOT / "build/dependencies/native/curl-transfer.c"
+    interface_project = interface_project or project
     binary = output / (source.stem + (".exe" if windows else ""))
     output.mkdir(parents=True)
     compiler = shutil.which("cl") if windows else "/usr/bin/cc"
@@ -96,7 +98,7 @@ def build_probe(project, output, target, provider_project, source=None):
         raise FileNotFoundError("The selected native transfer compiler is unavailable")
     if windows:
         command = [compiler, "/nologo", "/W4", "/O2", "/MT", "/DCURL_STATICLIB",
-                   "/I" + str(project / "include"), str(source),
+                   "/I" + str(interface_project / "include"), str(source),
                    "/Fo" + str(output / (source.stem + ".obj")), "/Fe" + str(binary),
                    *map(str, paths), "/link", "/MAP:" + str(output / "transfer.map"),
                    "ws2_32.lib", "crypt32.lib", "bcrypt.lib", "secur32.lib", "wldap32.lib",
@@ -104,7 +106,7 @@ def build_probe(project, output, target, provider_project, source=None):
     else:
         command = [compiler, "-arch", target.removeprefix("macos-"),
                    "-mmacosx-version-min=10.13", "-Wall", "-Wextra", "-DCURL_STATICLIB",
-                   "-I" + str(project / "include"), str(source), *map(str, paths),
+                   "-I" + str(interface_project / "include"), str(source), *map(str, paths),
                    "-framework", "Security", "-framework", "CoreFoundation",
                    "-framework", "SystemConfiguration", "-framework", "GSS",
                    "-framework", "LDAP", "-lresolv", "-liconv",
@@ -113,9 +115,11 @@ def build_probe(project, output, target, provider_project, source=None):
         "command": command, "compiler": {"path": compiler, "sha256": provenance.digest(Path(compiler))},
         "archives": [{"path": str(path), "sha256": provenance.digest(path)} for path in paths],
         "interface": provenance.archive_hashes(
-            project, [p.relative_to(project).as_posix()
-                      for p in (project / "include/curl").glob("*.h")]),
+            interface_project, [p.relative_to(interface_project).as_posix()
+                                for p in (interface_project / "include/curl").glob("*.h")]),
     }
+    if interface_project != project:
+        model["interfaceProject"] = str(interface_project)
     with (output / "compile.log").open("w") as stream:
         subprocess.run(command, cwd=output, stdout=stream, stderr=subprocess.STDOUT, check=True)
     verify_inputs(project, model)

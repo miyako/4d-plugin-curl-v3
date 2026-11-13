@@ -1022,7 +1022,40 @@ early/truncated payloads fail.
 Successful byte transfers do not establish strict SCP framing compliance or
 interoperability with every real SSH server. The rejected fixture-development
 runs remain preserved; no product archive was patched to accommodate the server.
-HTTP2, PAC-to-curl integration, older systems and operator-run 4D gates remain.
+PAC-to-curl integration, older systems and operator-run 4D gates remain.
+
+### Standalone HTTP/2 transfers
+
+`probe_curl_http2.py` exercises actual HTTP/2 rather than treating an enabled
+feature bit as transfer proof. A hash-locked development-only hyper-h2 fixture
+decodes HPACK request headers and handles stream/connection flow control.
+Five cases per variant cover h2c prior-knowledge GET/POST, authenticated
+OpenSSL TLS 1.2/1.3 with ALPN `h2`, and a gzip response. Complete 262,912-byte
+binary uploads/downloads exceed the initial HTTP/2 window; client metadata must
+report HTTP/2 and success, with matching server observations and original bytes.
+No application or 4D code is initialized.
+
+The public candidate headers come directly from the exact-hash original curl
+8.21.0 source archive, with its applicable license preserved. This matters
+because portable object kits do not themselves contain the curl development
+headers, and the repository's frozen baseline headers are not all identical.
+Both cohorts retain their actual compiler interface bytes separately. Original
+maps/logs must show the exact nghttp2 archive contributing to each probe.
+Additional receipts join candidate probe inputs to the verified selected-only
+plugin delivery, original complete binary and applicable Mac slice hashes.
+These joins do not claim every passed archive contributes live code to a probe.
+
+Local arm64 and actual Rosetta Intel clients each pass all ten
+candidate/comparison transfers. The manual unsigned `curl-http2` prerequisite
+scope repeats both Mac architectures and Windows against original selected
+inputs from run 43351736712; Windows/native-CI verification is still pending.
+The fixture drains normal peer shutdown after sending the final stream data:
+closing with unread control frames had caused a rejected, truncated TCP-reset
+result. Rejected outputs are retained, not counted as successful comparisons.
+The certificate-generation tool and Python wheels are fixture dependencies,
+not plugin components. This does not establish PAC integration, HTTP/3,
+all HTTP/2 server/proxy behavior, other TLS backends, older-system runtime
+or host compatibility.
 
 ### Fresh providers reach final unsigned candidates
 

@@ -29,7 +29,7 @@ on:
       native-prerequisite-scope:
         description: 'Isolated prerequisite jobs to run (only applies with native-prerequisites-only)'
         type: choice
-        options: [all, iconv, curl, inventory, providers, windows-user-relink]
+        options: [all, iconv, curl, inventory, providers, windows-user-relink, curl-http2]
         default: all
       native-provider-run:
         description: 'Original successful prerequisite producer run for curl/inventory assembly'
@@ -69,7 +69,7 @@ concurrency:
 
 jobs:
   native-prerequisites:
-    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope != 'curl' && inputs.native-prerequisite-scope != 'inventory' && inputs.native-prerequisite-scope != 'providers' && inputs.native-prerequisite-scope != 'windows-user-relink' }}
+    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope != 'curl' && inputs.native-prerequisite-scope != 'inventory' && inputs.native-prerequisite-scope != 'providers' && inputs.native-prerequisite-scope != 'windows-user-relink' && inputs.native-prerequisite-scope != 'curl-http2' }}
     uses: ./.github/workflows/native-dependencies.yml
     with:
       scope: ${{ inputs.native-prerequisite-scope || 'all' }}
@@ -97,6 +97,13 @@ jobs:
       contents: read
       actions: read
     uses: ./.github/workflows/user-relink-windows.yml
+
+  curl-http2:
+    if: ${{ inputs.native-prerequisites-only && inputs.native-prerequisite-scope == 'curl-http2' }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/curl-http2.yml
 
   proxy-candidate:
     if: ${{ !inputs.native-prerequisites-only && !inputs.native-candidate-plugin-only }}

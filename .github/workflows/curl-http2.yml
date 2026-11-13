@@ -1,0 +1,118 @@
+name: Isolated HTTP2 native compatibility
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  http2:
+    if: github.repository == 'miyako/4d-plugin-curl-v3'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      ORIGINAL_RUN: '43351736712'
+      ORIGINAL_HEAD: a15e87cbc88104527803cd7e3669c4b0851b9e7a
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+          toolset: '14.4'
+      - name: Verify the exact successful original unsigned native producer
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, os, urllib.request
+          from pathlib import Path
+          base = os.environ["GITHUB_API_URL"] + "/repos/" + os.environ["GITHUB_REPOSITORY"]
+          def get(path):
+              request = urllib.request.Request(base + path, headers={
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                  "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+          run = get("/actions/runs/" + os.environ["ORIGINAL_RUN"])
+          if (run["head_sha"] != os.environ["ORIGINAL_HEAD"]
+                  or run["head_branch"] != "miyako-native-dependency-provenance"
+                  or run["head_repository"]["full_name"] != os.environ["GITHUB_REPOSITORY"]
+                  or run["path"] != ".github/workflows/native-trace.yml"
+                  or run["event"] != "workflow_dispatch"
+                  or run["status"] != "completed" or run["conclusion"] != "success"):
+              raise ValueError("Unexpected original unsigned producer")
+          jobs = get("/actions/runs/" + os.environ["ORIGINAL_RUN"] + "/jobs?per_page=100")
+          names = ["native (macos-latest)", "native (windows-latest)",
+                   "Validate unsigned ZIP and DMG native SBOMs"]
+          if (len(jobs["jobs"]) != jobs["total_count"]
+                  or any(len([j for j in jobs["jobs"] if j["name"] == name
+                              and j["conclusion"] == "success"]) != 1 for name in names)):
+              raise ValueError("Missing or repeated successful original native/container jobs")
+          output = Path(os.environ["RUNNER_TEMP"]) / "curl-http2-transfers"
+          output.mkdir()
+          (output / "original-producer.json").write_text(json.dumps({
+              "run": run, "jobs": jobs}, indent=2))
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: isolated-selected-plugin-delivery-${{ runner.os }}
+          path: ${{ runner.temp }}/http2-selected-inputs
+          run-id: ${{ env.ORIGINAL_RUN }}
+          github-token: ${{ github.token }}
+      - name: Exercise real HTTP2 HPACK, flow control, TLS ALPN and gzip
+        shell: python
+        run: |
+          import os, platform, shutil, subprocess, sys, urllib.request
+          from pathlib import Path
+          root = Path.cwd()
+          sys.path.insert(0, str(root / "build/dependencies"))
+          from build_curl import pin
+          from provenance import write_json
+          import probe_curl_http2
+          temporary = Path(os.environ["RUNNER_TEMP"])
+          archive = temporary / "http2-curl-source.tar.xz"
+          with urllib.request.urlopen(pin()["url"]) as response, archive.open("wb") as stream:
+              shutil.copyfileobj(response, stream)
+          environment = temporary / "curl-http2-python"
+          subprocess.run([sys.executable, "-m", "venv", str(environment)], check=True)
+          windows = platform.system() == "Windows"
+          python = environment / ("Scripts/python.exe" if windows else "bin/python")
+          subprocess.run([str(python), "-m", "pip", "install", "--quiet",
+                          "--disable-pip-version-check", "--only-binary=:all:", "--require-hashes",
+                          "-r", str(root / "build/dependencies/http2-fixture-requirements.txt")],
+                         check=True)
+          subprocess.run([str(python), "-m", "unittest", "discover", "-s",
+                          "build/dependencies", "-p", "test_http2.py"], check=True)
+          openssl = shutil.which("openssl")
+          if openssl is None:
+              raise FileNotFoundError("An explicit OpenSSL-compatible fixture certificate tool is required")
+          kit = temporary / "http2-selected-inputs/Moved selected plugin kit"
+          output = temporary / "curl-http2-transfers"
+          for target in (["windows-x86_64"] if windows else ["macos-arm64", "macos-x86_64"]):
+              destination = output / target
+              subprocess.run([str(python), "-m", "probe_curl_http2",
+                              "--project", str(kit / "project"), "--baseline", str(root),
+                              "--output", str(destination), "--target", target,
+                              "--source-archive", str(archive), "--openssl", openssl],
+                             cwd=root / "build/dependencies", check=True)
+              write_json(output / ("plugin-selection-" + target + ".json"),
+                         probe_curl_http2.bind_plugin(kit, destination))
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: isolated-curl-http2-${{ runner.os }}
+          path: ${{ runner.temp }}/curl-http2-transfers/
+          include-hidden-files: true
+          if-no-files-found: error
