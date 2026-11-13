@@ -1456,6 +1456,69 @@ kit. `RELINKING.md` supplies ordinary-user commands, concrete static-delivery
 review obligations and the operator-only host/install/trust gate. Assembly and
 successful raw relinking are not production adoption or legal certification.
 
+### Verified combined delivery and local user-install preparation
+
+Code head `535027db2c99824f513bde0738c8807a8b3f2170` passed
+[isolated native run 43376758901](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43376758901):
+114 dependency regressions and the active-source/full-plugin user-relink
+experiment on native Mac arm64, native Mac x86_64 and Windows x64. All three
+persisted artifacts were downloaded and independently inspected, including the
+dated source change in each actual linked close-function's machine code.
+The local 140-test SBOM suite also passed. No plugin or 4D host was initialized.
+
+The assembled `candidate-relink-review-535027d.zip` contains 30,177 files.
+Its SHA-256 is
+`fb5235f342db4100b2aec0fda44ef4874917f9c471222e99b65c18fcb06fc160`;
+the delivery manifest SHA-256 is
+`cf075584dff5a5ac9772f7eb3eb874c176ff79fc790344f6d4baf33c99af73d3`.
+It joins all 35 selected archive bindings, six unchanged original provider
+records, 14 logical notice identities, 16 notice variants and 42 notice inputs.
+All ZIP members were independently reread, hashed and extracted with retained
+file permissions. The extracted package's own inspector passed outside the
+checkout with an empty `PYTHONPATH`. Using only that extracted package's tools
+and sources plus the documented local Apple toolchain, a fresh modified GNU
+build passed nine conversions and relinked the complete universal plugin.
+Its raw Mac binary SHA-256 is
+`1a485a8a4a7bb8b590abe7e5b295cb31e7c1d1c0bbe47be655bac8ed9e31da4d`.
+Neither the original producer records nor the inventory's reference artifact
+were restamped to describe the new transport ZIP.
+
+A separate user-owned install candidate adds the complete notices and project
+permission text, uses verified user-relinked Mac/Windows executables, and signs
+only the Mac executable locally with an ad-hoc identity. Strict all-architecture
+signature verification passed without a maintainer key, Developer ID, team
+authority or timestamp. Windows remains unsigned. The ZIP and read-only-mounted
+DMG were independently compared and contain the same ten-file cross-platform
+bundle:
+
+| Prepared artifact | SHA-256 |
+|---|---|
+| `cURL-user-relink.zip` | `ffaa60c21bc3320774859795d76bfabf3169ae2c981eb678a7333d9cd13d4b00` |
+| `cURL-user-relink.dmg` | `c5487c1c86487e43b9542011c651112d5465e1bf4d21671c6ecb02403566f67a` |
+| Ad-hoc universal Mac executable | `40c3975292144da869568733acd12ce4a07c621a9a92b6d53c2ef5cc662c0a4c` |
+| Unsigned Windows x64 executable | `8fb111f23a3c10cd98d87a2007a8cec473544d6195271cab67a524b6c83c374c` |
+
+`OPERATOR-CHECK.md` accompanies the prepared artifacts with isolated project,
+hash, architecture and normal local trust instructions. Its minimal API check
+is `$version:=cURL_VersionInfo`, not the clipboard-writing convenience method.
+Mac arm64, Mac Intel/Rosetta and interactive Windows x64 host availability and
+operator-run install/trust/API results are still required; affected host-runtime
+checks and redistribution review are not waived by successful static relinking.
+There was no host launch, installation, trust-policy change or quarantine
+stripping. These artifacts are internal candidates, not an adopted production
+dependency set or a legal-compliance certification.
+
+The complete review ZIP, native outputs, both packaged-source rebuilds, final
+and superseded user-install stages and their readers/generators are preserved
+outside the disposable worktree in
+`relink-review-535027d-verified-package-native-and-user-install.tar.gz`,
+SHA-256
+`e490f8b1c033719b1690cf9d1355f4a3a07b36653c20e7dc8cef9dc69a7b58af`.
+All 11,352 regular files and two scoped links were independently reread against
+their original hashes or exact link targets. Historical archive identities and
+original evidence remain unchanged. Production archives, Developer ID and
+notarization configuration, Windows signing, tags and releases remain untouched.
+
 ## Measured results and scoped candidate decision
 
 Checkpoint `d93ab29` passed all five candidate/baseline test executables and
