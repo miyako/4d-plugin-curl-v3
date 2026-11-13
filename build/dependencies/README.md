@@ -624,6 +624,14 @@ same checks on both Macs and uses the delivered Windows tools and source kit
 for its modified GNU build and combined full-plugin replay. These are isolated
 candidate checks, not completed licensing, installation or host verification.
 
+Run [43345510212](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43345510212),
+at `81c6127179ebb033775e65ffc58f18329af75423`, completed all three
+derived GNU source rebuilds. Independent download inspection checked the
+unchanged original record against the actual selected libiconv input, the
+delivered manifest, all nine conversion/rejection checks and ordered aliases.
+The three Mac objects per architecture and four Windows objects close to their
+actual modified archives. No interpreter caches were added to these kits.
+
 The first native GNU-delivery run (`43343775701`) completed both Mac modified
 rebuilds but rejected the Windows kit before compilation: the delivered Cygwin
 preparation entry point created five Python cache files inside the closed kit.
@@ -653,11 +661,23 @@ Actual relocated selected-only Mac materials have reproduced both original
 plugin slices byte-for-byte, rebuilt modified proxy and GNU sources using only
 delivered tools, and linked both changes into both complete slices. Eleven
 unused archive flags are omitted per Mac recipe; `-lsasl2` remains a system
-input, not an assumed removable archive. The Windows derived kit has passed
-material inspection; its actual native links remain gated on CI. The native
-workflow retains full audit kits separately and checks baseline/modified links
-from the derived materials without initializing any plugin. This does not yet
-provide complete notices/redistribution terms, install/trust or 4D host proof.
+input, not an assumed removable archive. Run `43345510212` also completed
+both native derived full-plugin replays. Independent inspection of all 17
+downloaded artifacts checked the exact selected-only file sets (12 universal
+Mac library files; 11 Windows files), omitted library records (11 Mac; 13
+Windows, including the unused generated import library), closed proxy/GNU
+material manifests and their actual modified build receipts. Both Mac baseline
+slices match original bytes; the Windows baseline matches beyond the existing
+bounded clock/checksum normalization. All modified outputs retain both defined
+proxy/GNU probe functions. The full audit kits are retained separately.
+
+The same persisted run rechecked all 35 source/compiler/archive-bound selected
+positions, original provider records and reconstructed universal provider bytes,
+all 78 actual curl transfer cases, official schemas and actual ZIP/DMG contents.
+Both containers carry the same seven bundle files. The three unknown numeric
+libmodman versions remain unknown; historical archive identities are unchanged.
+These results provide neither complete notices/redistribution terms,
+install/trust nor 4D host proof, and do not authorize production adoption.
 
 Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy
