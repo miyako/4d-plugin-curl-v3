@@ -1519,6 +1519,25 @@ their original hashes or exact link targets. Historical archive identities and
 original evidence remain unchanged. Production archives, Developer ID and
 notarization configuration, Windows signing, tags and releases remain untouched.
 
+The app's 64 MiB per-file capture limit is handled by a separately verified
+transport: eight sequential parts of at most 60 MiB, a hash/size manifest and
+`reassemble-candidate-review.py`. All ten transport files were successfully
+attached. With every file saved together under its original name, run
+`python3 reassemble-candidate-review.py --output candidate-relink-review-535027d.zip`
+(Windows: `python`). Omit `--output` to verify without writing. The tool pins
+the original ZIP hash, checks every part before writing and again while writing,
+and never overwrites an existing output. Reassembly and independent comparison
+of all 30,177 ZIP members passed, as did eight focused invalid-transport and
+overwrite rejections. The actual app-captured parts and helper were independently
+rejoined, not merely the pre-upload source files. The manifest SHA-256 is
+`8ef6bb94e41fe216803bc56da63f1acda09a3907133ba867944fbab31099b5e6`.
+The original external source backup was rehashed successfully; a separate
+seven-file metadata/reader/capture-receipt backup,
+`review-kit-transport-787c82e-verified-metadata.tar.gz`, has SHA-256
+`a3f8ff91c583e7b92a641a91005e5b29ba8269b583462a0e6e7b02d3df9a946d`.
+This transport changes no source-kit bytes or original evidence and introduces
+no application initialization, production adoption or new release.
+
 ### Final user-test container sidecars and loader observations
 
 The final ad-hoc user-test ZIP and DMG above also have their **own** normalized
