@@ -2,7 +2,7 @@
 
 ## Windows external static-library coverage
 
-The next bounded improvement starts from the actual Windows selections, not a
+This bounded improvement starts from the actual Windows selections, not a
 list of libraries usually supplied by Visual Studio. The unsigned native path
 now snapshots the effective MSBuild library directories before linking and
 joins selected external archive hashes to that snapshot after linking. It
@@ -23,9 +23,21 @@ package-specific evidence, versions/suppliers remain omitted and licenses remain
 `NOASSERTION`; Microsoft documentation references establish the library roles,
 not archive acquisition provenance or a redistribution permission.
 
+The implementation at `fc9affa` passed the
+[unsigned native run](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43453010654).
+Its downloaded Windows record accounts for all 14 selected external archives:
+five static-library inputs represented by four ordinary package groups
+(runtime support, C++ standard library, UCRT and SDK native support), nine
+import-only exclusions, and zero unclassified inputs. Independent inspection
+of the persisted ZIP/DMG and both standard formats confirmed the exact archive
+bindings, equivalent package descriptions/static edges, identical bundle
+contents and all three native target hashes. The original 35-position
+repository-source coverage remains separate; these external packages do not
+acquire source provenance or verified release versions from toolchain context.
+
 Historical records without fresh external-inspection receipts retain their
 original read-only scope. This work neither edits v4.9.11 assets nor authorizes
-a new release, signing, dependency upgrades or manual 4D testing. and native dependency traceability
+a new release, signing, dependency upgrades or manual 4D testing.
 
 The release workflow adds three **sidecars per final distributed container**:
 `cURL-VERSION.zip.cdx.json` (CycloneDX 1.6 JSON),
