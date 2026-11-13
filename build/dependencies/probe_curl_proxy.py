@@ -262,7 +262,8 @@ def inspect_proof(output):
             "compile.log", "transfer.map", "selected-members.json",
             "curl-proxy-transfer.exe" if target.startswith("windows") else "curl-proxy-transfer"))
         if target.startswith("windows"):
-            expected.add(variant + "/curl-proxy-transfer.obj")
+            expected.update(variant + "/curl-proxy-transfer." + suffix
+                            for suffix in ("obj", "lib", "exp"))
         expected.update(f"{variant}/{name}{suffix}" for name in CASES for suffix in (
             ".stdout", ".stderr", ".response", ".server.json", ".pac", ".command.json",
             ".exit.json"))
