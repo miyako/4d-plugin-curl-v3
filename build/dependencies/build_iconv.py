@@ -45,6 +45,17 @@ def modified_source(original, date):
         "int iconv_user_relink_probe(void) { return 1; }\n").encode()
 
 
+def edit_active_function(original, date):
+    date = calendar_date.fromisoformat(date).isoformat()
+    anchor = b"int iconv_close (iconv_t icd)\n{\n"
+    if original.count(anchor) != 1:
+        raise ValueError("Expected one active GNU iconv_close definition")
+    change = (f"  /* Local user modification, {date}. */\n"
+              "  volatile unsigned int user_selected_revision = 731u;\n"
+              "  (void) user_selected_revision;\n").encode("ascii")
+    return original.replace(anchor, anchor + change)
+
+
 def user_baseline(base):
     original = json.loads((base / "native-build-provenance.json").read_text())
     if original["schema_version"] != 1:

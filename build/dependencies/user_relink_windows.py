@@ -4,7 +4,7 @@
 import argparse
 import json
 import os
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath
 import platform
 import shutil
 import subprocess
@@ -12,6 +12,7 @@ import sys
 
 sys.dont_write_bytecode = True
 import plugin_relink_delivery as delivery
+from plugin_relink_delivery import replacement_options
 import portable_plugin_windows as portable
 from plugin_relink_materials import relative_path
 from provenance import archive_hashes, digest, write_json
@@ -127,19 +128,6 @@ def replay(kit, output, replacements):
                                            for p in output.rglob("*") if p.is_file()])
     write_json(output / MANIFEST, proof)
     return inspect(kit, output)
-
-
-def replacement_options(values):
-    result = {}
-    for value in values:
-        key, separator, path = value.partition("=")
-        if (not separator or not path or key in result or "\\" in key
-                or PureWindowsPath(key).drive or PurePosixPath(key).is_absolute()
-                or ".." in PurePosixPath(key).parts
-                or PurePosixPath(key).as_posix() != key):
-            raise ValueError("Use unique canonical repository/path.lib=USER_ARCHIVE replacements")
-        result[key] = Path(path).absolute()
-    return result
 
 
 if __name__ == "__main__":

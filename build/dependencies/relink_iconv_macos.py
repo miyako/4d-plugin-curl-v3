@@ -21,7 +21,7 @@ from provenance import archive_hashes, digest, write_json
 modified_source = iconv.modified_source
 
 
-def rebuild(candidate, output):
+def rebuild(candidate, output, active_function=False):
     if platform.system() != "Darwin":
         raise ValueError("GNU iconv Mac relinking requires macOS")
     original = json.loads((candidate / "native-build-provenance.json").read_text())
@@ -41,7 +41,7 @@ def rebuild(candidate, output):
     path = source / "lib/iconv.c"
     date = datetime.now(timezone.utc).date().isoformat()
     before = path.read_bytes()
-    path.write_bytes(modified_source(before, date))
+    path.write_bytes((iconv.edit_active_function if active_function else modified_source)(before, date))
     sources = iconv.tree_files(source)
     work = output / "build"
     work.mkdir()
@@ -73,7 +73,8 @@ def rebuild(candidate, output):
     if digest(archive) == digest(candidate / "install" / original["archives"][0]["path"]):
         raise ValueError("GNU user modification did not change the library")
     probe = output / "probe.c"
-    probe.write_text(
+    probe.write_text('#include "recipe/build/dependencies/native/iconv-probe.c"\n'
+                    if active_function else
         '#define main original_iconv_probe\n#include "recipe/build/dependencies/native/iconv-probe.c"\n'
         '#undef main\nextern int iconv_user_relink_probe(void);\n'
         'int main(void) { if (iconv_user_relink_probe() != 1) return 1; '
@@ -119,6 +120,8 @@ def rebuild(candidate, output):
                                         if p.is_file() and not p.is_symlink()]),
         "scope": "Modified GNU library, defined-code and baseline conversion checks; full-plugin relinking/host proof are separate.",
     }
+    if active_function:
+        record["modificationKind"] = "active-function-user-edit"
     write_json(output / "iconv-user-relink-proof.json", record)
     inspect(candidate, output)
     return record
@@ -138,8 +141,11 @@ def inspect(candidate, output):
             or record["files"] != archive_hashes(output, [a["path"] for a in record["files"]])):
         raise ValueError("GNU modified-source proof or delivered input binding changed")
     path = output / "source/lib/iconv.c"
-    expected = modified_source((candidate / "source/lib/iconv.c").read_bytes(),
-                               record["modification"]["dateUtc"])
+    kind = record.get("modificationKind", "defined-marker")
+    if kind not in ("defined-marker", "active-function-user-edit"):
+        raise ValueError("Unsupported GNU user modification kind")
+    edit = iconv.edit_active_function if kind == "active-function-user-edit" else modified_source
+    expected = edit((candidate / "source/lib/iconv.c").read_bytes(), record["modification"]["dateUtc"])
     files = [dict(a) for a in original["sourceFiles"]]
     changed = next(a for a in files if a["path"] == "lib/iconv.c")
     if (path.read_bytes() != expected
@@ -173,6 +179,11 @@ if __name__ == "__main__":
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--inspect-only", action="store_true")
+    parser.add_argument("--active-function", action="store_true",
+                        help="Edit an active function and run conversions without a fixed marker")
     args = parser.parse_args()
-    result = (inspect if args.inspect_only else rebuild)(args.candidate.resolve(), args.output.resolve())
+    if args.inspect_only and args.active_function:
+        parser.error("inspect reads the recorded modification kind")
+    result = (inspect(args.candidate.resolve(), args.output.resolve()) if args.inspect_only else
+              rebuild(args.candidate.resolve(), args.output.resolve(), args.active_function))
     print(json.dumps({k: result[k] for k in ("target", "status", "modifiedArchiveSha256")}, indent=2))

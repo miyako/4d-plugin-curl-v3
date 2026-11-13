@@ -1,4 +1,4 @@
-name: Isolated Windows user-source relinking
+name: Isolated user-source relinking
 
 on:
   workflow_dispatch:
@@ -9,6 +9,100 @@ permissions:
   actions: read
 
 jobs:
+  mac-user-edit:
+    if: github.repository == 'miyako/4d-plugin-curl-v3'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: macos-arm64
+          - os: macos-15-intel
+            target: macos-x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      ORIGINAL_RUN: '43351736712'
+      ORIGINAL_HEAD: a15e87cbc88104527803cd7e3669c4b0851b9e7a
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Verify the exact successful original unsigned producer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir "$RUNNER_TEMP/user-relink-originals"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ORIGINAL_RUN" > "$RUNNER_TEMP/user-relink-originals/run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ORIGINAL_RUN/jobs?per_page=100" > "$RUNNER_TEMP/user-relink-originals/jobs.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "user-relink-originals"
+          run = json.loads((root / "run.json").read_text())
+          jobs = json.loads((root / "jobs.json").read_text())
+          if (run["head_sha"] != os.environ["ORIGINAL_HEAD"]
+                  or run["head_branch"] != "miyako-native-dependency-provenance"
+                  or run["head_repository"]["full_name"] != os.environ["GITHUB_REPOSITORY"]
+                  or run["path"] != ".github/workflows/native-trace.yml"
+                  or run["event"] != "workflow_dispatch"
+                  or run["status"] != "completed" or run["conclusion"] != "success"
+                  or len(jobs["jobs"]) != jobs["total_count"]
+                  or not any(j["name"] == "native (macos-latest)"
+                             and j["conclusion"] == "success" for j in jobs["jobs"])):
+              raise ValueError("Unexpected original universal unsigned producer")
+          PY
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: isolated-selected-plugin-delivery-macOS
+          path: ${{ runner.temp }}/user-relink-originals/plugin
+          run-id: ${{ env.ORIGINAL_RUN }}
+          github-token: ${{ github.token }}
+      - name: Recompile active source and relink without fixed markers
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 -m unittest discover -s build/dependencies -p 'test_*.py'
+          python3 build/dependencies/probe_user_edit_macos.py \
+            --kit "$RUNNER_TEMP/user-relink-originals/plugin/Moved selected plugin kit" \
+            --target "$TARGET" --output "$RUNNER_TEMP/user-source-edit"
+          mkdir "$RUNNER_TEMP/Relocated user inputs"
+          mv "$RUNNER_TEMP/user-relink-originals/plugin/Moved selected plugin kit" "$RUNNER_TEMP/Relocated user inputs/Moved immutable kit"
+          mv "$RUNNER_TEMP/user-source-edit" "$RUNNER_TEMP/Relocated user inputs/Moved user edit"
+          python3 build/dependencies/probe_user_edit_macos.py --inspect-only \
+            --kit "$RUNNER_TEMP/Relocated user inputs/Moved immutable kit" \
+            --output "$RUNNER_TEMP/Relocated user inputs/Moved user edit"
+      - name: Retain the actual user tools and their license
+        if: always()
+        shell: python
+        run: |
+          import os, shutil
+          from pathlib import Path
+          output = Path(os.environ["RUNNER_TEMP"]) / "user-source-tools"
+          for folder in ("dependencies", "sbom"):
+              for path in (Path("build") / folder).iterdir():
+                  if path.is_file() and path.suffix in (".py", ".json"):
+                      destination = output / "build" / folder / path.name
+                      destination.parent.mkdir(parents=True, exist_ok=True)
+                      shutil.copyfile(path, destination)
+          shutil.copyfile("LICENSE", output / "LICENSE")
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: isolated-marker-free-${{ matrix.target }}-user-relink
+          path: |
+            ${{ runner.temp }}/Relocated user inputs/
+            ${{ runner.temp }}/user-source-edit/
+            ${{ runner.temp }}/user-source-tools/
+            ${{ runner.temp }}/user-relink-originals/run.json
+            ${{ runner.temp }}/user-relink-originals/jobs.json
+          if-no-files-found: error
+          include-hidden-files: true
   user-edit:
     if: github.repository == 'miyako/4d-plugin-curl-v3'
     runs-on: windows-latest

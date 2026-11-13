@@ -20,7 +20,7 @@ from relink_candidate import inspect_relink
 MARKER = "_proxy_user_relink_probe"
 
 
-def defines_marker(data, marker=MARKER):
+def defined_section_symbols(data):
     count, size = unpack("<II", data, 16)
     region(data, 32, size)
     offset, tables = 32, []
@@ -38,12 +38,17 @@ def defines_marker(data, marker=MARKER):
     raw, count, strings, length = tables[0]
     region(data, raw, count * 16)
     names = region(data, strings, length)
-    found = 0
+    result = []
     for index in range(count):
         string, kind, section, _, _ = unpack("<IBBHQ", data, raw + 16 * index)
         if not kind & 0xE0 and kind & 0x0E == 0x0E and section > 0:
-            found += cstring(names, string) == marker
-    return found == 1
+            result.append({"name": cstring(names, string),
+                           "public": bool(kind & 1 and not kind & 0x10)})
+    return result
+
+
+def defines_marker(data, marker=MARKER):
+    return sum(s["name"] == marker for s in defined_section_symbols(data)) == 1
 
 
 def link_arguments(original, output, modified=None):

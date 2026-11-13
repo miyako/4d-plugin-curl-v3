@@ -1,13 +1,68 @@
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import struct
 import tempfile
 import unittest
 from unittest.mock import patch
 
 import probe_user_edit_windows as experiment
+import user_relink_macos as mac
 import user_relink_windows as user
 
 
 class UserRelinkTests(unittest.TestCase):
+    def test_mac_user_substitution_preserves_order_without_demo_linker_flags(self):
+        kit = Path("kit").absolute()
+        arguments = ["clang++", "-La", "-lproxy", "-lssl",
+                     str(kit / "project/a/libiconv.a"), "-bundle", "-o", "cURL"]
+        replacements = {"a/libproxy.a": Path("user proxy.a"),
+                        "a/libiconv.a": Path("user conversion.a")}
+        result = mac.substitute(arguments, kit,
+                                {"a/libproxy.a": "p", "a/libiconv.a": "i"}, replacements)
+        expected = list(arguments)
+        expected[2], expected[4] = "user proxy.a", "user conversion.a"
+        self.assertEqual(result, expected)
+        self.assertEqual(arguments[2], "-lproxy")
+        self.assertFalse(any("user_relink_probe" in a for a in result))
+
+    def test_mac_user_substitution_rejects_unselected_ambiguous_or_repeated_inputs(self):
+        for selected, arguments, replacements in (
+                ({"a/libproxy.a": "p"}, ["-lproxy"], {"a/libother.a": Path("user.a")}),
+                ({"a/libproxy.a": "p"}, ["-lssl"], {"a/libproxy.a": Path("user.a")}),
+                ({"a/libproxy.a": "p"}, ["-lproxy"] * 2, {"a/libproxy.a": Path("user.a")}),
+                ({"a/libproxy.a": "p", "b/libproxy.a": "q"}, ["-lproxy"],
+                 {"a/libproxy.a": Path("user.a")})):
+            with self.subTest(arguments=arguments), self.assertRaises(ValueError):
+                mac.substitute(arguments, Path("kit"), selected, replacements)
+
+    def test_mac_proof_commands_use_original_posix_roots_not_the_inspection_host(self):
+        recipe = {"target": "macos-arm64", "arguments": [
+            "${DRIVER}", "-isysroot", "${SDK}", "-filelist", "replaced-list", "-liconv",
+            "-o", "${OUTPUT}/macos-arm64/cURL"]}
+        output = PurePosixPath("/original user output")
+        replacement = output / "replacements/macos-arm64/a/libiconv.a"
+        result = mac.arguments_for(PurePosixPath("/original kit"), output, recipe,
+                                   "/Xcode/clang++", "/Xcode/MacOSX.sdk",
+                                   {"a/libiconv.a": "sha"}, {"a/libiconv.a": replacement})
+        self.assertEqual(result[4], "/original user output/macos-arm64/objects.list")
+        self.assertEqual(result[5], str(replacement))
+        self.assertEqual(result[-1], "/original user output/macos-arm64/cURL")
+
+    def test_mac_public_symbol_gate_excludes_private_local_undefined_and_debug_entries(self):
+        symbols = [("_PluginMain", 0x0f, 1), ("_private", 0x1f, 1),
+                   ("_undefined", 0x01, 0), ("_local", 0x0e, 1),
+                   ("_debug", 0xef, 1), ("_repeat", 0x0e, 1), ("_repeat", 0x0e, 1)]
+        strings, entries = b"\0", []
+        for name, kind, section in symbols:
+            entries.append(struct.pack("<IBBHQ", len(strings), kind, section, 0, 0))
+            strings += name.encode() + b"\0"
+        raw = b"".join(entries)
+        binary = (struct.pack("<8I", 0xfeedfacf, 0x100000c, 0, 8, 1, 24, 0, 0)
+                  + struct.pack("<6I", 2, 24, 56, len(entries), 56 + len(raw), len(strings))
+                  + raw + strings)
+        self.assertEqual(mac.public_symbols(binary), {"_PluginMain"})
+        self.assertTrue(mac.portable.local.defines_marker(binary, "_local"))
+        self.assertFalse(mac.portable.local.defines_marker(binary, "_repeat"))
+
     def test_working_copy_preserves_all_source_names_including_windows_lib_license_texts(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -70,3 +125,5 @@ class UserRelinkTests(unittest.TestCase):
         for invalid in (b"wrong source", original * 2):
             with self.assertRaises(ValueError):
                 experiment.edit_source(invalid, "2026-06-01")
+        with self.assertRaises(ValueError):
+            experiment.edit_source(original, "2026-02-30")

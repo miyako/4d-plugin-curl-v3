@@ -729,6 +729,57 @@ to the actual modified archive. The resulting slice hashes are
 user-facing licensing delivery, installation or host behavior. The separate
 Windows result below uses an incremental native compile. No plugin was initialized.
 
+`user_relink_macos.py` now supplies the separate general-user path for thin
+per-CPU archives. Run the current tools alongside a pristine **selected-only**
+Mac kit, not an older immutable kit's tool snapshot:
+
+```sh
+python3 build/dependencies/user_relink_macos.py replay \
+  --kit "/materials/Moved selected plugin kit" --output "/user/new link" \
+  --replace-arm64 "a/libiconv.a=/user/arm64/libiconv.a" \
+  --replace-x86-64 "a/libiconv.a=/user/x86_64/libiconv.a"
+python3 build/dependencies/user_relink_macos.py inspect \
+  --kit "/materials/Moved selected plugin kit" --output "/user/new link"
+```
+
+Repeat either replacement option for other actually selected archives; at least
+one replacement is required and an unchanged CPU may keep its original inputs.
+The tool retains replacements, original objects, argument/search order and
+public symbols without adding forced markers. It records the active Apple
+driver, linker, lipo and SDK settings hashes **as new user work**, separately
+from the original producer toolchain. A compatible user Xcode/SDK may differ;
+both baseline and modified slices are linked with that same user toolchain and
+compared against the original public symbols. The strict original portable
+replay and its byte-identical/toolchain checks remain unchanged. This raw path
+does not establish arbitrary replacement source identity, semantic/older-host
+compatibility, byte-identical reproduction or license compliance.
+
+`probe_user_edit_macos.py` exercises the source-to-full-plugin path: it extracts
+the delivered pinned GNU archive, dates a volatile local edit inside the
+existing `iconv_close`, reuses the measured configure/static/deployment recipe,
+recompiles the source-bound objects and passes all nine baseline conversions.
+It then calls the generic raw linker and checks actual archive-member/live
+function map selection, changed binary bytes and absence of either fixed
+demonstration marker. The selected-kit and complete experiment can subsequently
+move to paths containing spaces; read-only inspection uses their retained
+original native command roots, without executing the plugin or compiler:
+
+```sh
+python3 build/dependencies/probe_user_edit_macos.py \
+  --kit "/materials/Moved selected plugin kit" \
+  --target macos-arm64 --output /user/fresh-gnu-experiment
+python3 build/dependencies/probe_user_edit_macos.py --inspect-only \
+  --kit "/moved materials/kit" --output "/moved materials/user experiment"
+```
+
+Use `macos-x86_64` for the other CPU. GNU configure still requires its fresh
+build output path to have no whitespace; this does not restrict the kit or
+subsequent raw-link/inspection paths. The read-only unsigned
+`user-relink-windows.yml` workflow now exercises both Mac architectures on
+native runners and retains the existing Windows active-source experiment.
+Final combined licensing delivery and operator-only host/install/trust checks
+remain separate open gates.
+
 `user_relink_windows.py` provides a separate general-user raw-link path, not a
 mode that relaxes the fixed demonstrations. With the recorded MSVC/SDK/CRT
 environment active, use a pristine **selected-only** Windows kit and a fresh
@@ -801,6 +852,10 @@ checks plus the ordered encoding aliases. Its executable probe calls the new
 function; `--inspect-only` rechecks the persisted source/recipe/output proof
 without running it. GNU configure/build output requires a fresh directory
 without whitespace; the source kit itself may be relocated to a spaced path.
+The explicit `--active-function` alternative edits the existing close function
+and uses the unchanged conversion probe instead of appending/calling the fixed
+marker. Its proof records that modification kind; inspection still validates
+the exact dated delta and rejects unrelated source changes.
 
 ```sh
 python3 "$KIT/tools/build/dependencies/relink_iconv_macos.py" \

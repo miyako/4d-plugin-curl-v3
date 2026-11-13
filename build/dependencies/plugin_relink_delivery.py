@@ -23,6 +23,19 @@ PORTABLE = {"macos-universal": "portable-object-kit.json",
 HISTORICAL_CONTAINERS = {"product-source/cURL.zip", "product-source/cURL.dmg"}
 
 
+def replacement_options(values):
+    result = {}
+    for value in values:
+        key, separator, path = value.partition("=")
+        if (not separator or not path or key in result or "\\" in key
+                or PureWindowsPath(key).drive or PurePosixPath(key).is_absolute()
+                or ".." in PurePosixPath(key).parts
+                or PurePosixPath(key).as_posix() != key):
+            raise ValueError("Use unique canonical repository/archive=USER_ARCHIVE replacements")
+        result[key] = Path(path).absolute()
+    return result
+
+
 def selected_archives(evidence):
     result = {}
     for link in evidence["linkEvidence"].values():

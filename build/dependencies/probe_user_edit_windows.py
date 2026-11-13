@@ -21,14 +21,7 @@ import trace_compiler
 import user_relink_windows as user
 
 
-def edit_source(original, date):
-    anchor = b"int iconv_close (iconv_t icd)\n{\n"
-    if original.count(anchor) != 1:
-        raise ValueError("Expected one active GNU iconv_close definition")
-    change = (f"  /* Local user modification, {date}. */\n"
-              "  volatile unsigned int user_selected_revision = 731u;\n"
-              "  (void) user_selected_revision;\n").encode("ascii")
-    return original.replace(anchor, anchor + change)
+edit_source = iconv.edit_active_function
 
 
 def copy_working_inputs(prepared, work):
