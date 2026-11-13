@@ -8,6 +8,21 @@ import user_relink_windows as user
 
 
 class UserRelinkTests(unittest.TestCase):
+    def test_working_copy_preserves_all_source_names_including_windows_lib_license_texts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "prepared"
+            for name in ("source/COPYING.LIB", "source/libcharset/COPYING.LIB",
+                         "source/fixture.a", "build/config.h", "recipe/builder.py"):
+                path = source / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(name.encode())
+            experiment.copy_working_inputs(source, root / "working")
+            for path in source.rglob("*"):
+                if path.is_file():
+                    self.assertEqual(path.read_bytes(), (
+                        root / "working" / path.relative_to(source)).read_bytes())
+
     def test_selected_delivery_paths_become_repository_paths_not_basename_guesses(self):
         record = {"target": "windows-x86_64", "selectedArchives": {
             "project/lib/64/iconv.lib": "hash"}}

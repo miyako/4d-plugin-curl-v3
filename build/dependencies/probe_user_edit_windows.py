@@ -31,6 +31,11 @@ def edit_source(original, date):
     return original.replace(anchor, anchor + change)
 
 
+def copy_working_inputs(prepared, work):
+    for folder in ("source", "build", "recipe"):
+        shutil.copytree(prepared / folder, work / folder)
+
+
 def run(kit, prepared, output):
     if (platform.system() != "Windows" or output.exists()
             or any(output.is_relative_to(p) or p.is_relative_to(output) for p in (kit, prepared))):
@@ -49,9 +54,8 @@ def run(kit, prepared, output):
         raise ValueError("Prepared GNU tree is not bound to this delivered source")
     output.mkdir(parents=True)
     work = output / "working"
-    for folder in ("source", "build", "recipe"):
-        shutil.copytree(prepared / folder, work / folder,
-                        ignore=shutil.ignore_patterns("*.lib", "*.a", "__pycache__"))
+    copy_working_inputs(prepared, work)
+    relative_path(work, original["builtArchive"]).unlink()
     shutil.copyfile(original_path, output / "original-demonstration-record-reference.json")
     source = work / "source/lib/iconv.c"
     pristine = material / "source/lib/iconv.c"
