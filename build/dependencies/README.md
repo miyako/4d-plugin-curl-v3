@@ -30,6 +30,37 @@ The user subsequently requested no further manual gating; the additional
 visible-conversion source-edit experiment was stopped, not recorded as passed.
 No more 4D launches are part of release automation.
 
+## Published migration outcome
+
+[v4.9.11](https://github.com/miyako/4d-plugin-curl-v3/releases/tag/v4.9.11)
+was published from `17477645446a44c71cd7e0b3f40af03de554bdb9` by
+[Build 43390139459](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43390139459).
+Independent downloads verified all nine assets, both official SBOM schemas,
+all nine build-provenance attestations and all four container/SBOM attestations.
+ZIP and DMG contain the same ten bundle files, including the universal macOS
+executable and unsigned Windows x64 executable. Developer ID signature and
+stapled DMG notarization verification pass without loading the plugin.
+
+All 35 selected repository archive bindings have source/compiler/archive
+evidence; 32 have verified versions and libmodman's numeric version remains
+unknown. The sources ZIP has 30,258 files and retains the original source/object
+kit, six original provider records and 42 notice inputs. Its sibling release
+binding, original unsigned reference and final signed code binding were
+independently rechecked. Internal candidate status labels remain unchanged
+historical records, not the current release authorization.
+
+| Published container | SHA-256 |
+|---|---|
+| `cURL-4.9.11.zip` | `464e926b72d3a97dedc663911c392d8c4e8e7f9425cf5550311fc044ee8db342` |
+| `cURL-4.9.11.dmg` | `e515cf0e160fcb8edfb3dfa9b433f9022fd3ca4da70e58393a03b44ecc1260b7` |
+| `cURL-4.9.11-sources.zip` | `1da4a93a3008ca35817e99b4b69a8999377a696358c7e1f5034c8dc93d29de0f` |
+
+This closes the authorized source-provenance release, not historical archive
+identity gaps, all-host runtime compatibility, or a legal-compliance certification.
+The first attempt, Build 43386567669, stopped before notarization/publication;
+its original artifacts and the bounded signing-normalization diagnosis remain
+preserved separately. No historical release assets or tags were replaced.
+
 ## Frozen baseline
 
 `baseline-v4.9.10.json` is derived from the eight published
@@ -79,7 +110,9 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 - [x] Preserve and independently inspect published containers and archive selections.
 - [x] Recover observable curl features/protocols on all targets; retain unknown
   historical configure arguments as an explicit residual.
-- [ ] Resolve libproxy/libmodman replacement and static-distribution obligations.
+- [x] Adopt the pinned libproxy/libmodman replacement under the release
+  authorization and deliver the static-link source/object/notice/relink materials;
+  this is not a legal-compliance certification.
 - [x] Build/test the proxy candidate against exact baseline archives on all three targets.
 - [x] Rebuild delivered library sources with a user modification and relink a
   standalone consumer on all three targets; independently inspect persisted proofs.
@@ -103,10 +136,12 @@ the original prebuilt configure arguments remain an explicit baseline gap.
 - [x] Verify portable Windows source/object and GNU modification/relink execution.
 - [x] Compare actual standalone password-auth SFTP/SCP payloads and SSH
   host-key/password/missing-file rejection on all three targets.
-- [ ] Run protocol/proxy/TLS/SSH/compression/conversion and deployment/CRT checks.
+- [x] Complete the scoped native protocol/proxy/TLS/SSH/compression/conversion
+  and deployment/CRT checks described below; manual host checks are not a gate
+  and older-OS/Windows/GUI runtime compatibility is not inferred.
 - [x] Independently inspect persisted unsigned cross-platform ZIP and DMG outputs.
-- [x] Verify zero opaque selected repository archives in the isolated measured-provider
-  candidate; production adoption and redistribution/compatibility gates remain open.
+- [x] Verify zero opaque selected repository archives in the measured-provider
+  candidate and the published release, with corresponding-source/relink delivery.
 
 Never delete old archives/evidence before verified replacement. Historical
 read-only analysis must remain supported. A release/sign/tag/merge requires
