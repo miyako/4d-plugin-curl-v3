@@ -1418,6 +1418,44 @@ built. Request the concrete operator-run check when complete materials exist;
 lack of a hosted CI installation must neither waive this gate nor stop the
 independent migration. Analysis tools must not launch or initialize 4D.
 
+## Combined source/object/notice review delivery
+
+`relink_review_delivery.py` consolidates the existing normalized inventory,
+exact original unsigned cross-platform ZIP, both immutable selected-only kits,
+inventory-bound notices and original OpenSSL/Brotli compiler/source records.
+It compares all selected archive hashes and reference binary/slice hashes,
+deduplicates provider references without inflating selected coverage, and
+reuses the existing complete provider verifier after copying only its recorded
+materials and archives. Installed provider executables and proprietary
+SDK/compiler/CRT/system archives are not copied. Unselected source-built
+provider audit archives remain explicitly segregated from plugin link inputs.
+
+```sh
+python3 build/dependencies/relink_review_delivery.py \
+  --inventory /original/unsigned-native.zip.inventory.json \
+  --reference-zip /original/unsigned-native.zip \
+  --mac-kit "/original/mac/Moved selected plugin kit" \
+  --windows-kit "/original/windows/Moved selected plugin kit" \
+  --notices /verified/notice-delivery \
+  --provider /original/arm64/openssl-build-provenance.json \
+  --provider /original/arm64/brotli-provenance.json \
+  --provider /original/x86_64/openssl-build-provenance.json \
+  --provider /original/x86_64/brotli-provenance.json \
+  --provider /original/windows/openssl-build-provenance.json \
+  --provider /original/windows/brotli-provenance.json \
+  --output /fresh/combined-review
+python3 /fresh/combined-review/tools/build/dependencies/relink_review_delivery.py \
+  --inspect-only --output /fresh/combined-review
+```
+
+Generate from the committed tool source tree; its tracked current tools and
+`RELINKING.md` are included beside unchanged older evidence snapshots. The
+inspector is read-only and does not invoke Git, proprietary tools or the plugin.
+The inventory continues to identify its original ZIP, not the combined source
+kit. `RELINKING.md` supplies ordinary-user commands, concrete static-delivery
+review obligations and the operator-only host/install/trust gate. Assembly and
+successful raw relinking are not production adoption or legal certification.
+
 ## Measured results and scoped candidate decision
 
 Checkpoint `d93ab29` passed all five candidate/baseline test executables and

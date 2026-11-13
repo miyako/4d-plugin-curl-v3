@@ -167,7 +167,7 @@ jobs:
       - name: Exercise active user source modification without fixed markers
         shell: pwsh
         run: |
-          python -m unittest discover -s build/dependencies -p test_user_relink.py
+          python -m unittest discover -s build/dependencies -p test_*.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python build/dependencies/probe_user_edit_windows.py `
             --kit "$env:RUNNER_TEMP/user-relink-originals/plugin/Moved selected plugin kit" `
