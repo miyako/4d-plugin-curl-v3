@@ -212,11 +212,10 @@ def inspect_case(output, target, variant, item):
             or (root / (name + ".pac")).read_bytes() != pac_bytes(
                 urlsplit(item["url"]).port, urlsplit(item["proxy"]).port)):
         raise ValueError("Proxy selection or actual curl route differs: " + variant + "/" + name)
-    if name.startswith("pac") and target.startswith("macos"):
+    if name.startswith("pac"):
         if events["pac"] != [{"path": "/proxy.pac"}]:
-            raise ValueError("macOS PAC was not actually retrieved and evaluated")
-    elif (len(events["pac"]) > int(name.startswith("pac"))
-          or any(p != {"path": "/proxy.pac"} for p in events["pac"])):
+            raise ValueError("PAC source retrieval differs from the observed baseline")
+    elif events["pac"]:
         raise ValueError("Unexpected PAC acquisition")
 
 

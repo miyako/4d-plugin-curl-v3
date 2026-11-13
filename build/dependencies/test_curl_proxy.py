@@ -59,6 +59,26 @@ class ProxyFixtureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "actual curl route"):
                 proxy.inspect_case(root, "windows-x86_64", "candidate", item)
 
+    def test_windows_direct_fallback_does_not_hide_missing_pac_retrieval(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "candidate").mkdir()
+            case = root / "candidate/pac-proxy"
+            case.with_suffix(".response").write_bytes(proxy.PAYLOAD)
+            write_json(case.with_suffix(".stdout"), {
+                "curlCode": 0, "httpStatus": 200, "proxies": ["direct://"]})
+            write_json(case.with_suffix(".exit.json"), 0)
+            case.with_suffix(".pac").write_bytes(proxy.pac_bytes(12345, 12346))
+            write_json(case.with_suffix(".server.json"), {
+                "origin": [{"path": "/payload", "host": "destination.invalid:12345",
+                            "forwarded": False}], "proxy": [], "pac": []})
+            item = {"case": "pac-proxy", "exitCode": 0,
+                    "url": "http://destination.invalid:12345/payload",
+                    "proxy": "http://127.0.0.1:12346", "route": "direct",
+                    "responseSha256": proxy.digest(case.with_suffix(".response"))}
+            with self.assertRaisesRegex(ValueError, "PAC source retrieval"):
+                proxy.inspect_case(root, "windows-x86_64", "candidate", item)
+
 
 class ProbeBindingTests(unittest.TestCase):
     def test_windows_paths_and_selected_hash_are_bound(self):
