@@ -100,7 +100,7 @@ def build_probe(project, output, target, provider_project, source=None, interfac
         command = [compiler, "/nologo", "/W4", "/O2", "/MT", "/DCURL_STATICLIB",
                    "/I" + str(interface_project / "include"), str(source),
                    "/Fo" + str(output / (source.stem + ".obj")), "/Fe" + str(binary),
-                   *map(str, paths), "/link", "/MAP:" + str(output / "transfer.map"),
+                   *map(str, paths), "/link", "/VERBOSE:LIB", "/MAP:" + str(output / "transfer.map"),
                    "ws2_32.lib", "crypt32.lib", "bcrypt.lib", "secur32.lib", "wldap32.lib",
                    "advapi32.lib", "normaliz.lib", "user32.lib", "iphlpapi.lib"]
     else:
