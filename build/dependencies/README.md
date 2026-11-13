@@ -1045,10 +1045,22 @@ Additional receipts join candidate probe inputs to the verified selected-only
 plugin delivery, original complete binary and applicable Mac slice hashes.
 These joins do not claim every passed archive contributes live code to a probe.
 
-Local arm64 and actual Rosetta Intel clients each pass all ten
-candidate/comparison transfers. The manual unsigned `curl-http2` prerequisite
-scope repeats both Mac architectures and Windows against original selected
-inputs from run 43351736712; Windows/native-CI verification is still pending.
+Run [43360070888](https://github.com/miyako/4d-plugin-curl-v3/actions/runs/43360070888),
+at `78ee04881035e1a271c87e65ea2af42498836501`, passes all 30 actual transfers
+across both Mac architectures and Windows. Independent inspection of the
+downloaded artifacts verifies native client CPUs, exact pinned public headers,
+the original frozen comparison headers, actual nghttp2 session implementation
+selection (23 members per cohort/target), complete payloads and original plugin
+binary/slice joins. Probe archive inputs bind to nine actually selected plugin
+positions per Mac target and eight on Windows. Local arm64/Rosetta Intel
+comparisons also pass.
+
+The manual unsigned `curl-http2` prerequisite scope uses unchanged original
+selected inputs from run 43351736712, not replacement production archives.
+The first Windows evidence gate was rejected after transfers completed because
+its map alone lacked full library paths. Standalone MSVC links now capture
+`/VERBOSE:LIB` diagnostics; the successful rerun resolves actual nghttp2
+selections without guessing a path from a basename.
 The fixture drains normal peer shutdown after sending the final stream data:
 closing with unread control frames had caused a rejected, truncated TCP-reset
 result. Rejected outputs are retained, not counted as successful comparisons.
