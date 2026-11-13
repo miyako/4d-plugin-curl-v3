@@ -9,8 +9,11 @@ from pathlib import Path, PureWindowsPath
 import platform
 import shutil
 import subprocess
+import sys
 
+sys.dont_write_bytecode = True
 import relink_plugin_windows as local
+from plugin_relink_delivery import verify_if_derived
 from plugin_relink_materials import copy_delivery, relative_path, verify_files
 from provenance import archive_hashes, digest, write_json
 
@@ -26,6 +29,7 @@ def inspect_replay(kit, output, modified=None, modified_iconv=None):
             or proof["status"] != record["status"] or proof["target"] != record["target"]
             or proof["kitManifestSha256"] != digest(kit / MANIFEST)):
         raise ValueError("Portable Windows replay does not bind this candidate kit")
+    verify_if_derived(kit, record)
     verify_files(kit, record)
     binary = kit / "project/test/Plugins/cURL.bundle/Contents/Windows64/cURL.4DX"
     if (digest(binary) != record["originalBinarySha256"]
@@ -181,6 +185,7 @@ def replay(kit, output, modified=None, modified_iconv=None):
     if (record["schemaVersion"] != 1 or record["target"] != "windows-x86_64"
             or record["status"] != "not-approved-for-production"):
         raise ValueError("Unsupported Windows portable object kit")
+    verify_if_derived(kit, record)
     verify_files(kit, record)
     project = kit / "project"
     system_archives(record, project)

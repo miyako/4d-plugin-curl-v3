@@ -8,8 +8,11 @@ import platform
 import shlex
 import shutil
 import subprocess
+import sys
 
+sys.dont_write_bytecode = True
 import relink_plugin_macos as local
+from plugin_relink_delivery import verify_if_derived
 from plugin_relink_materials import copy_delivery, relative_path
 from provenance import archive_hashes, digest, write_json
 
@@ -130,6 +133,7 @@ def replay(kit, output, replacements, iconv_replacements=None):
     if (record.get("schemaVersion") != 1 or record.get("target") != "macos-universal"
             or record.get("status") != "not-approved-for-production"):
         raise ValueError("Unsupported portable object materials")
+    verify_if_derived(kit, record)
     if output.exists() or output.is_relative_to(kit):
         raise ValueError("Use a fresh replay directory outside the kit")
     for item in record["files"]:

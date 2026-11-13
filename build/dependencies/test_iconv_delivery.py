@@ -1,6 +1,8 @@
 import io
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -111,6 +113,13 @@ class IconvDeliveryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "original unmodified"):
                 delivery.export(self.candidate, self.output)
         inspect.assert_not_called()
+
+    def test_delivered_build_tool_entry_point_does_not_mutate_closed_materials(self):
+        self.export()
+        subprocess.run([sys.executable, str(
+            self.output / "tools/build/dependencies/prepare_cygwin.py"), "--help"],
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        delivery.inspect(self.output)
 
 
 if __name__ == "__main__":

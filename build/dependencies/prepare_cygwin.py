@@ -8,8 +8,10 @@ from pathlib import Path
 import platform
 import shutil
 import subprocess
+import sys
 import urllib.request
 
+sys.dont_write_bytecode = True
 from build_native import ROOT
 from provenance import digest, write_json
 

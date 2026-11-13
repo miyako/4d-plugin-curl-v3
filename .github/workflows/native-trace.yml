@@ -779,6 +779,74 @@ jobs:
           path: ${{ runner.temp }}/portable-plugin-upload/
           include-hidden-files: true
           if-no-files-found: error
+      - name: Derive, relocate and replay selected-only plugin materials
+        if: ${{ inputs.native-candidate-plugin-only }}
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        shell: python
+        run: |
+          import hashlib, json, os, subprocess, sys
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "selected-plugin-delivery"
+          root.mkdir()
+          mac = os.environ["RUNNER_OS"] == "macOS"
+          script = "portable_plugin_macos.py" if mac else "portable_plugin_windows.py"
+          if mac:
+              original = Path(os.environ["RUNNER_TEMP"]) / "selected-plugin-original-audit"
+              subprocess.run([sys.executable, "build/dependencies/" + script,
+                  "export", "--project", str(Path.cwd()), "--output", str(original)], check=True)
+          else:
+              original = Path(os.environ["RUNNER_TEMP"]) / "portable-plugin/Moved Windows user kit"
+          initial = root / "initial-kit"
+          subprocess.run([sys.executable, "build/dependencies/plugin_relink_delivery.py",
+              "export", "--original", str(original), "--output", str(initial)], check=True)
+          kit = root / "Moved selected plugin kit"
+          initial.rename(kit)
+          tools = kit / "tools/build/dependencies"
+          changes = []
+          targets = ("macos-arm64", "macos-x86_64") if mac else ("windows-x86_64",)
+          for target in targets:
+              proxy = kit / "library-materials" / target / "libproxy"
+              proxy_output = Path(os.environ["RUNNER_TEMP"]) / "proxy-source-delivery" / target / "rebuilt"
+              subprocess.run([sys.executable, str(proxy / "tools/build/dependencies/relink_candidate.py"),
+                  "--candidate", str(proxy), "--output", str(proxy_output), "--inspect-only"], check=True)
+              gnu = kit / "library-materials" / target / "libiconv"
+              gnu_output = Path(os.environ["RUNNER_TEMP"]) / "iconv-source-delivery" / target / "rebuilt"
+              if mac:
+                  subprocess.run([sys.executable, str(gnu / "tools/build/dependencies/relink_iconv_macos.py"),
+                      "--candidate", str(gnu), "--output", str(gnu_output), "--inspect-only"], check=True)
+                  suffix = "arm64" if target == "macos-arm64" else "x86-64"
+                  changes.extend(["--proxy-" + suffix, str(proxy_output / "build/libproxy.a"),
+                                  "--iconv-" + suffix, str(gnu_output / "build/lib/.libs/libiconv.a")])
+              else:
+                  subprocess.run([sys.executable, str(gnu / "tools/build/dependencies/build_iconv.py"),
+                      "inspect", str(gnu_output)], check=True)
+                  record = json.loads((gnu_output / "native-build-provenance.json").read_text())
+                  manifest_sha = hashlib.sha256((gnu / "iconv-relink-delivery.json").read_bytes()).hexdigest()
+                  if record["userBaseDeliveryManifestSha256"] != manifest_sha:
+                      raise RuntimeError("Modified GNU sources do not bind the selected-only delivery")
+                  changes.extend(["--modified-proxy", str(proxy_output / "build/libproxy.lib"),
+                                  "--modified-iconv", str(gnu_output / "install/lib/libiconv.lib")])
+          command = [sys.executable, str(tools / script), "replay", "--kit", str(kit)]
+          subprocess.run(command + ["--output", str(root / "baseline")], check=True)
+          subprocess.run(command + ["--output", str(root / "modified"), *changes], check=True)
+          subprocess.run([sys.executable, str(tools / "plugin_relink_delivery.py"),
+              "inspect", str(kit)], check=True)
+      - name: Retain the separate original full Mac audit kit
+        if: ${{ always() && inputs.native-candidate-plugin-only && runner.os == 'macOS' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: isolated-portable-plugin-macOS
+          path: ${{ runner.temp }}/selected-plugin-original-audit/
+          include-hidden-files: true
+          if-no-files-found: error
+      - name: Retain selected-only plugin materials and actual link receipts
+        if: ${{ always() && inputs.native-candidate-plugin-only }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: isolated-selected-plugin-delivery-${{ runner.os }}
+          path: ${{ runner.temp }}/selected-plugin-delivery/
+          include-hidden-files: true
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

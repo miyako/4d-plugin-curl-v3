@@ -624,6 +624,41 @@ same checks on both Macs and uses the delivered Windows tools and source kit
 for its modified GNU build and combined full-plugin replay. These are isolated
 candidate checks, not completed licensing, installation or host verification.
 
+The first native GNU-delivery run (`43343775701`) completed both Mac modified
+rebuilds but rejected the Windows kit before compilation: the delivered Cygwin
+preparation entry point created five Python cache files inside the closed kit.
+Its pinned inputs were unchanged. The rejected material remains preserved;
+the preparation entry point now disables cache writes before importing local
+helpers. A subprocess regression checks that invoking the delivered tool leaves
+the material file set unchanged. Unexpected files remain a hard failure.
+
+`plugin_relink_delivery.py` derives a separate selected-input plugin relink kit
+from the complete internal audit kit. It retains actual selected repository
+archives, product objects/source and matching derived proxy/GNU source materials.
+It omits unused repository libraries, historical top-level `cURL.zip`/`cURL.dmg`
+copies and historical dependency probe executables. The unchanged original
+portable record is retained explicitly as a reference. Only explicit library
+arguments matching omitted repository copies are removed; retained argument
+order, search paths and system inputs remain unchanged. Basename collisions
+with retained/system libraries fail rather than guessing.
+
+```sh
+python3 build/dependencies/plugin_relink_delivery.py export \
+  --original /preserved/full-internal-audit-kit --output /fresh/selected-input-kit
+python3 /fresh/selected-input-kit/tools/build/dependencies/portable_plugin_macos.py \
+  replay --kit /fresh/selected-input-kit --output /fresh/baseline-replay
+```
+
+Actual relocated selected-only Mac materials have reproduced both original
+plugin slices byte-for-byte, rebuilt modified proxy and GNU sources using only
+delivered tools, and linked both changes into both complete slices. Eleven
+unused archive flags are omitted per Mac recipe; `-lsasl2` remains a system
+input, not an assumed removable archive. The Windows derived kit has passed
+material inspection; its actual native links remain gated on CI. The native
+workflow retains full audit kits separately and checks baseline/modified links
+from the derived materials without initializing any plugin. This does not yet
+provide complete notices/redistribution terms, install/trust or 4D host proof.
+
 Actual relocated-path execution, including a path containing spaces, has
 reproduced the original universal plugin and rebuilt both delivered proxy
 sources before linking their changes into both full-plugin slices. This closes
