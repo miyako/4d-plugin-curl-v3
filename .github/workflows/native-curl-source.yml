@@ -94,25 +94,25 @@ jobs:
           path.write_text(json.dumps({
               "run": {k: run[k] for k in ("id", "head_sha", "path", "event", "head_branch")},
               "producers": producers}, indent=2))
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           run-id: ${{ inputs.provider-run-id }}
           github-token: ${{ github.token }}
           name: native-libssh2-${{ matrix.target }}
           path: ${{ runner.temp }}/prerequisites/ssh
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           run-id: ${{ inputs.provider-run-id }}
           github-token: ${{ github.token }}
           name: native-zlib-${{ matrix.target }}
           path: ${{ runner.temp }}/prerequisites/zlib
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           run-id: ${{ inputs.provider-run-id }}
           github-token: ${{ github.token }}
           name: native-nghttp2-${{ matrix.target }}
           path: ${{ runner.temp }}/prerequisites/http
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           run-id: ${{ inputs.provider-run-id }}
           github-token: ${{ github.token }}
@@ -207,33 +207,33 @@ jobs:
           output = Path(os.environ["RUNNER_TEMP"]) / "native-source-inventory"
           output.mkdir()
           (output / "acquisition.json").write_text(json.dumps(records, indent=2))
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           run-id: ${{ inputs.source-run-id || github.run_id }}
           github-token: ${{ github.token }}
           pattern: native-libcurl-*
           path: ${{ runner.temp }}/native-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           run-id: ${{ inputs.provider-run-id }}
           github-token: ${{ github.token }}
           pattern: native-nghttp3-*
           path: ${{ runner.temp }}/native-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.iconv-provider-run-id != '' }}
         with:
           run-id: ${{ inputs.iconv-provider-run-id }}
           github-token: ${{ github.token }}
           pattern: native-libiconv-*
           path: ${{ runner.temp }}/native-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.proxy-provider-run-id != '' }}
         with:
           run-id: ${{ inputs.proxy-provider-run-id }}
           github-token: ${{ github.token }}
           pattern: isolated-proxy-macos-*
           path: ${{ runner.temp }}/native-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.proxy-provider-run-id != '' }}
         with:
           run-id: ${{ inputs.proxy-provider-run-id }}
