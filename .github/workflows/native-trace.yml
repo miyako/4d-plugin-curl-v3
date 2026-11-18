@@ -230,7 +230,7 @@ jobs:
               os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_REF_NAME"], "inventory")
           (Path(os.environ["RUNNER_TEMP"]) / "candidate-inventory-acquisition.json").write_text(
               json.dumps(record, indent=2))
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only }}
         with:
           run-id: ${{ inputs.native-candidate-inventory-run }}
@@ -281,49 +281,49 @@ jobs:
                   get("/actions/runs/" + identifier + "/jobs?per_page=100&filter=all"),
                   os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_REF_NAME"], "providers")
           (root / "candidate-source-acquisition.json").write_text(json.dumps(records, indent=2))
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only && inputs.native-materials-provider-run != '' }}
         with:
           run-id: ${{ inputs.native-materials-provider-run }}
           github-token: ${{ github.token }}
           pattern: isolated-provider-materials-${{ runner.os == 'Windows' && 'windows-x86_64' || 'macos-*' }}
           path: ${{ runner.temp }}/candidate-provider-materials
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only }}
         with:
           run-id: ${{ steps.candidate-providers.outputs.curl }}
           github-token: ${{ github.token }}
           pattern: native-libcurl-*
           path: ${{ runner.temp }}/candidate-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only && runner.os == 'macOS' }}
         with:
           run-id: ${{ steps.candidate-providers.outputs.http }}
           github-token: ${{ github.token }}
           pattern: native-nghttp3-*
           path: ${{ runner.temp }}/candidate-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only }}
         with:
           run-id: ${{ steps.candidate-providers.outputs.iconv }}
           github-token: ${{ github.token }}
           pattern: native-libiconv-*
           path: ${{ runner.temp }}/candidate-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only && runner.os == 'macOS' }}
         with:
           run-id: ${{ steps.candidate-providers.outputs.proxy }}
           github-token: ${{ github.token }}
           pattern: isolated-proxy-macos-*
           path: ${{ runner.temp }}/candidate-kits
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
         with:
           run-id: ${{ steps.candidate-providers.outputs.proxy }}
           github-token: ${{ github.token }}
           name: isolated-proxy-windows-x86_64
           path: ${{ runner.temp }}/candidate-kits/isolated-proxy-windows-x86_64
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ inputs.native-candidate-plugin-only && runner.os == 'Windows' }}
         with:
           run-id: ${{ steps.candidate-providers.outputs.proxy }}
@@ -359,7 +359,7 @@ jobs:
                         "macos-universal" if mac else "windows-x86_64", selected, provider_kits)
           with open(os.environ["GITHUB_ENV"], "a") as stream:
               stream.write("PLUGIN_ROOT=" + str(root / "plugin-candidate/project") + "\n")
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ !inputs.native-candidate-plugin-only }}
         with:
           name: brotli-${{ runner.os }}
@@ -960,11 +960,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -q -r build/sbom/requirements.txt
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: unsigned-native-build-macOS
           path: macos
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: unsigned-native-build-Windows
           path: windows

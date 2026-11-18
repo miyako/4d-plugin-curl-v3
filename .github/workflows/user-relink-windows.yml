@@ -56,7 +56,7 @@ jobs:
                              and j["conclusion"] == "success" for j in jobs["jobs"])):
               raise ValueError("Unexpected original universal unsigned producer")
           PY
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: isolated-selected-plugin-delivery-macOS
           path: ${{ runner.temp }}/user-relink-originals/plugin
@@ -152,13 +152,13 @@ jobs:
           root.mkdir()
           (root / "run.json").write_text(json.dumps(run, indent=2))
           (root / "jobs.json").write_text(json.dumps(jobs, indent=2))
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: isolated-selected-plugin-delivery-Windows
           path: ${{ runner.temp }}/user-relink-originals/plugin
           run-id: ${{ env.ORIGINAL_RUN }}
           github-token: ${{ github.token }}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: isolated-iconv-source-delivery-Windows
           path: ${{ runner.temp }}/user-relink-originals/iconv
